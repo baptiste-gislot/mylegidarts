@@ -7,12 +7,14 @@ import { supabase } from './supabaseClient'
 export interface PlayerRow {
   id: string
   name: string
+  nickname: string | null
   created_at: string
 }
 
 export interface SessionRow {
   id: string
   player_id: string
+  match_id: string | null
   darts: Dart[]
   total: number
   created_at: string
@@ -26,8 +28,13 @@ export interface LeagueData {
   configured: boolean
   addPlayer: (name: string) => Promise<string | null>
   removePlayer: (playerId: string) => Promise<string | null>
-  saveSessions: (entries: { playerId: string; darts: Dart[]; total: number }[]) => Promise<string | null>
+  setNickname: (playerId: string, nickname: string) => Promise<string | null>
+  saveSessions: (
+    entries: { playerId: string; darts: Dart[]; total: number }[],
+    matchId?: string | null,
+  ) => Promise<string | null>
   removeSession: (sessionId: string) => Promise<string | null>
+  removeMatch: (sessionIds: string[]) => Promise<string | null>
 }
 
 export function useLeague(): LeagueData {
@@ -85,11 +92,28 @@ export function useLeague(): LeagueData {
     return null
   }
 
+  async function setNickname(playerId: string, nickname: string): Promise<string | null> {
+    if (!supabase) return 'Supabase n’est pas configuré.'
+    const { error: err } = await supabase
+      .from('players')
+      .update({ nickname: nickname.trim() || null })
+      .eq('id', playerId)
+    if (err) return err.message
+    await refetch()
+    return null
+  }
+
   async function saveSessions(
     entries: { playerId: string; darts: Dart[]; total: number }[],
+    matchId: string | null = null,
   ): Promise<string | null> {
     if (!supabase) return 'Supabase n’est pas configuré.'
-    const rows = entries.map((e) => ({ player_id: e.playerId, darts: e.darts, total: e.total }))
+    const rows = entries.map((e) => ({
+      player_id: e.playerId,
+      match_id: matchId,
+      darts: e.darts,
+      total: e.total,
+    }))
     const { error: err } = await supabase.from('sessions').insert(rows)
     if (err) return err.message
     await refetch()
@@ -104,6 +128,14 @@ export function useLeague(): LeagueData {
     return null
   }
 
+  async function removeMatch(sessionIds: string[]): Promise<string | null> {
+    if (!supabase) return 'Supabase n’est pas configuré.'
+    const { error: err } = await supabase.from('sessions').delete().in('id', sessionIds)
+    if (err) return err.message
+    await refetch()
+    return null
+  }
+
   return {
     players,
     sessions,
@@ -112,7 +144,9 @@ export function useLeague(): LeagueData {
     configured: supabase !== null,
     addPlayer,
     removePlayer,
+    setNickname,
     saveSessions,
     removeSession,
+    removeMatch,
   }
 }

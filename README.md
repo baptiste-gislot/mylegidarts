@@ -4,6 +4,11 @@ PWA de leaderboard de fléchettes pour MyLegiTech. Le défi : **4 volées de 3 f
 
 ## Fonctionnalités
 
+- **Classement** : deux critères (meilleur score / moyenne par partie) × deux périodes (mois en cours / depuis toujours), palmarès des vainqueurs mensuels, podium célébré au changement de mois, néon sur le leader.
+- **Ambiance** : annonceur vocal (180, records, relais entre joueurs, trash-talk sur les volées ratées), bruitages d'impact synthétisés (WebAudio, PC et mobile), confettis, vibrations, toasts. Bouton 🔊 dans l'en-tête pour tout couper.
+- **Historique** : groupé par partie (vainqueur mis en avant), détail volée par volée sur `/partie/[id]`.
+- **Joueurs** : surnoms éditables, utilisés par l'annonceur et le live.
+
 - **Tirer** : session multi-joueurs (volées alternées), clavier de saisie Simple/Double/Triple, 25, Bull, Raté, avec annulation.
 - **Classement** : record par joueur, moyenne, meilleure volée, badge bullseye pour le leader.
 - **Historique** : détail des sessions volée par volée, suppression possible.
@@ -19,7 +24,7 @@ Next.js 16 (App Router, Turbopack) · TypeScript · Supabase (Postgres + Realtim
 ## Mise en route
 
 1. Créez un projet sur [supabase.com](https://supabase.com).
-2. Dans le **SQL Editor** du projet, exécutez le contenu de [`supabase/schema.sql`](supabase/schema.sql) (tables, politiques RLS ouvertes, publication temps réel).
+2. Dans le **SQL Editor** du projet, exécutez [`supabase/schema.sql`](supabase/schema.sql) pour une installation neuve, ou les migrations de [`supabase/migrations/`](supabase/migrations) sur une base existante.
 3. Copiez `.env.local.example` vers `.env.local` et renseignez `NEXT_PUBLIC_SUPABASE_URL` et `NEXT_PUBLIC_SUPABASE_ANON_KEY` (Settings → API).
 4. Installez et lancez :
 

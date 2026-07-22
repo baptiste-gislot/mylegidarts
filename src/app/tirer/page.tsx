@@ -17,7 +17,14 @@ import {
 import { useToast } from '@/components/Toaster'
 import { fireConfetti, vibrate } from '@/lib/effects'
 import { useLiveMatchPublisher } from '@/lib/liveMatch'
-import { useLeague } from '@/lib/useLeague'
+import { fanfare, say, thock } from '@/lib/sound'
+import { trashTalk } from '@/lib/trashTalk'
+import { useLeague, type PlayerRow } from '@/lib/useLeague'
+
+/** Nom d'annonce : le surnom s'il existe, sinon le prénom. */
+function stageName(player: PlayerRow | undefined): string {
+  return player?.nickname ?? player?.name ?? '?'
+}
 
 const SECTORS = Array.from({ length: 20 }, (_, i) => i + 1)
 
@@ -65,6 +72,8 @@ export default function TirerPage() {
     if (flash180 === null) return
     void fireConfetti('perfect')
     vibrate([60, 60, 60, 60, 120])
+    fanfare('perfect')
+    say('Cent quatre-vingts !')
     const timer = setTimeout(() => setFlash180(null), 1800)
     return () => clearTimeout(timer)
   }, [flash180])
@@ -93,10 +102,10 @@ export default function TirerPage() {
       id: matchId,
       startedAt,
       finished: thrown === order.length * DARTS_PER_SESSION,
-      players: order.map((id) => ({
-        id,
-        name: players.find((p) => p.id === id)?.name ?? '?',
-      })),
+      players: order.map((id) => {
+        const player = players.find((p) => p.id === id)
+        return { id, name: player?.name ?? '?', nickname: player?.nickname ?? null }
+      }),
       darts: dartsByPlayer,
     })
   }, [started, matchId, startedAt, order, dartsByPlayer, players, publish])
@@ -123,6 +132,9 @@ export default function TirerPage() {
     return map
   }, [sessions])
 
+  // Verrou d'enregistrement : empêche d'insérer deux fois la même partie.
+  const savedRef = useRef(false)
+
   // Célébration de fin de session : confettis si au moins un record tombe.
   const celebratedRef = useRef(false)
   useEffect(() => {
@@ -135,11 +147,16 @@ export default function TirerPage() {
     if (celebratedRef.current) return
     celebratedRef.current = true
     vibrate([40, 60, 40])
-    const hasRecord = order.some(
+    const recordHolders = order.filter(
       (playerId, i) => sessionTotal(dartsByPlayer[i]) > (bestByPlayer.get(playerId) ?? -1),
     )
-    if (hasRecord) void fireConfetti('record')
-  }, [started, order, dartsByPlayer, bestByPlayer])
+    if (recordHolders.length > 0) {
+      void fireConfetti('record')
+      fanfare('record')
+      const names = recordHolders.map((id) => stageName(players.find((p) => p.id === id)))
+      say(`Nouveau record pour ${names.join(' et ')} !`)
+    }
+  }, [started, order, dartsByPlayer, bestByPlayer, players])
 
   if (!configured) return <SetupNotice />
   if (loading) return <p className="empty">Chargement…</p>
@@ -174,23 +191,39 @@ export default function TirerPage() {
 
   function start() {
     if (order.length === 0) return
+    savedRef.current = false
     setDartsByPlayer(order.map(() => []))
     setMatchId(crypto.randomUUID())
     setStartedAt(new Date().toISOString())
     setStarted(true)
     setSaveError(null)
+    const first = players.find((p) => p.id === order[0])
+    say(`C'est parti ! ${stageName(first)}, à la cible.`)
   }
 
   function throwDart(dart: Dart) {
     if (finished) return
+    thock(dart.sector === 0 ? 'miss' : dart.sector === 25 && dart.mult === 2 ? 'bull' : 'normal')
+
     const volleyAfterThrow = [...currentVolley, dart]
-    if (
-      volleyAfterThrow.length === DARTS_PER_VOLLEY &&
-      sessionTotal(volleyAfterThrow) === PERFECT_VOLLEY &&
-      currentPlayer
-    ) {
-      setFlash180(currentPlayer.name)
+    const volleyDone = volleyAfterThrow.length === DARTS_PER_VOLLEY
+    if (volleyDone) {
+      const volleyTotal = sessionTotal(volleyAfterThrow)
+      if (volleyTotal === PERFECT_VOLLEY && currentPlayer) {
+        setFlash180(currentPlayer.name)
+      } else {
+        // Trash-talk occasionnel + annonce du joueur suivant.
+        const pique = trashTalk(volleyTotal)
+        if (pique) toast(pique)
+        const sessionDone = thrownCount + 1 === totalDarts
+        const nextIndex = ((globalVolley + 1) % Math.max(1, order.length))
+        const nextPlayer = players.find((p) => p.id === order[nextIndex])
+        const relais =
+          !sessionDone && order.length > 1 ? ` À toi, ${stageName(nextPlayer)} !` : ''
+        if (pique || relais) say(`${pique ?? ''}${relais}`)
+      }
     }
+
     setDartsByPlayer((current) =>
       current.map((darts, i) => (i === currentPlayerIndex ? [...darts, dart] : darts)),
     )
@@ -219,20 +252,29 @@ export default function TirerPage() {
   }
 
   async function save() {
+    // Verrou anti double-clic : une partie ne s'enregistre qu'une fois.
+    if (saving || savedRef.current) return
     setSaving(true)
     const entries = order.map((playerId, i) => ({
       playerId,
       darts: dartsByPlayer[i],
       total: sessionTotal(dartsByPlayer[i]),
     }))
-    const err = await saveSessions(entries)
-    setSaving(false)
+    const err = await saveSessions(entries, matchId)
     if (err) {
+      setSaving(false)
       setSaveError(err)
     } else {
+      savedRef.current = true
       localStorage.removeItem(IN_PROGRESS_KEY)
       stopLive()
-      toast('Session enregistrée — le classement est à jour', 'success')
+      toast('Partie enregistrée — le classement est à jour', 'success')
+      // reset immédiat : le bouton disparaît, impossible de ré-enregistrer
+      setStarted(false)
+      setDartsByPlayer([])
+      setMatchId(null)
+      setStartedAt(null)
+      setSaving(false)
       router.push('/')
     }
   }
@@ -247,6 +289,10 @@ export default function TirerPage() {
   if (!started) {
     return (
       <div className="stack">
+        <div className="idle-board" aria-hidden="true">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/icons/icon-512.png" alt="" width={180} height={180} />
+        </div>
         <section>
           <h2 className="section-title">Qui tire ? (dans l’ordre de passage)</h2>
           <div className="chips">

@@ -8,7 +8,8 @@ import { useLeague } from '@/lib/useLeague'
 
 export default function JoueursPage() {
   const toast = useToast()
-  const { players, sessions, loading, error, configured, addPlayer, removePlayer } = useLeague()
+  const { players, sessions, loading, error, configured, addPlayer, removePlayer, setNickname } =
+    useLeague()
   const [name, setName] = useState('')
   const [formError, setFormError] = useState<string | null>(null)
 
@@ -26,6 +27,17 @@ export default function JoueursPage() {
       setName('')
       setFormError(null)
     }
+  }
+
+  async function editNickname(playerId: string, playerName: string, current: string | null) {
+    const nickname = window.prompt(
+      `Surnom de ${playerName} (laissez vide pour le retirer) :`,
+      current ?? '',
+    )
+    if (nickname === null) return
+    const err = await setNickname(playerId, nickname)
+    if (err) setFormError(err)
+    else toast(nickname.trim() ? `${playerName} devient « ${nickname.trim()} »` : 'Surnom retiré')
   }
 
   async function remove(playerId: string, playerName: string) {
@@ -79,11 +91,21 @@ export default function JoueursPage() {
               <li key={player.id} className="board__row">
                 <PlayerAvatar name={player.name} />
                 <span className="board__who">
-                  <span className="board__name">{player.name}</span>
+                  <span className="board__name">
+                    {player.name}
+                    {player.nickname && <em className="board__nickname"> « {player.nickname} »</em>}
+                  </span>
                   <span className="board__record">
                     {count} session{count > 1 ? 's' : ''}
                   </span>
                 </span>
+                <button
+                  type="button"
+                  className="button-ghost"
+                  onClick={() => void editNickname(player.id, player.name, player.nickname)}
+                >
+                  Surnom
+                </button>
                 <button
                   type="button"
                   className="button-ghost"

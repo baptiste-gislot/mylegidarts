@@ -4,6 +4,7 @@
 create table if not exists public.players (
   id uuid primary key default gen_random_uuid(),
   name text not null,
+  nickname text,
   created_at timestamptz not null default now(),
   constraint players_name_unique unique (name)
 );
@@ -11,6 +12,8 @@ create table if not exists public.players (
 create table if not exists public.sessions (
   id uuid primary key default gen_random_uuid(),
   player_id uuid not null references public.players (id) on delete cascade,
+  -- Les sessions enregistrées ensemble (même partie) partagent un match_id.
+  match_id uuid,
   -- 12 fléchettes : [{ "sector": 20, "mult": 3 }, ...] (sector 0 = raté, 25 = bull)
   darts jsonb not null,
   total int not null check (total between 0 and 720),
@@ -18,6 +21,7 @@ create table if not exists public.sessions (
 );
 
 create index if not exists sessions_player_id_idx on public.sessions (player_id);
+create index if not exists sessions_match_id_idx on public.sessions (match_id);
 create index if not exists sessions_created_at_idx on public.sessions (created_at desc);
 
 -- App ouverte sans authentification : lecture/écriture pour le rôle anon.
@@ -27,6 +31,8 @@ alter table public.sessions enable row level security;
 create policy "players open read" on public.players for select using (true);
 create policy "players open insert" on public.players for insert with check (true);
 create policy "players open delete" on public.players for delete using (true);
+-- update limité aux players (surnoms) ; les sessions restent immuables.
+create policy "players open update" on public.players for update using (true) with check (true);
 
 create policy "sessions open read" on public.sessions for select using (true);
 create policy "sessions open insert" on public.sessions for insert with check (true);

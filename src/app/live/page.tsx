@@ -69,6 +69,7 @@ function LiveMatchCard({ match }: { match: LiveMatch }) {
               <span className="live-row__who">
                 <span className="board__name">
                   {player.name}
+                  {player.nickname && <em className="board__nickname"> « {player.nickname} »</em>}
                   {active && <em className="live-row__turn"> · à la cible</em>}
                 </span>
                 <span className="board__record">

@@ -877,6 +877,338 @@ a {
   color: var(--craie-dim);
 }
 
+/* ---------- Bouton sons ---------- */
+
+.masthead {
+  position: relative;
+}
+
+.masthead__sound {
+  position: absolute;
+  top: calc(20px + env(safe-area-inset-top));
+  right: 0;
+  font-size: 20px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  line-height: 1;
+}
+
+/* ---------- Néon du leader ---------- */
+
+.board__row--leader {
+  animation: neon 2.6s ease-in-out infinite;
+}
+
+@keyframes neon {
+  0%,
+  100% {
+    box-shadow: 0 0 6px rgba(201, 162, 43, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 16px rgba(201, 162, 43, 0.55);
+  }
+}
+
+/* ---------- Surnoms ---------- */
+
+.board__nickname {
+  font-style: normal;
+  color: var(--laiton);
+  font-weight: 500;
+}
+
+/* ---------- Cible en attente ---------- */
+
+.idle-board {
+  display: flex;
+  justify-content: center;
+  padding: 4px 0 0;
+}
+
+.idle-board img {
+  animation: idle-spin 90s linear infinite;
+  filter: drop-shadow(0 0 24px rgba(216, 64, 47, 0.25));
+}
+
+@keyframes idle-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- Ripple cible touchée (Bull / 25) ---------- */
+
+.key--bull50:active,
+.key--bull25:active {
+  animation: bull-hit 320ms ease-out;
+}
+
+@keyframes bull-hit {
+  0% {
+    box-shadow: 0 0 0 0 rgba(216, 64, 47, 0.55);
+  }
+  100% {
+    box-shadow: 0 0 0 14px rgba(216, 64, 47, 0);
+  }
+}
+
+/* ---------- Historique groupé par partie ---------- */
+
+.match-card {
+  display: block;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+}
+
+.match-card__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.match-card__type {
+  font-family: var(--font-display-stack);
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--craie-dim);
+}
+
+.match-card__lines {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.match-card__line {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.match-card__player--winner {
+  color: var(--laiton);
+  font-weight: 600;
+}
+
+.match-card__total {
+  font-family: var(--font-display-stack);
+  font-weight: 700;
+  font-size: 22px;
+}
+
+.match-card .history__actions {
+  margin-top: 8px;
+}
+
+/* ---------- Détail d'une partie ---------- */
+
+.match-detail {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.match-detail--winner {
+  border-color: var(--laiton);
+}
+
+.match-detail__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.match-detail__name {
+  flex: 1;
+  font-weight: 600;
+}
+
+.match-detail__total {
+  font-family: var(--font-display-stack);
+  font-weight: 700;
+  font-size: 30px;
+}
+
+.match-detail__volleys {
+  padding: 8px 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.volley-line {
+  display: grid;
+  grid-template-columns: 72px 1fr auto;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.volley-line__label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--craie-dim);
+}
+
+.volley-line__darts {
+  font-family: var(--font-display-stack);
+  font-weight: 500;
+  letter-spacing: 0.05em;
+}
+
+.volley-line__total {
+  font-family: var(--font-display-stack);
+  font-weight: 700;
+  font-size: 18px;
+}
+
+/* ---------- Palmarès ---------- */
+
+.hall {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.hall__row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 12px;
+  align-items: baseline;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+}
+
+.hall__month {
+  color: var(--craie-dim);
+  font-size: 14px;
+  text-transform: capitalize;
+}
+
+.hall__name {
+  font-weight: 600;
+}
+
+.hall__score {
+  font-family: var(--font-display-stack);
+  font-weight: 700;
+  font-size: 20px;
+  color: var(--laiton);
+}
+
+/* ---------- Podium de fin de mois ---------- */
+
+.podium {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: color-mix(in srgb, var(--ink) 96%, black);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 24px;
+  text-align: center;
+}
+
+.podium__eyebrow {
+  font-family: var(--font-display-stack);
+  font-weight: 500;
+  font-size: 14px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--craie-dim);
+}
+
+.podium__title {
+  font-family: var(--font-display-stack);
+  font-weight: 700;
+  font-size: 34px;
+  text-transform: uppercase;
+  line-height: 1;
+  color: var(--laiton);
+}
+
+.podium__steps {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  width: 100%;
+  max-width: 420px;
+}
+
+.podium__step {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.podium__medal {
+  font-size: 30px;
+}
+
+.podium__name {
+  font-weight: 600;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.podium__score {
+  font-family: var(--font-display-stack);
+  font-weight: 700;
+  font-size: 24px;
+  color: var(--laiton);
+}
+
+.podium__block {
+  width: 100%;
+  border-radius: 8px 8px 0 0;
+  background: linear-gradient(180deg, var(--raised), var(--surface));
+  border: 1px solid var(--line);
+  border-bottom: none;
+}
+
+.podium__step--1 .podium__block {
+  height: 110px;
+  border-color: var(--laiton);
+}
+
+.podium__step--2 .podium__block {
+  height: 74px;
+}
+
+.podium__step--3 .podium__block {
+  height: 50px;
+}
+
+.podium__close {
+  max-width: 420px;
+}
+
 /* ---------- Toasts ---------- */
 
 .toasts {

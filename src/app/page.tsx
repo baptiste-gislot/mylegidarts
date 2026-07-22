@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { MonthPodium } from '@/components/MonthPodium'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
 import { SetupNotice } from '@/components/SetupNotice'
 import { useLiveMatches } from '@/lib/liveMatch'
@@ -9,6 +10,7 @@ import { bestVolley, count180s } from '@/lib/scoring'
 import { useLeague } from '@/lib/useLeague'
 
 type Period = 'mois' | 'toujours'
+type Ranking = 'record' | 'moyenne'
 
 interface Line {
   playerId: string
@@ -26,6 +28,7 @@ export default function ClassementPage() {
   const { players, sessions, loading, error, configured } = useLeague()
   const liveMatches = useLiveMatches()
   const [period, setPeriod] = useState<Period>('mois')
+  const [ranking, setRanking] = useState<Ranking>('record')
 
   if (!configured) return <SetupNotice />
   if (loading) return <p className="empty">Chargement du classement…</p>
@@ -53,9 +56,29 @@ export default function ClassementPage() {
       }
     })
     .filter((line): line is Line => line !== null)
-    .sort((a, b) => b.best - a.best || b.average - a.average || a.name.localeCompare(b.name))
+    .sort((a, b) =>
+      ranking === 'record'
+        ? b.best - a.best || b.average - a.average || a.name.localeCompare(b.name)
+        : b.average - a.average || b.best - a.best || a.name.localeCompare(b.name),
+    )
 
   const idle = players.filter((p) => !lines.some((l) => l.playerId === p.id))
+
+  // Palmarès : le vainqueur (meilleur score) de chaque mois écoulé.
+  const hallOfFame = (() => {
+    const byMonth = new Map<string, { label: string; name: string; best: number }>()
+    for (const s of sessions) {
+      const d = new Date(s.created_at)
+      if (d >= monthStart) continue
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      const name = players.find((p) => p.id === s.player_id)?.name ?? '?'
+      const current = byMonth.get(key)
+      if (!current || s.total > current.best) {
+        byMonth.set(key, { label: monthFormat.format(d), name, best: s.total })
+      }
+    }
+    return [...byMonth.entries()].sort((a, b) => b[0].localeCompare(a[0])).map(([, v]) => v)
+  })()
 
   if (players.length === 0) {
     return (
@@ -102,6 +125,27 @@ export default function ClassementPage() {
         </button>
       </div>
 
+      <div className="chips" role="radiogroup" aria-label="Critère de classement">
+        <button
+          type="button"
+          role="radio"
+          aria-checked={ranking === 'record'}
+          className={ranking === 'record' ? 'chip chip--on' : 'chip'}
+          onClick={() => setRanking('record')}
+        >
+          Meilleur score
+        </button>
+        <button
+          type="button"
+          role="radio"
+          aria-checked={ranking === 'moyenne'}
+          className={ranking === 'moyenne' ? 'chip chip--on' : 'chip'}
+          onClick={() => setRanking('moyenne')}
+        >
+          Moyenne / partie
+        </button>
+      </div>
+
       {lines.length === 0 ? (
         <div className="empty">
           <p className="empty__title">
@@ -126,16 +170,19 @@ export default function ClassementPage() {
                 <span className="board__who">
                   <span className="board__name">{line.name}</span>
                   <span className="board__record">
-                    {line.sessionsCount} session{line.sessionsCount > 1 ? 's' : ''} · moy.{' '}
-                    {line.average} · volée max {line.bestVolley}
+                    {line.sessionsCount} session{line.sessionsCount > 1 ? 's' : ''} ·{' '}
+                    {ranking === 'record' ? `moy. ${line.average}` : `record ${line.best}`} ·
+                    volée max {line.bestVolley}
                     {line.count180 > 0 && (
                       <em className="board__180"> · {line.count180}× 180</em>
                     )}
                   </span>
                 </span>
                 <span className="board__score">
-                  <span className="board__points">{line.best}</span>
-                  <span className="board__sub">record</span>
+                  <span className="board__points">
+                    {ranking === 'record' ? line.best : line.average}
+                  </span>
+                  <span className="board__sub">{ranking === 'record' ? 'record' : 'moyenne'}</span>
                 </span>
               </Link>
             </li>
@@ -164,6 +211,23 @@ export default function ClassementPage() {
           </ul>
         </section>
       )}
+
+      {period === 'toujours' && hallOfFame.length > 0 && (
+        <section>
+          <h2 className="section-title">Palmarès des mois</h2>
+          <ul className="hall">
+            {hallOfFame.map((entry) => (
+              <li key={entry.label} className="hall__row">
+                <span className="hall__month">{entry.label}</span>
+                <span className="hall__name">🏆 {entry.name}</span>
+                <span className="hall__score">{entry.best}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <MonthPodium players={players} sessions={sessions} />
     </div>
   )
 }

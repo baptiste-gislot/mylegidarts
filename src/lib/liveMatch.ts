@@ -12,7 +12,7 @@ export interface LiveMatch {
   /** Horodatage de la diffusion : sert à ne garder que l'état le plus récent. */
   updatedAt: string
   finished: boolean
-  players: { id: string; name: string }[]
+  players: { id: string; name: string; nickname?: string | null }[]
   darts: Dart[][]
 }
 

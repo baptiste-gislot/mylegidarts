@@ -32,6 +32,11 @@ export default function ProfilPage() {
   if (error) return <p className="notice notice--error">Erreur : {error}</p>
 
   const player = players.find((p) => p.id === id)
+  const displayedName = player
+    ? player.nickname
+      ? `${player.name} « ${player.nickname} »`
+      : player.name
+    : ''
   if (!player) {
     return (
       <div className="empty">
@@ -50,7 +55,7 @@ export default function ProfilPage() {
   if (own.length === 0) {
     return (
       <div className="stack">
-        <ProfilHeader name={player.name} />
+        <ProfilHeader name={displayedName} />
         <div className="empty">
           <p className="empty__title">Aucune session</p>
           <p>{player.name} n’a pas encore tiré. Le profil se remplira dès la première session.</p>
@@ -78,7 +83,7 @@ export default function ProfilPage() {
 
   return (
     <div className="stack">
-      <ProfilHeader name={player.name} />
+      <ProfilHeader name={displayedName} />
 
       <div className="tiles">
         <div className="tile tile--hero">
