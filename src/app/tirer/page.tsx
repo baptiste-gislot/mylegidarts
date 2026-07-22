@@ -14,17 +14,45 @@ import {
   type Dart,
   type Mult,
 } from '@/lib/scoring'
+import { useLiveMatchPublisher } from '@/lib/liveMatch'
 import { useLeague } from '@/lib/useLeague'
 
 const SECTORS = Array.from({ length: 20 }, (_, i) => i + 1)
 
+const IN_PROGRESS_KEY = 'mylegidarts-session-en-cours'
+const IN_PROGRESS_MAX_AGE_MS = 6 * 60 * 60 * 1000
+
+interface StoredMatch {
+  matchId: string
+  startedAt: string
+  order: string[]
+  dartsByPlayer: Dart[][]
+}
+
+function loadStoredMatch(): StoredMatch | null {
+  try {
+    const raw = localStorage.getItem(IN_PROGRESS_KEY)
+    if (!raw) return null
+    const stored = JSON.parse(raw) as StoredMatch
+    const fresh = Date.now() - new Date(stored.startedAt).getTime() < IN_PROGRESS_MAX_AGE_MS
+    if (fresh && Array.isArray(stored.order) && Array.isArray(stored.dartsByPlayer)) return stored
+  } catch {
+    // stockage corrompu : on repart d'une session vierge
+  }
+  localStorage.removeItem(IN_PROGRESS_KEY)
+  return null
+}
+
 export default function TirerPage() {
   const router = useRouter()
   const { players, sessions, loading, error, configured, saveSessions } = useLeague()
+  const { publish, stop: stopLive } = useLiveMatchPublisher()
 
   const [order, setOrder] = useState<string[]>([])
   const [started, setStarted] = useState(false)
   const [dartsByPlayer, setDartsByPlayer] = useState<Dart[][]>([])
+  const [matchId, setMatchId] = useState<string | null>(null)
+  const [startedAt, setStartedAt] = useState<string | null>(null)
   const [mult, setMult] = useState<Mult>(1)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -35,6 +63,52 @@ export default function TirerPage() {
     const timer = setTimeout(() => setFlash180(null), 1800)
     return () => clearTimeout(timer)
   }, [flash180])
+
+  // Reprend une session interrompue (changement d'onglet, rechargement).
+  useEffect(() => {
+    const stored = loadStoredMatch()
+    if (stored) {
+      setOrder(stored.order)
+      setDartsByPlayer(stored.dartsByPlayer)
+      setMatchId(stored.matchId)
+      setStartedAt(stored.startedAt)
+      setStarted(true)
+    }
+  }, [])
+
+  // Sauvegarde locale de la session en cours + diffusion en direct.
+  useEffect(() => {
+    if (!started || matchId === null || startedAt === null) return
+    localStorage.setItem(
+      IN_PROGRESS_KEY,
+      JSON.stringify({ matchId, startedAt, order, dartsByPlayer } satisfies StoredMatch),
+    )
+    const thrown = dartsByPlayer.reduce((sum, d) => sum + d.length, 0)
+    publish({
+      id: matchId,
+      startedAt,
+      finished: thrown === order.length * DARTS_PER_SESSION,
+      players: order.map((id) => ({
+        id,
+        name: players.find((p) => p.id === id)?.name ?? '?',
+      })),
+      darts: dartsByPlayer,
+    })
+  }, [started, matchId, startedAt, order, dartsByPlayer, players, publish])
+
+  // Si un joueur de la session restaurée a été supprimé entre-temps, on repart à zéro.
+  useEffect(() => {
+    if (!started || loading || order.length === 0) return
+    if (order.some((id) => !players.some((p) => p.id === id))) {
+      localStorage.removeItem(IN_PROGRESS_KEY)
+      stopLive()
+      setStarted(false)
+      setOrder([])
+      setDartsByPlayer([])
+      setMatchId(null)
+      setStartedAt(null)
+    }
+  }, [started, loading, order, players, stopLive])
 
   const bestByPlayer = useMemo(() => {
     const map = new Map<string, number>()
@@ -78,6 +152,8 @@ export default function TirerPage() {
   function start() {
     if (order.length === 0) return
     setDartsByPlayer(order.map(() => []))
+    setMatchId(crypto.randomUUID())
+    setStartedAt(new Date().toISOString())
     setStarted(true)
     setSaveError(null)
   }
@@ -108,8 +184,12 @@ export default function TirerPage() {
   }
 
   function reset() {
+    localStorage.removeItem(IN_PROGRESS_KEY)
+    stopLive()
     setStarted(false)
     setDartsByPlayer([])
+    setMatchId(null)
+    setStartedAt(null)
     setMult(1)
     setSaveError(null)
   }
@@ -126,6 +206,8 @@ export default function TirerPage() {
     if (err) {
       setSaveError(err)
     } else {
+      localStorage.removeItem(IN_PROGRESS_KEY)
+      stopLive()
       router.push('/')
     }
   }

@@ -877,6 +877,111 @@ a {
   color: var(--craie-dim);
 }
 
+/* ---------- Direct (partie en cours) ---------- */
+
+.live-dot {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--rouge);
+  animation: live-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes live-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(216, 64, 47, 0.55);
+  }
+  55% {
+    box-shadow: 0 0 0 6px rgba(216, 64, 47, 0);
+  }
+}
+
+.live-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--rouge);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--rouge) 12%, var(--surface));
+}
+
+.live-banner__text {
+  flex: 1;
+  min-width: 0;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.live-banner__cta {
+  font-family: var(--font-display-stack);
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--rouge);
+}
+
+.live-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.live-card__head {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.live-card__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-display-stack);
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--craie-dim);
+}
+
+.live-card__players {
+  list-style: none;
+}
+
+.live-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+}
+
+.live-row + .live-row {
+  border-top: 1px solid var(--line);
+}
+
+.live-row--active {
+  background: color-mix(in srgb, var(--laiton) 9%, transparent);
+}
+
+.live-row__who {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.live-row__turn {
+  font-style: normal;
+  color: var(--laiton);
+  font-weight: 500;
+}
+
 /* ---------- Flash 180 ---------- */
 
 .flash180 {

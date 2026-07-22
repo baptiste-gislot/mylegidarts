@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
 import { SetupNotice } from '@/components/SetupNotice'
+import { useLiveMatches } from '@/lib/liveMatch'
 import { bestVolley, count180s } from '@/lib/scoring'
 import { useLeague } from '@/lib/useLeague'
 
@@ -23,6 +24,7 @@ const monthFormat = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'num
 
 export default function ClassementPage() {
   const { players, sessions, loading, error, configured } = useLeague()
+  const liveMatches = useLiveMatches()
   const [period, setPeriod] = useState<Period>('mois')
 
   if (!configured) return <SetupNotice />
@@ -66,6 +68,19 @@ export default function ClassementPage() {
 
   return (
     <div className="stack">
+      {liveMatches.length > 0 && (
+        <Link href="/live" className="live-banner">
+          <span className="live-dot" aria-hidden="true" />
+          <span className="live-banner__text">
+            Partie en cours :{' '}
+            {liveMatches
+              .map((m) => m.players.map((p) => p.name).join(' · '))
+              .join(' — ')}
+          </span>
+          <span className="live-banner__cta">Suivre</span>
+        </Link>
+      )}
+
       <div className="chips" role="radiogroup" aria-label="Période du classement">
         <button
           type="button"

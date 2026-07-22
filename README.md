@@ -8,6 +8,7 @@ PWA de leaderboard de fléchettes pour MyLegiTech. Le défi : **4 volées de 3 f
 - **Classement** : record par joueur, moyenne, meilleure volée, badge bullseye pour le leader.
 - **Historique** : détail des sessions volée par volée, suppression possible.
 - **Joueurs** : ajout/suppression (les sessions du joueur supprimé partent avec lui).
+- **Direct** : les parties en cours sont visibles en live par les autres appareils (`/live`, bannière sur le classement) via Supabase Realtime Presence — rien n’est écrit en base tant que la session n’est pas enregistrée. La session en cours survit à un changement d’onglet ou un rechargement (reprise automatique pendant 6 h).
 - Données partagées en temps réel entre appareils via Supabase (app ouverte, sans authentification).
 - PWA installable (manifest + service worker Serwist), UI mobile-first.
 
