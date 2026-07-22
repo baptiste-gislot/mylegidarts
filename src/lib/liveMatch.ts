@@ -9,10 +9,14 @@ import { supabase } from './supabaseClient'
 export interface LiveMatch {
   id: string
   startedAt: string
+  /** Horodatage de la diffusion : sert à ne garder que l'état le plus récent. */
+  updatedAt: string
   finished: boolean
   players: { id: string; name: string }[]
   darts: Dart[][]
 }
+
+export type LiveMatchInput = Omit<LiveMatch, 'updatedAt'>
 
 const CHANNEL = 'live-matches'
 
@@ -26,8 +30,9 @@ export function useLiveMatchPublisher() {
   const readyRef = useRef(false)
   const pendingRef = useRef<LiveMatch | null>(null)
 
-  const publish = useCallback((match: LiveMatch) => {
+  const publish = useCallback((input: LiveMatchInput) => {
     if (!supabase) return
+    const match: LiveMatch = { ...input, updatedAt: new Date().toISOString() }
     if (channelRef.current === null) {
       const channel = supabase.channel(CHANNEL, {
         config: { presence: { key: match.id } },
@@ -69,18 +74,25 @@ export function useLiveMatches(): LiveMatch[] {
     spectator
       .on('presence', { event: 'sync' }, () => {
         const state = spectator.presenceState<LiveMatch>()
-        const list = Object.values(state)
-          .flat()
-          .filter((m) => typeof m.id === 'string' && Array.isArray(m.darts))
-          .map((m) => ({
-            id: m.id,
-            startedAt: m.startedAt,
-            finished: m.finished,
-            players: m.players,
-            darts: m.darts,
-          }))
-          .sort((a, b) => a.startedAt.localeCompare(b.startedAt))
-        setMatches(list)
+        // Presence peut laisser plusieurs états empilés pour une même partie
+        // (un par track/reconnexion) : on ne garde que le plus récent par id.
+        const freshest = new Map<string, LiveMatch>()
+        for (const meta of Object.values(state).flat()) {
+          if (typeof meta.id !== 'string' || !Array.isArray(meta.darts)) continue
+          const match: LiveMatch = {
+            id: meta.id,
+            startedAt: meta.startedAt,
+            updatedAt: meta.updatedAt ?? meta.startedAt,
+            finished: meta.finished,
+            players: meta.players,
+            darts: meta.darts,
+          }
+          const known = freshest.get(match.id)
+          if (!known || match.updatedAt >= known.updatedAt) freshest.set(match.id, match)
+        }
+        setMatches(
+          [...freshest.values()].sort((a, b) => a.startedAt.localeCompare(b.startedAt)),
+        )
       })
       .subscribe()
 
