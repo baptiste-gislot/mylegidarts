@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { SetupNotice } from '@/components/SetupNotice'
 import {
@@ -14,6 +14,8 @@ import {
   type Dart,
   type Mult,
 } from '@/lib/scoring'
+import { useToast } from '@/components/Toaster'
+import { fireConfetti, vibrate } from '@/lib/effects'
 import { useLiveMatchPublisher } from '@/lib/liveMatch'
 import { useLeague } from '@/lib/useLeague'
 
@@ -45,6 +47,7 @@ function loadStoredMatch(): StoredMatch | null {
 
 export default function TirerPage() {
   const router = useRouter()
+  const toast = useToast()
   const { players, sessions, loading, error, configured, saveSessions } = useLeague()
   const { publish, stop: stopLive } = useLiveMatchPublisher()
 
@@ -60,6 +63,8 @@ export default function TirerPage() {
 
   useEffect(() => {
     if (flash180 === null) return
+    void fireConfetti('perfect')
+    vibrate([60, 60, 60, 60, 120])
     const timer = setTimeout(() => setFlash180(null), 1800)
     return () => clearTimeout(timer)
   }, [flash180])
@@ -118,6 +123,24 @@ export default function TirerPage() {
     return map
   }, [sessions])
 
+  // Célébration de fin de session : confettis si au moins un record tombe.
+  const celebratedRef = useRef(false)
+  useEffect(() => {
+    const thrown = dartsByPlayer.reduce((sum, d) => sum + d.length, 0)
+    const done = started && order.length > 0 && thrown === order.length * DARTS_PER_SESSION
+    if (!done) {
+      celebratedRef.current = false
+      return
+    }
+    if (celebratedRef.current) return
+    celebratedRef.current = true
+    vibrate([40, 60, 40])
+    const hasRecord = order.some(
+      (playerId, i) => sessionTotal(dartsByPlayer[i]) > (bestByPlayer.get(playerId) ?? -1),
+    )
+    if (hasRecord) void fireConfetti('record')
+  }, [started, order, dartsByPlayer, bestByPlayer])
+
   if (!configured) return <SetupNotice />
   if (loading) return <p className="empty">Chargement…</p>
   if (error) return <p className="notice notice--error">Erreur : {error}</p>
@@ -172,6 +195,7 @@ export default function TirerPage() {
       current.map((darts, i) => (i === currentPlayerIndex ? [...darts, dart] : darts)),
     )
     setMult(1)
+    vibrate(12)
   }
 
   function undo() {
@@ -208,6 +232,7 @@ export default function TirerPage() {
     } else {
       localStorage.removeItem(IN_PROGRESS_KEY)
       stopLive()
+      toast('Session enregistrée — le classement est à jour', 'success')
       router.push('/')
     }
   }

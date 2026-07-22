@@ -3,9 +3,11 @@
 import { useState } from 'react'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
 import { SetupNotice } from '@/components/SetupNotice'
+import { useToast } from '@/components/Toaster'
 import { useLeague } from '@/lib/useLeague'
 
 export default function JoueursPage() {
+  const toast = useToast()
   const { players, sessions, loading, error, configured, addPlayer, removePlayer } = useLeague()
   const [name, setName] = useState('')
   const [formError, setFormError] = useState<string | null>(null)
@@ -20,6 +22,7 @@ export default function JoueursPage() {
     if (err) {
       setFormError(err)
     } else {
+      toast(`${name.trim()} rejoint la ligue`, 'success')
       setName('')
       setFormError(null)
     }
@@ -34,6 +37,7 @@ export default function JoueursPage() {
     if (window.confirm(warning)) {
       const err = await removePlayer(playerId)
       if (err) setFormError(err)
+      else toast(`${playerName} quitte la ligue`)
     }
   }
 

@@ -1,6 +1,7 @@
 'use client'
 
 import { SetupNotice } from '@/components/SetupNotice'
+import { useToast } from '@/components/Toaster'
 import { dartLabel, sessionTotal, volleys } from '@/lib/scoring'
 import { useLeague } from '@/lib/useLeague'
 
@@ -13,6 +14,7 @@ const dateFormat = new Intl.DateTimeFormat('fr-FR', {
 })
 
 export default function HistoriquePage() {
+  const toast = useToast()
   const { players, sessions, loading, error, configured, removeSession } = useLeague()
 
   if (!configured) return <SetupNotice />
@@ -59,7 +61,9 @@ export default function HistoriquePage() {
               className="button-ghost"
               onClick={() => {
                 if (window.confirm('Supprimer cette session ? Le classement sera recalculé.')) {
-                  void removeSession(session.id)
+                  void removeSession(session.id).then((err) => {
+                    if (!err) toast('Session supprimée, classement recalculé')
+                  })
                 }
               }}
             >

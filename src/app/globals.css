@@ -877,6 +877,54 @@ a {
   color: var(--craie-dim);
 }
 
+/* ---------- Toasts ---------- */
+
+.toasts {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: calc(76px + env(safe-area-inset-bottom));
+  z-index: 70;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.toast {
+  max-width: 480px;
+  padding: 11px 18px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--raised) 92%, black);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--craie-dim);
+  color: var(--craie);
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  animation: toast-in 220ms ease-out;
+}
+
+.toast--success {
+  border-left-color: var(--vert);
+}
+
+.toast--error {
+  border-left-color: var(--rouge);
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 /* ---------- Direct (partie en cours) ---------- */
 
 .live-dot {

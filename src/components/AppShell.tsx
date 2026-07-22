@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { ToastProvider } from './Toaster'
 
 const TABS = [
   { href: '/', label: 'Classement' },
@@ -14,7 +15,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
 
   return (
-    <div className="app">
+    <ToastProvider>
+      <div className="app">
       <header className="masthead">
         <p className="masthead__eyebrow">MyLegiTech</p>
         <h1 className="masthead__title">
@@ -40,6 +42,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           )
         })}
       </nav>
-    </div>
+      </div>
+    </ToastProvider>
   )
 }
