@@ -6,8 +6,8 @@ import { MonthPodium } from '@/components/MonthPodium'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
 import { SetupNotice } from '@/components/SetupNotice'
 import { useLiveMatches } from '@/lib/liveMatch'
-import { bestVolley, count180s } from '@/lib/scoring'
 import { useLeagueContext } from '@/lib/LeagueProvider'
+import { monthKey, type PlayerMonthStats } from '@/lib/useLeague'
 
 type Period = 'mois' | 'toujours'
 type Ranking = 'record' | 'moyenne'
@@ -24,8 +24,13 @@ interface Line {
 
 const monthFormat = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' })
 
+function monthLabel(key: string): string {
+  const [year, month] = key.split('-').map(Number)
+  return monthFormat.format(new Date(year, month - 1, 1))
+}
+
 export default function ClassementPage() {
-  const { players, sessions, loading, error, configured } = useLeagueContext()
+  const { players, stats, loading, error, configured } = useLeagueContext()
   const liveMatches = useLiveMatches()
   const [period, setPeriod] = useState<Period>('mois')
   const [ranking, setRanking] = useState<Ranking>('record')
@@ -34,25 +39,22 @@ export default function ClassementPage() {
   if (loading) return <p className="empty">Chargement du classement…</p>
   if (error) return <p className="notice notice--error">Erreur : {error}</p>
 
-  const now = new Date()
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-  const inPeriod =
-    period === 'mois'
-      ? sessions.filter((s) => new Date(s.created_at) >= monthStart)
-      : sessions
+  const currentMonth = monthKey(new Date())
+  const inPeriod = period === 'mois' ? stats.filter((s) => s.month === currentMonth) : stats
 
   const lines: Line[] = players
     .map((player) => {
       const own = inPeriod.filter((s) => s.player_id === player.id)
       if (own.length === 0) return null
+      const sessionsCount = own.reduce((sum, s) => sum + s.sessions_count, 0)
       return {
         playerId: player.id,
         name: player.name,
-        best: Math.max(...own.map((s) => s.total)),
-        bestVolley: Math.max(...own.map((s) => bestVolley(s.darts))),
-        sessionsCount: own.length,
-        average: Math.round(own.reduce((sum, s) => sum + s.total, 0) / own.length),
-        count180: own.reduce((sum, s) => sum + count180s(s.darts), 0),
+        best: Math.max(...own.map((s) => s.best_total)),
+        bestVolley: Math.max(...own.map((s) => s.best_volley)),
+        sessionsCount,
+        average: Math.round(own.reduce((sum, s) => sum + s.sum_total, 0) / sessionsCount),
+        count180: own.reduce((sum, s) => sum + s.count_180, 0),
       }
     })
     .filter((line): line is Line => line !== null)
@@ -66,18 +68,19 @@ export default function ClassementPage() {
 
   // Palmarès : le vainqueur (meilleur score) de chaque mois écoulé.
   const hallOfFame = (() => {
-    const byMonth = new Map<string, { label: string; name: string; best: number }>()
-    for (const s of sessions) {
-      const d = new Date(s.created_at)
-      if (d >= monthStart) continue
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-      const name = players.find((p) => p.id === s.player_id)?.name ?? '?'
-      const current = byMonth.get(key)
-      if (!current || s.total > current.best) {
-        byMonth.set(key, { label: monthFormat.format(d), name, best: s.total })
-      }
+    const byMonth = new Map<string, PlayerMonthStats>()
+    for (const s of stats) {
+      if (s.month >= currentMonth) continue
+      const current = byMonth.get(s.month)
+      if (!current || s.best_total > current.best_total) byMonth.set(s.month, s)
     }
-    return [...byMonth.entries()].sort((a, b) => b[0].localeCompare(a[0])).map(([, v]) => v)
+    return [...byMonth.entries()]
+      .sort((a, b) => b[0].localeCompare(a[0]))
+      .map(([key, s]) => ({
+        label: monthLabel(key),
+        name: players.find((p) => p.id === s.player_id)?.name ?? '?',
+        best: s.best_total,
+      }))
   })()
 
   if (players.length === 0) {
@@ -112,7 +115,7 @@ export default function ClassementPage() {
           className={period === 'mois' ? 'chip chip--on' : 'chip'}
           onClick={() => setPeriod('mois')}
         >
-          {monthFormat.format(now)}
+          {monthLabel(currentMonth)}
         </button>
         <button
           type="button"
@@ -227,7 +230,7 @@ export default function ClassementPage() {
         </section>
       )}
 
-      <MonthPodium players={players} sessions={sessions} />
+      <MonthPodium players={players} stats={stats} />
     </div>
   )
 }

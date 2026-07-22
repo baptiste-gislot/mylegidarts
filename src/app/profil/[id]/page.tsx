@@ -14,6 +14,7 @@ import {
   volleys,
 } from '@/lib/scoring'
 import { useLeagueContext } from '@/lib/LeagueProvider'
+import { usePlayerSessions } from '@/lib/useSessions'
 
 const dateFormat = new Intl.DateTimeFormat('fr-FR', {
   weekday: 'short',
@@ -25,11 +26,14 @@ const dateFormat = new Intl.DateTimeFormat('fr-FR', {
 
 export default function ProfilPage() {
   const { id } = useParams<{ id: string }>()
-  const { players, sessions, loading, error, configured } = useLeagueContext()
+  const { players, loading, error, configured } = useLeagueContext()
+  const { sessions: own, error: sessionsError } = usePlayerSessions(id)
 
   if (!configured) return <SetupNotice />
   if (loading) return <p className="empty">Chargement du profil…</p>
-  if (error) return <p className="notice notice--error">Erreur : {error}</p>
+  if (error || sessionsError) {
+    return <p className="notice notice--error">Erreur : {error ?? sessionsError}</p>
+  }
 
   const player = players.find((p) => p.id === id)
   const displayedName = player
@@ -48,9 +52,7 @@ export default function ProfilPage() {
     )
   }
 
-  const own = sessions
-    .filter((s) => s.player_id === player.id)
-    .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+  if (own === null) return <p className="empty">Chargement du profil…</p>
 
   if (own.length === 0) {
     return (

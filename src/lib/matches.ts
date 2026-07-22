@@ -1,15 +1,20 @@
-import type { SessionRow } from './useLeague'
+interface MatchLike {
+  id: string
+  match_id: string | null
+  total: number
+  created_at: string
+}
 
-export interface MatchGroup {
+export interface MatchGroup<T extends MatchLike> {
   id: string
   date: string
   /** Sessions de la partie, triées du meilleur au moins bon total. */
-  sessions: SessionRow[]
+  sessions: T[]
 }
 
 /** Regroupe les sessions par partie (match_id partagé ; les anciennes sessions restent seules). */
-export function groupByMatch(sessions: SessionRow[]): MatchGroup[] {
-  const groups = new Map<string, SessionRow[]>()
+export function groupByMatch<T extends MatchLike>(sessions: T[]): MatchGroup<T>[] {
+  const groups = new Map<string, T[]>()
   for (const s of sessions) {
     const key = s.match_id ?? s.id
     groups.set(key, [...(groups.get(key) ?? []), s])

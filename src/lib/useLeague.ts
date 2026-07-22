@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Dart } from './scoring'
 import { supabase } from './supabaseClient'
 
-const SNAPSHOT_KEY = 'mylegidarts-cache-v1'
+const SNAPSHOT_KEY = 'mylegidarts-cache-v2'
 
 export interface PlayerRow {
   id: string
@@ -13,6 +13,7 @@ export interface PlayerRow {
   created_at: string
 }
 
+/** Ligne complète de la table sessions (darts inclus) — chargée à la demande. */
 export interface SessionRow {
   id: string
   player_id: string
@@ -22,9 +23,36 @@ export interface SessionRow {
   created_at: string
 }
 
+/** Ligne de la vue session_stats : la session sans le détail des fléchettes. */
+export interface SessionStatRow {
+  id: string
+  player_id: string
+  match_id: string | null
+  total: number
+  created_at: string
+  best_volley: number
+  count_180: number
+}
+
+/** Ligne de la vue player_month_stats (month au format 'YYYY-MM', Europe/Paris). */
+export interface PlayerMonthStats {
+  player_id: string
+  month: string
+  sessions_count: number
+  best_total: number
+  sum_total: number
+  best_volley: number
+  count_180: number
+}
+
+/** Clé 'YYYY-MM' d'une date, pour comparer avec player_month_stats.month. */
+export function monthKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+}
+
 export interface LeagueData {
   players: PlayerRow[]
-  sessions: SessionRow[]
+  stats: PlayerMonthStats[]
   loading: boolean
   error: string | null
   configured: boolean
@@ -35,40 +63,42 @@ export interface LeagueData {
     entries: { playerId: string; darts: Dart[]; total: number }[],
     matchId?: string | null,
   ) => Promise<string | null>
-  removeSession: (sessionId: string) => Promise<string | null>
   removeMatch: (sessionIds: string[]) => Promise<string | null>
 }
 
+/**
+ * Données partagées de la ligue : joueurs + agrégats par joueur/mois.
+ * Le détail des sessions (fléchettes) n'est jamais chargé ici — les pages
+ * qui en ont besoin (historique, profil, partie) le chargent à la demande
+ * via les hooks de useSessions.ts.
+ */
 export function useLeague(): LeagueData {
   const [players, setPlayers] = useState<PlayerRow[]>([])
-  const [sessions, setSessions] = useState<SessionRow[]>([])
+  const [stats, setStats] = useState<PlayerMonthStats[]>([])
   const [loading, setLoading] = useState(supabase !== null)
   const [error, setError] = useState<string | null>(null)
   const hasDataRef = useRef(false)
 
   const refetch = useCallback(async () => {
     if (!supabase) return
-    const [playersRes, sessionsRes] = await Promise.all([
+    const [playersRes, statsRes] = await Promise.all([
       supabase.from('players').select('*').order('name'),
-      supabase.from('sessions').select('*').order('created_at', { ascending: false }),
+      supabase.from('player_month_stats').select('*'),
     ])
-    if (playersRes.error || sessionsRes.error) {
+    if (playersRes.error || statsRes.error) {
       // Avec des données (fraîches ou en cache) déjà affichées, un échec de
       // rafraîchissement reste silencieux : mieux vaut du légèrement périmé
       // qu'un écran d'erreur.
-      if (!hasDataRef.current) setError((playersRes.error ?? sessionsRes.error)!.message)
+      if (!hasDataRef.current) setError((playersRes.error ?? statsRes.error)!.message)
     } else {
       hasDataRef.current = true
       const nextPlayers = playersRes.data as PlayerRow[]
-      const nextSessions = sessionsRes.data as SessionRow[]
+      const nextStats = statsRes.data as PlayerMonthStats[]
       setPlayers(nextPlayers)
-      setSessions(nextSessions)
+      setStats(nextStats)
       setError(null)
       try {
-        localStorage.setItem(
-          SNAPSHOT_KEY,
-          JSON.stringify({ players: nextPlayers, sessions: nextSessions }),
-        )
+        localStorage.setItem(SNAPSHOT_KEY, JSON.stringify({ players: nextPlayers, stats: nextStats }))
       } catch {
         // stockage plein : tant pis pour le cache, l'app fonctionne sans
       }
@@ -78,16 +108,15 @@ export function useLeague(): LeagueData {
 
   useEffect(() => {
     if (!supabase) return
-    // Affichage immédiat depuis le dernier instantané local (stale-while-revalidate) :
-    // les données fraîches arrivent juste derrière via refetch + realtime.
+    // Affichage immédiat depuis le dernier instantané local (stale-while-revalidate).
     try {
       const raw = localStorage.getItem(SNAPSHOT_KEY)
       if (raw) {
-        const cached = JSON.parse(raw) as { players: PlayerRow[]; sessions: SessionRow[] }
-        if (Array.isArray(cached.players) && Array.isArray(cached.sessions)) {
+        const cached = JSON.parse(raw) as { players: PlayerRow[]; stats: PlayerMonthStats[] }
+        if (Array.isArray(cached.players) && Array.isArray(cached.stats)) {
           hasDataRef.current = true
           setPlayers(cached.players)
-          setSessions(cached.sessions)
+          setStats(cached.stats)
           setLoading(false)
         }
       }
@@ -153,14 +182,6 @@ export function useLeague(): LeagueData {
     return null
   }
 
-  async function removeSession(sessionId: string): Promise<string | null> {
-    if (!supabase) return 'Supabase n’est pas configuré.'
-    const { error: err } = await supabase.from('sessions').delete().eq('id', sessionId)
-    if (err) return err.message
-    await refetch()
-    return null
-  }
-
   async function removeMatch(sessionIds: string[]): Promise<string | null> {
     if (!supabase) return 'Supabase n’est pas configuré.'
     const { error: err } = await supabase.from('sessions').delete().in('id', sessionIds)
@@ -171,7 +192,7 @@ export function useLeague(): LeagueData {
 
   return {
     players,
-    sessions,
+    stats,
     loading,
     error,
     configured: supabase !== null,
@@ -179,7 +200,6 @@ export function useLeague(): LeagueData {
     removePlayer,
     setNickname,
     saveSessions,
-    removeSession,
     removeMatch,
   }
 }

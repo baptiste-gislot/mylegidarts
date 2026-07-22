@@ -1,6 +1,6 @@
 # MyLegiDarts
 
-PWA de leaderboard de fléchettes pour MyLegiTech. Le défi : **4 volées de 3 fléchettes**, saisies fléchette par fléchette — le meilleur score total fait le classement.
+PWA de leaderboard de fléchettes. Le défi : **4 volées de 3 fléchettes**, saisies fléchette par fléchette — le meilleur score total fait le classement.
 
 ## Fonctionnalités
 

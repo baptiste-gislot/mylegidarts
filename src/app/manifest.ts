@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: 'MyLegiDarts',
     short_name: 'MyLegiDarts',
     description:
-      'Leaderboard de fléchettes MyLegiTech : 4 volées de 3 fléchettes, le meilleur score fait la loi.',
+      'Leaderboard de fléchettes : 4 volées de 3 fléchettes, le meilleur score fait la loi.',
     start_url: '/',
     display: 'standalone',
     orientation: 'portrait',

@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     template: '%s · MyLegiDarts',
   },
   description:
-    'Leaderboard de fléchettes MyLegiTech : 4 volées de 3 fléchettes, le meilleur score fait la loi.',
+    'Leaderboard de fléchettes : 4 volées de 3 fléchettes, le meilleur score fait la loi.',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',

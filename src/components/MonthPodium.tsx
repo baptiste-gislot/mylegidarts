@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { fireConfetti } from '@/lib/effects'
 import { say } from '@/lib/sound'
-import type { PlayerRow, SessionRow } from '@/lib/useLeague'
+import { monthKey, type PlayerMonthStats, type PlayerRow } from '@/lib/useLeague'
 
 const SEEN_KEY = 'mylegidarts-podium-vu'
 
@@ -18,42 +18,37 @@ interface Step {
  * Au premier lancement de l'app un nouveau mois, célèbre le podium
  * du mois écoulé (une fois par appareil).
  */
-export function MonthPodium({ players, sessions }: { players: PlayerRow[]; sessions: SessionRow[] }) {
+export function MonthPodium({ players, stats }: { players: PlayerRow[]; stats: PlayerMonthStats[] }) {
   const [visible, setVisible] = useState(false)
 
   const now = new Date()
-  const start = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-  const end = new Date(now.getFullYear(), now.getMonth(), 1)
-  const monthKey = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`
+  const previousMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+  const previousMonth = monthKey(previousMonthDate)
 
-  const podium: Step[] = useMemo(() => {
-    const bestByPlayer = new Map<string, number>()
-    for (const s of sessions) {
-      const d = new Date(s.created_at)
-      if (d < start || d >= end) continue
-      bestByPlayer.set(s.player_id, Math.max(bestByPlayer.get(s.player_id) ?? 0, s.total))
-    }
-    return [...bestByPlayer.entries()]
-      .map(([playerId, best]) => ({
-        name: players.find((p) => p.id === playerId)?.name ?? '?',
-        best,
-      }))
-      .sort((a, b) => b.best - a.best)
-      .slice(0, 3)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [players, sessions, monthKey])
+  const podium: Step[] = useMemo(
+    () =>
+      stats
+        .filter((s) => s.month === previousMonth)
+        .sort((a, b) => b.best_total - a.best_total)
+        .slice(0, 3)
+        .map((s) => ({
+          name: players.find((p) => p.id === s.player_id)?.name ?? '?',
+          best: s.best_total,
+        })),
+    [players, stats, previousMonth],
+  )
 
   useEffect(() => {
     if (podium.length === 0) return
-    if (localStorage.getItem(SEEN_KEY) === monthKey) return
+    if (localStorage.getItem(SEEN_KEY) === previousMonth) return
     setVisible(true)
     void fireConfetti('record')
-    say(`Le podium de ${monthFormat.format(start)} : ${podium[0].name}, champion du mois !`)
+    say(`Le podium de ${monthFormat.format(previousMonthDate)} : ${podium[0].name}, champion du mois !`)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [podium.length, monthKey])
+  }, [podium.length, previousMonth])
 
   function close() {
-    localStorage.setItem(SEEN_KEY, monthKey)
+    localStorage.setItem(SEEN_KEY, previousMonth)
     setVisible(false)
   }
 
@@ -67,7 +62,7 @@ export function MonthPodium({ players, sessions }: { players: PlayerRow[]; sessi
   return (
     <div className="podium" role="dialog" aria-modal="true" aria-label="Podium du mois écoulé">
       <p className="podium__eyebrow">Le mois est terminé</p>
-      <h2 className="podium__title">Podium de {monthFormat.format(start)}</h2>
+      <h2 className="podium__title">Podium de {monthFormat.format(previousMonthDate)}</h2>
       <div className="podium__steps">
         {display.map((step) => {
           const rank = rankOf(step)

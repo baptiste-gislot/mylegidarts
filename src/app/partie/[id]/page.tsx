@@ -6,6 +6,7 @@ import { PlayerAvatar } from '@/components/PlayerAvatar'
 import { SetupNotice } from '@/components/SetupNotice'
 import { dartLabel, sessionTotal, volleys } from '@/lib/scoring'
 import { useLeagueContext } from '@/lib/LeagueProvider'
+import { useMatchSessions } from '@/lib/useSessions'
 
 const dateFormat = new Intl.DateTimeFormat('fr-FR', {
   weekday: 'long',
@@ -17,15 +18,14 @@ const dateFormat = new Intl.DateTimeFormat('fr-FR', {
 
 export default function PartiePage() {
   const { id } = useParams<{ id: string }>()
-  const { players, sessions, loading, error, configured } = useLeagueContext()
+  const { players, loading, error, configured } = useLeagueContext()
+  const { sessions: matchSessions, error: sessionsError } = useMatchSessions(id)
 
   if (!configured) return <SetupNotice />
-  if (loading) return <p className="empty">Chargement de la partie…</p>
-  if (error) return <p className="notice notice--error">Erreur : {error}</p>
-
-  const matchSessions = sessions
-    .filter((s) => (s.match_id ?? s.id) === id)
-    .sort((a, b) => b.total - a.total)
+  if (loading || matchSessions === null) return <p className="empty">Chargement de la partie…</p>
+  if (error || sessionsError) {
+    return <p className="notice notice--error">Erreur : {error ?? sessionsError}</p>
+  }
 
   if (matchSessions.length === 0) {
     return (

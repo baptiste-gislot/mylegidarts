@@ -8,8 +8,11 @@ import { useLeagueContext } from '@/lib/LeagueProvider'
 
 export default function JoueursPage() {
   const toast = useToast()
-  const { players, sessions, loading, error, configured, addPlayer, removePlayer, setNickname } =
+  const { players, stats, loading, error, configured, addPlayer, removePlayer, setNickname } =
     useLeagueContext()
+
+  const sessionCount = (playerId: string) =>
+    stats.filter((s) => s.player_id === playerId).reduce((sum, s) => sum + s.sessions_count, 0)
   const [name, setName] = useState('')
   const [formError, setFormError] = useState<string | null>(null)
 
@@ -41,7 +44,7 @@ export default function JoueursPage() {
   }
 
   async function remove(playerId: string, playerName: string) {
-    const count = sessions.filter((s) => s.player_id === playerId).length
+    const count = sessionCount(playerId)
     const warning =
       count > 0
         ? `Supprimer ${playerName} ? Ses ${count} session${count > 1 ? 's seront supprimées' : ' sera supprimée'} et le classement recalculé.`
@@ -86,7 +89,7 @@ export default function JoueursPage() {
       ) : (
         <ul className="board">
           {players.map((player) => {
-            const count = sessions.filter((s) => s.player_id === player.id).length
+            const count = sessionCount(player.id)
             return (
               <li key={player.id} className="board__row">
                 <PlayerAvatar name={player.name} />

@@ -1013,6 +1013,11 @@ a {
   margin-top: 8px;
 }
 
+.history__more {
+  align-self: center;
+  padding: 10px 22px;
+}
+
 /* ---------- Détail d'une partie ---------- */
 
 .match-detail {

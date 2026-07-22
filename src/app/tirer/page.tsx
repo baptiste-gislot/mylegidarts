@@ -18,7 +18,7 @@ import { useToast } from '@/components/Toaster'
 import { fireConfetti, vibrate } from '@/lib/effects'
 import { useLiveMatchPublisher } from '@/lib/liveMatch'
 import { fanfare, say, thock } from '@/lib/sound'
-import { trashTalk } from '@/lib/trashTalk'
+import { praise, trashTalk } from '@/lib/trashTalk'
 import { useLeagueContext } from '@/lib/LeagueProvider'
 import type { PlayerRow } from '@/lib/useLeague'
 
@@ -56,7 +56,7 @@ function loadStoredMatch(): StoredMatch | null {
 export default function TirerPage() {
   const router = useRouter()
   const toast = useToast()
-  const { players, sessions, loading, error, configured, saveSessions } = useLeagueContext()
+  const { players, stats, loading, error, configured, saveSessions } = useLeagueContext()
   const { publish, stop: stopLive } = useLiveMatchPublisher()
 
   const [order, setOrder] = useState<string[]>([])
@@ -127,11 +127,11 @@ export default function TirerPage() {
 
   const bestByPlayer = useMemo(() => {
     const map = new Map<string, number>()
-    for (const s of sessions) {
-      map.set(s.player_id, Math.max(map.get(s.player_id) ?? 0, s.total))
+    for (const s of stats) {
+      map.set(s.player_id, Math.max(map.get(s.player_id) ?? 0, s.best_total))
     }
     return map
-  }, [sessions])
+  }, [stats])
 
   // Verrou d'enregistrement : empêche d'insérer deux fois la même partie.
   const savedRef = useRef(false)
@@ -213,15 +213,15 @@ export default function TirerPage() {
       if (volleyTotal === PERFECT_VOLLEY && currentPlayer) {
         setFlash180(currentPlayer.name)
       } else {
-        // Trash-talk occasionnel + annonce du joueur suivant.
-        const pique = trashTalk(volleyTotal)
-        if (pique) toast(pique)
+        // Compliment ou pique selon la volée, puis annonce du joueur suivant.
+        const commentaire = praise(volleyTotal) ?? trashTalk(volleyTotal)
+        if (commentaire) toast(commentaire)
         const sessionDone = thrownCount + 1 === totalDarts
         const nextIndex = ((globalVolley + 1) % Math.max(1, order.length))
         const nextPlayer = players.find((p) => p.id === order[nextIndex])
         const relais =
           !sessionDone && order.length > 1 ? ` À toi, ${stageName(nextPlayer)} !` : ''
-        if (pique || relais) say(`${pique ?? ''}${relais}`)
+        if (commentaire || relais) say(`${commentaire ?? ''}${relais}`)
       }
     }
 
