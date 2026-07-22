@@ -1412,6 +1412,148 @@ a {
   }
 }
 
+/* ---------- Bandeau d'installation (mobile) ---------- */
+
+.install-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--laiton);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--laiton) 10%, var(--surface));
+}
+
+.install-banner__icon {
+  font-size: 20px;
+}
+
+.install-banner__text {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.install-banner__cta {
+  flex: none;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--laiton);
+  color: var(--ink);
+  font-family: var(--font-display-stack);
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.install-banner__close {
+  flex: none;
+  padding: 6px 8px;
+  color: var(--craie-dim);
+  font-size: 14px;
+}
+
+/* ---------- Écrans larges (PC) ---------- */
+
+@media (min-width: 900px) {
+  .app {
+    max-width: 1060px;
+    padding: 0 40px 48px;
+  }
+
+  /* La navigation passe en haut, sous le titre. */
+  .masthead {
+    order: 0;
+  }
+
+  .tabbar {
+    order: 1;
+    position: static;
+    justify-content: flex-start;
+    gap: 6px;
+    padding: 10px 0;
+    background: none;
+    border-top: none;
+    border-bottom: 1px solid var(--line);
+    backdrop-filter: none;
+    margin-bottom: 26px;
+  }
+
+  .tabbar__tab {
+    flex: none;
+    max-width: none;
+    padding: 10px 20px 8px;
+  }
+
+  .content {
+    order: 2;
+    width: 100%;
+    max-width: 760px;
+    margin: 0 auto;
+  }
+
+  /* Le scorer profite de toute la largeur : statut à gauche, clavier à droite. */
+  .content:has(.scorer) {
+    max-width: none;
+  }
+
+  .scorer {
+    display: grid;
+    grid-template-columns: minmax(320px, 5fr) 6fr;
+    grid-template-areas:
+      'status keypad'
+      'slots keypad'
+      'totals keypad'
+      '. keypad';
+    gap: 14px 28px;
+    align-items: start;
+  }
+
+  .scorer__status {
+    grid-area: status;
+  }
+
+  .scorer__slots {
+    grid-area: slots;
+  }
+
+  .scorer__totals {
+    grid-area: totals;
+  }
+
+  .keypad {
+    grid-area: keypad;
+  }
+
+  .slot {
+    height: 84px;
+  }
+
+  .key {
+    padding: 16px 0;
+  }
+
+  .tiles {
+    grid-template-columns: repeat(6, 1fr);
+  }
+
+  .toasts {
+    bottom: 28px;
+  }
+
+  .install-banner {
+    display: none;
+  }
+
+  .idle-board img {
+    width: 220px;
+    height: 220px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     transition: none !important;

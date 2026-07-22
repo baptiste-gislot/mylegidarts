@@ -1,8 +1,10 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Dart } from './scoring'
 import { supabase } from './supabaseClient'
+
+const SNAPSHOT_KEY = 'mylegidarts-cache-v1'
 
 export interface PlayerRow {
   id: string
@@ -42,6 +44,7 @@ export function useLeague(): LeagueData {
   const [sessions, setSessions] = useState<SessionRow[]>([])
   const [loading, setLoading] = useState(supabase !== null)
   const [error, setError] = useState<string | null>(null)
+  const hasDataRef = useRef(false)
 
   const refetch = useCallback(async () => {
     if (!supabase) return
@@ -50,17 +53,47 @@ export function useLeague(): LeagueData {
       supabase.from('sessions').select('*').order('created_at', { ascending: false }),
     ])
     if (playersRes.error || sessionsRes.error) {
-      setError((playersRes.error ?? sessionsRes.error)!.message)
+      // Avec des données (fraîches ou en cache) déjà affichées, un échec de
+      // rafraîchissement reste silencieux : mieux vaut du légèrement périmé
+      // qu'un écran d'erreur.
+      if (!hasDataRef.current) setError((playersRes.error ?? sessionsRes.error)!.message)
     } else {
-      setPlayers(playersRes.data as PlayerRow[])
-      setSessions(sessionsRes.data as SessionRow[])
+      hasDataRef.current = true
+      const nextPlayers = playersRes.data as PlayerRow[]
+      const nextSessions = sessionsRes.data as SessionRow[]
+      setPlayers(nextPlayers)
+      setSessions(nextSessions)
       setError(null)
+      try {
+        localStorage.setItem(
+          SNAPSHOT_KEY,
+          JSON.stringify({ players: nextPlayers, sessions: nextSessions }),
+        )
+      } catch {
+        // stockage plein : tant pis pour le cache, l'app fonctionne sans
+      }
     }
     setLoading(false)
   }, [])
 
   useEffect(() => {
     if (!supabase) return
+    // Affichage immédiat depuis le dernier instantané local (stale-while-revalidate) :
+    // les données fraîches arrivent juste derrière via refetch + realtime.
+    try {
+      const raw = localStorage.getItem(SNAPSHOT_KEY)
+      if (raw) {
+        const cached = JSON.parse(raw) as { players: PlayerRow[]; sessions: SessionRow[] }
+        if (Array.isArray(cached.players) && Array.isArray(cached.sessions)) {
+          hasDataRef.current = true
+          setPlayers(cached.players)
+          setSessions(cached.sessions)
+          setLoading(false)
+        }
+      }
+    } catch {
+      // instantané corrompu : on attend simplement le réseau
+    }
     void refetch()
     const channel = supabase
       .channel('league-changes')

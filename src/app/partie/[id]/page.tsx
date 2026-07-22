@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
 import { SetupNotice } from '@/components/SetupNotice'
 import { dartLabel, sessionTotal, volleys } from '@/lib/scoring'
-import { useLeague } from '@/lib/useLeague'
+import { useLeagueContext } from '@/lib/LeagueProvider'
 
 const dateFormat = new Intl.DateTimeFormat('fr-FR', {
   weekday: 'long',
@@ -17,7 +17,7 @@ const dateFormat = new Intl.DateTimeFormat('fr-FR', {
 
 export default function PartiePage() {
   const { id } = useParams<{ id: string }>()
-  const { players, sessions, loading, error, configured } = useLeague()
+  const { players, sessions, loading, error, configured } = useLeagueContext()
 
   if (!configured) return <SetupNotice />
   if (loading) return <p className="empty">Chargement de la partie…</p>

@@ -7,7 +7,7 @@ import { PlayerAvatar } from '@/components/PlayerAvatar'
 import { SetupNotice } from '@/components/SetupNotice'
 import { useLiveMatches } from '@/lib/liveMatch'
 import { bestVolley, count180s } from '@/lib/scoring'
-import { useLeague } from '@/lib/useLeague'
+import { useLeagueContext } from '@/lib/LeagueProvider'
 
 type Period = 'mois' | 'toujours'
 type Ranking = 'record' | 'moyenne'
@@ -25,7 +25,7 @@ interface Line {
 const monthFormat = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' })
 
 export default function ClassementPage() {
-  const { players, sessions, loading, error, configured } = useLeague()
+  const { players, sessions, loading, error, configured } = useLeagueContext()
   const liveMatches = useLiveMatches()
   const [period, setPeriod] = useState<Period>('mois')
   const [ranking, setRanking] = useState<Ranking>('record')

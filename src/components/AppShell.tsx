@@ -3,7 +3,9 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { LeagueProvider } from '@/lib/LeagueProvider'
 import { setSoundsEnabled, soundsEnabled } from '@/lib/sound'
+import { InstallBanner } from './InstallBanner'
 import { ToastProvider } from './Toaster'
 
 const TABS = [
@@ -28,7 +30,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <ToastProvider>
-      <div className="app">
+      <LeagueProvider>
+        <div className="app">
         <header className="masthead">
           <p className="masthead__eyebrow">MyLegiTech</p>
           <h1 className="masthead__title">
@@ -45,6 +48,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {sounds ? '🔊' : '🔇'}
           </button>
         </header>
+
+        <InstallBanner />
 
         <main className="content">{children}</main>
 
@@ -65,8 +70,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </Link>
             )
           })}
-        </nav>
-      </div>
+          </nav>
+        </div>
+      </LeagueProvider>
     </ToastProvider>
   )
 }

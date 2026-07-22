@@ -19,7 +19,8 @@ import { fireConfetti, vibrate } from '@/lib/effects'
 import { useLiveMatchPublisher } from '@/lib/liveMatch'
 import { fanfare, say, thock } from '@/lib/sound'
 import { trashTalk } from '@/lib/trashTalk'
-import { useLeague, type PlayerRow } from '@/lib/useLeague'
+import { useLeagueContext } from '@/lib/LeagueProvider'
+import type { PlayerRow } from '@/lib/useLeague'
 
 /** Nom d'annonce : le surnom s'il existe, sinon le prénom. */
 function stageName(player: PlayerRow | undefined): string {
@@ -55,7 +56,7 @@ function loadStoredMatch(): StoredMatch | null {
 export default function TirerPage() {
   const router = useRouter()
   const toast = useToast()
-  const { players, sessions, loading, error, configured, saveSessions } = useLeague()
+  const { players, sessions, loading, error, configured, saveSessions } = useLeagueContext()
   const { publish, stop: stopLive } = useLiveMatchPublisher()
 
   const [order, setOrder] = useState<string[]>([])

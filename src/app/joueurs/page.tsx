@@ -4,12 +4,12 @@ import { useState } from 'react'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
 import { SetupNotice } from '@/components/SetupNotice'
 import { useToast } from '@/components/Toaster'
-import { useLeague } from '@/lib/useLeague'
+import { useLeagueContext } from '@/lib/LeagueProvider'
 
 export default function JoueursPage() {
   const toast = useToast()
   const { players, sessions, loading, error, configured, addPlayer, removePlayer, setNickname } =
-    useLeague()
+    useLeagueContext()
   const [name, setName] = useState('')
   const [formError, setFormError] = useState<string | null>(null)
 

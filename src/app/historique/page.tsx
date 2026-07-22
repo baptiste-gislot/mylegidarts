@@ -5,7 +5,7 @@ import { SetupNotice } from '@/components/SetupNotice'
 import { useToast } from '@/components/Toaster'
 import { groupByMatch } from '@/lib/matches'
 import { count180s } from '@/lib/scoring'
-import { useLeague } from '@/lib/useLeague'
+import { useLeagueContext } from '@/lib/LeagueProvider'
 
 const dateFormat = new Intl.DateTimeFormat('fr-FR', {
   weekday: 'short',
@@ -17,7 +17,7 @@ const dateFormat = new Intl.DateTimeFormat('fr-FR', {
 
 export default function HistoriquePage() {
   const toast = useToast()
-  const { players, sessions, loading, error, configured, removeMatch } = useLeague()
+  const { players, sessions, loading, error, configured, removeMatch } = useLeagueContext()
 
   if (!configured) return <SetupNotice />
   if (loading) return <p className="empty">Chargement de l’historique…</p>
