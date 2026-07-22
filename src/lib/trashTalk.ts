@@ -15,6 +15,15 @@ const LOW_VOLLEY_LINES = [
   'La prochaine tournée est pour toi, ça motive.',
   'Heureusement que c’est l’intention qui compte.',
   'Tu vises le 20 ou tu improvises ?',
+  'La cible a plus peur de ton haleine que de tes fléchettes.',
+  'C’était un échauffement, on va dire.',
+  'Il paraît que la pratique paie. Un jour.',
+  'Les lunettes, c’est remboursé par la mutuelle.',
+  'Ta technique est unique. Garde-la pour toi.',
+  'On lance avec la main, pas avec les yeux fermés.',
+  'Le stagiaire fait mieux. Et il n’a pas de bras.',
+  'Ce n’est plus du sport, c’est de l’art abstrait.',
+  'Rassure-moi, tu tenais la fléchette dans le bon sens ?',
 ]
 
 const ZERO_VOLLEY_LINES = [
@@ -23,6 +32,9 @@ const ZERO_VOLLEY_LINES = [
   'Le sol est touché, la cible non.',
   'Personne n’a rien vu, promis.',
   'On encadre celle-là ?',
+  'Trois lancers, zéro dégât. La cible te remercie.',
+  'Statistiquement, c’est presque impossible. Bravo ?',
+  'Même en visant à côté, tu aurais marqué.',
 ]
 
 const GOOD_VOLLEY_LINES = [
@@ -32,6 +44,12 @@ const GOOD_VOLLEY_LINES = [
   'Le sisal s’en souviendra.',
   'Ça commence à sentir le record.',
   'Joli bras.',
+  'Voilà pourquoi on te laisse gagner au babyfoot.',
+  'La cible n’a rien vu venir.',
+  'Du travail d’orfèvre.',
+  'Chirurgical.',
+  'Quelqu’un s’est entraîné en cachette.',
+  'Le genre de volée qui fait taire l’open space.',
 ]
 
 const BIG_VOLLEY_LINES = [
@@ -41,6 +59,12 @@ const BIG_VOLLEY_LINES = [
   'Quelqu’un a pris une licence en douce.',
   'Le patron de la cible.',
   'Magistral !',
+  'Appelez la fédération, il y a un dossier.',
+  'La cible demande un arbitrage vidéo.',
+  'C’est plus une volée, c’est une démonstration.',
+  'Les autres peuvent rentrer chez eux.',
+  'Standing ovation de la machine à café.',
+  'On va devoir reculer la ligne de tir pour toi.',
 ]
 
 function pick(lines: string[]): string {
