@@ -8,6 +8,21 @@ PWA de leaderboard de fléchettes. Le défi : **4 volées de 3 fléchettes**, sa
 - **Ambiance** : annonceur vocal (180, records, relais entre joueurs, trash-talk sur les volées ratées), bruitages d'impact synthétisés (WebAudio, PC et mobile), confettis, vibrations, toasts. Bouton 🔊 dans l'en-tête pour tout couper.
 - **Historique** : groupé par partie (vainqueur mis en avant), détail volée par volée sur `/partie/[id]`.
 - **Joueurs** : surnoms éditables, utilisés par l'annonceur et le live.
+- **301** : deuxième jeu (premier à zéro exactement, bust si dépassement, sortie sèche) — hors classement, mais compté dans les face-à-face.
+- **Face-à-face** : bilan des duels (parties à 2) sur la page profil, tous modes confondus.
+- **Suppression verrouillée** : joueurs et parties ne se suppriment qu'avec le code d'équipe (fonctions SQL `security definer` ; code par défaut `180`, à changer dans `league_settings`).
+- **QR d'installation** : page `/inviter` imprimable, liée depuis Joueurs.
+- **Garde-fou de schéma** : l'app vérifie la version de la base au démarrage et réclame la migration manquante au lieu d'échouer silencieusement.
+
+## Développement
+
+Tests (Vitest), lint (ESLint) et types sont vérifiés par la CI GitHub Actions à chaque push :
+
+```bash
+npm test         # tests unitaires du cœur métier (scoring, 301, parties)
+npm run lint
+npm run typecheck
+```
 
 - **Tirer** : session multi-joueurs (volées alternées), clavier de saisie Simple/Double/Triple, 25, Bull, Raté, avec annulation.
 - **Classement** : record par joueur, moyenne, meilleure volée, badge bullseye pour le leader.

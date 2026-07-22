@@ -1,48 +1,5 @@
--- Schéma complet MyLegiDarts (version 4).
--- Pour une installation neuve : exécuter ce fichier dans le SQL Editor.
--- Pour une base existante : exécuter les fichiers de migrations/ dans l'ordre.
-
-create table if not exists public.players (
-  id uuid primary key default gen_random_uuid(),
-  name text not null,
-  nickname text,
-  created_at timestamptz not null default now(),
-  constraint players_name_unique unique (name)
-);
-
-create table if not exists public.sessions (
-  id uuid primary key default gen_random_uuid(),
-  player_id uuid not null references public.players (id) on delete cascade,
-  -- Les sessions enregistrées ensemble (même partie) partagent un match_id.
-  match_id uuid,
-  -- 12 fléchettes : [{ "sector": 20, "mult": 3 }, ...] (sector 0 = raté, 25 = bull)
-  darts jsonb not null,
-  total int not null check (total between 0 and 720),
-  mode text not null default 'volees' check (mode in ('volees', '301')),
-  won boolean,
-  created_at timestamptz not null default now()
-);
-
-create index if not exists sessions_player_id_idx on public.sessions (player_id);
-create index if not exists sessions_match_id_idx on public.sessions (match_id);
-create index if not exists sessions_created_at_idx on public.sessions (created_at desc);
-
--- App ouverte sans authentification : lecture/écriture pour le rôle anon,
--- mais PAS de delete direct (voir les fonctions à code plus bas) ni
--- d'update sauf sur players (surnoms).
-alter table public.players enable row level security;
-alter table public.sessions enable row level security;
-
-create policy "players open read" on public.players for select using (true);
-create policy "players open insert" on public.players for insert with check (true);
-create policy "players open update" on public.players for update using (true) with check (true);
-
-create policy "sessions open read" on public.sessions for select using (true);
-create policy "sessions open insert" on public.sessions for insert with check (true);
-
--- Diffusion temps réel des changements vers les clients connectés.
-alter publication supabase_realtime add table public.players;
-alter publication supabase_realtime add table public.sessions;
+-- Migration v4 : verrou de suppression, version de schéma, duels, mode 301.
+-- À exécuter dans le SQL Editor de Supabase (idempotente).
 
 -- ---------- Version de schéma (garde-fou côté app) ----------
 create table if not exists public.schema_version (
@@ -50,11 +7,20 @@ create table if not exists public.schema_version (
   version int not null
 );
 alter table public.schema_version enable row level security;
+drop policy if exists "version open read" on public.schema_version;
 create policy "version open read" on public.schema_version for select using (true);
-insert into public.schema_version (id, version) values (1, 4)
-on conflict (id) do update set version = 4;
+
+-- ---------- Mode de jeu (défi 4 volées / 301) ----------
+alter table public.sessions add column if not exists mode text not null default 'volees'
+  check (mode in ('volees', '301'));
+alter table public.sessions add column if not exists won boolean;
 
 -- ---------- Verrou de suppression ----------
+-- Plus de delete direct pour le rôle anon : la suppression passe par des
+-- fonctions qui exigent le code d'équipe (modifiable ci-dessous).
+drop policy if exists "players open delete" on public.players;
+drop policy if exists "sessions open delete" on public.sessions;
+
 create table if not exists public.league_settings (
   id int primary key default 1 check (id = 1),
   delete_code text not null
@@ -63,6 +29,8 @@ create table if not exists public.league_settings (
 --   update public.league_settings set delete_code = 'votre-code';
 insert into public.league_settings (id, delete_code) values (1, '180')
 on conflict (id) do nothing;
+-- RLS sans aucune politique : la table est invisible pour anon,
+-- seules les fonctions security definer peuvent la lire.
 alter table public.league_settings enable row level security;
 revoke all on public.league_settings from anon, authenticated;
 
@@ -97,7 +65,10 @@ $$;
 grant execute on function public.delete_sessions(uuid[], text) to anon, authenticated;
 grant execute on function public.delete_player(uuid, text) to anon, authenticated;
 
--- ---------- Vues d'agrégats ----------
+-- ---------- Vues mises à jour (mode/won) ----------
+drop view if exists public.player_month_stats;
+drop view if exists public.session_stats;
+
 create view public.session_stats
 with (security_invoker = true) as
 with volleys as (
@@ -136,7 +107,7 @@ where mode = 'volees'
 group by player_id, to_char(created_at at time zone 'Europe/Paris', 'YYYY-MM');
 
 -- ---------- Face-à-face (parties à exactement 2 joueurs) ----------
-create view public.duel_stats
+create or replace view public.duel_stats
 with (security_invoker = true) as
 with two_player_matches as (
   select match_id
@@ -161,3 +132,7 @@ group by a.player_id, b.player_id;
 
 grant select on public.session_stats, public.player_month_stats, public.duel_stats
   to anon, authenticated;
+
+-- ---------- Marquer la version ----------
+insert into public.schema_version (id, version) values (1, 4)
+on conflict (id) do update set version = 4;

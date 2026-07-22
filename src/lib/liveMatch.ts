@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import type { Dart } from './scoring'
 import { supabase } from './supabaseClient'
+import type { GameMode } from './useLeague'
 
 /** État d'une partie en cours, diffusé via Supabase Realtime Presence. */
 export interface LiveMatch {
@@ -12,6 +13,7 @@ export interface LiveMatch {
   /** Horodatage de la diffusion : sert à ne garder que l'état le plus récent. */
   updatedAt: string
   finished: boolean
+  mode?: GameMode
   players: { id: string; name: string; nickname?: string | null }[]
   darts: Dart[][]
 }
@@ -84,6 +86,7 @@ export function useLiveMatches(): LiveMatch[] {
             startedAt: meta.startedAt,
             updatedAt: meta.updatedAt ?? meta.startedAt,
             finished: meta.finished,
+            mode: meta.mode ?? 'volees',
             players: meta.players,
             darts: meta.darts,
           }

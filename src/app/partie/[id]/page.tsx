@@ -40,8 +40,19 @@ export default function PartiePage() {
   }
 
   const nameById = new Map(players.map((p) => [p.id, p.name]))
-  const winner = matchSessions[0]
+  const is301 = matchSessions[0]?.mode === '301'
+  const winner = is301
+    ? (matchSessions.find((s) => s.won) ?? matchSessions[0])
+    : matchSessions[0]
   const isDuel = matchSessions.length > 1
+
+  const title = is301
+    ? matchSessions.some((s) => s.won)
+      ? `301 — Victoire de ${nameById.get(winner.player_id) ?? '?'}`
+      : '301 — Partie abandonnée'
+    : isDuel
+      ? `Victoire de ${nameById.get(winner.player_id) ?? '?'}`
+      : `Session de ${nameById.get(winner.player_id) ?? '?'}`
 
   return (
     <div className="stack">
@@ -50,29 +61,28 @@ export default function PartiePage() {
           ← Historique
         </Link>
         <div>
-          <h2 className="profil-head__name">
-            {isDuel
-              ? `Victoire de ${nameById.get(winner.player_id) ?? '?'}`
-              : `Session de ${nameById.get(winner.player_id) ?? '?'}`}
-          </h2>
+          <h2 className="profil-head__name">{title}</h2>
           <p className="board__record">{dateFormat.format(new Date(winner.created_at))}</p>
         </div>
       </div>
 
       {matchSessions.map((session, index) => {
         const name = nameById.get(session.player_id) ?? 'Joueur supprimé'
+        const winnerRow = is301 ? session.won === true : index === 0 && isDuel
         return (
           <section
             key={session.id}
-            className={index === 0 && isDuel ? 'match-detail match-detail--winner' : 'match-detail'}
+            className={winnerRow ? 'match-detail match-detail--winner' : 'match-detail'}
           >
             <div className="match-detail__head">
-              <PlayerAvatar name={name} leader={index === 0 && isDuel} />
+              <PlayerAvatar name={name} leader={winnerRow} />
               <span className="match-detail__name">
-                {index === 0 && isDuel && '🏆 '}
+                {winnerRow && '🏆 '}
                 {name}
               </span>
-              <span className="match-detail__total">{session.total}</span>
+              <span className="match-detail__total">
+                {is301 && !session.won ? `reste ${301 - session.total}` : session.total}
+              </span>
             </div>
             <div className="match-detail__volleys">
               {volleys(session.darts).map((volley, i) => {

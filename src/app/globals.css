@@ -1417,6 +1417,128 @@ a {
   }
 }
 
+/* ---------- Face-à-face ---------- */
+
+.duels {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.duels__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+}
+
+.duels__who {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.duels__score {
+  font-family: var(--font-display-stack);
+  font-weight: 700;
+  font-size: 20px;
+  white-space: nowrap;
+}
+
+.duels__score--up {
+  color: var(--vert);
+}
+
+/* ---------- Note de mode (301) ---------- */
+
+.mode-hint {
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--craie-dim);
+}
+
+/* ---------- Invitation / QR ---------- */
+
+.invite {
+  align-items: center;
+}
+
+.invite > .button-ghost {
+  align-self: flex-start;
+}
+
+.invite__card {
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 26px 20px;
+  background: var(--surface);
+  border: 1px solid var(--laiton);
+  border-radius: var(--radius);
+  text-align: center;
+}
+
+.invite__title {
+  font-family: var(--font-display-stack);
+  font-weight: 700;
+  font-size: 30px;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.invite__sub {
+  color: var(--craie-dim);
+  font-size: 14px;
+}
+
+.invite__qr {
+  border-radius: 12px;
+  max-width: 100%;
+}
+
+.invite__url {
+  font-size: 13px;
+  color: var(--craie-dim);
+  word-break: break-all;
+}
+
+.invite-link {
+  align-self: center;
+}
+
+@media print {
+  .masthead__sound,
+  .tabbar,
+  .invite > .button-ghost,
+  button {
+    display: none !important;
+  }
+
+  body {
+    background: #fff;
+    color: #000;
+  }
+
+  .invite__card {
+    border-color: #000;
+    background: #fff;
+    color: #000;
+  }
+
+  .invite__sub,
+  .invite__url {
+    color: #333;
+  }
+}
+
 /* ---------- Bandeau d'installation (mobile) ---------- */
 
 .install-banner {

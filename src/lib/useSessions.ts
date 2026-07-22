@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
-import type { SessionRow, SessionStatRow } from './useLeague'
+import type { DuelStatRow, SessionRow, SessionStatRow } from './useLeague'
 
 /** Taille de page de l'historique, en sessions (une partie = 1 à N sessions). */
 export const HISTORY_PAGE_SIZE = 60
@@ -57,7 +57,11 @@ export function useSessionHistory() {
   }
 }
 
-/** Sessions complètes (avec fléchettes) d'un joueur, pour la page profil. */
+/**
+ * Sessions complètes (avec fléchettes) d'un joueur, pour la page profil.
+ * Mode « défi 4 volées » uniquement : les stats du profil ne mélangent
+ * pas les parties de 301.
+ */
 export function usePlayerSessions(playerId: string | undefined) {
   const [sessions, setSessions] = useState<SessionRow[] | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -69,6 +73,7 @@ export function usePlayerSessions(playerId: string | undefined) {
       .from('sessions')
       .select('*')
       .eq('player_id', playerId)
+      .eq('mode', 'volees')
       .order('created_at', { ascending: true })
       .then(({ data, error: err }) => {
         if (cancelled) return
@@ -81,6 +86,29 @@ export function usePlayerSessions(playerId: string | undefined) {
   }, [playerId])
 
   return { sessions, error }
+}
+
+/** Bilan des face-à-face d'un joueur (parties à 2, tous modes confondus). */
+export function useDuels(playerId: string | undefined) {
+  const [duels, setDuels] = useState<DuelStatRow[] | null>(null)
+
+  useEffect(() => {
+    if (!supabase || !playerId) return
+    let cancelled = false
+    void supabase
+      .from('duel_stats')
+      .select('*')
+      .eq('player_id', playerId)
+      .then(({ data, error: err }) => {
+        if (cancelled) return
+        if (!err) setDuels(data as DuelStatRow[])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [playerId])
+
+  return duels
 }
 
 /** Sessions complètes d'une partie (match_id partagé, ou session seule). */

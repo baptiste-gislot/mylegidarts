@@ -10,6 +10,7 @@ import {
   dartLabel,
   sessionTotal,
 } from '@/lib/scoring'
+import { replay301 } from '@/lib/play301'
 import { useLiveMatches, type LiveMatch } from '@/lib/liveMatch'
 import { supabase } from '@/lib/supabaseClient'
 
@@ -40,19 +41,25 @@ export default function LivePage() {
 }
 
 function LiveMatchCard({ match }: { match: LiveMatch }) {
+  const is301 = match.mode === '301'
   const thrownCount = match.darts.reduce((sum, d) => sum + d.length, 0)
   const playerCount = Math.max(1, match.players.length)
   const globalVolley = Math.floor(thrownCount / DARTS_PER_VOLLEY)
   const currentPlayerIndex = globalVolley % playerCount
   const currentRound = Math.floor(globalVolley / playerCount)
-  const finished = match.finished || thrownCount === match.players.length * DARTS_PER_SESSION
+  const finished =
+    match.finished || (!is301 && thrownCount === match.players.length * DARTS_PER_SESSION)
 
   return (
     <section className="live-card" aria-live="polite">
       <div className="live-card__head">
         <span className="live-card__status">
           <span className="live-dot" aria-hidden="true" />
-          {finished ? 'Terminée — en attente d’enregistrement' : `En direct · volée ${Math.min(currentRound + 1, VOLLEYS_PER_SESSION)}/${VOLLEYS_PER_SESSION}`}
+          {finished
+            ? 'Terminée — en attente d’enregistrement'
+            : is301
+              ? `En direct · 301 · volée ${currentRound + 1}`
+              : `En direct · volée ${Math.min(currentRound + 1, VOLLEYS_PER_SESSION)}/${VOLLEYS_PER_SESSION}`}
         </span>
       </div>
 
@@ -78,7 +85,9 @@ function LiveMatchCard({ match }: { match: LiveMatch }) {
                     : 'pas encore tiré'}
                 </span>
               </span>
-              <span className="board__points">{sessionTotal(darts)}</span>
+              <span className="board__points">
+                {is301 ? `↓ ${replay301(darts).remaining}` : sessionTotal(darts)}
+              </span>
             </li>
           )
         })}

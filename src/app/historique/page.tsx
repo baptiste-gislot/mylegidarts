@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { SetupNotice } from '@/components/SetupNotice'
 import { useToast } from '@/components/Toaster'
+import { askDeleteCode, forgetDeleteCode, rememberDeleteCode } from '@/lib/deleteCode'
 import { groupByMatch } from '@/lib/matches'
 import { useLeagueContext } from '@/lib/LeagueProvider'
 import { useSessionHistory } from '@/lib/useSessions'
@@ -44,34 +45,41 @@ export default function HistoriquePage() {
       <ul className="history">
         {groups.map((group) => {
           const total180 = group.sessions.reduce((sum, s) => sum + s.count_180, 0)
+          const is301 = group.sessions[0]?.mode === '301'
           return (
             <li key={group.id}>
               <Link href={`/partie/${group.id}`} className="match-card">
                 <div className="match-card__head">
                   <span className="match-card__type">
-                    {group.sessions.length > 1
-                      ? `Partie à ${group.sessions.length}`
-                      : 'Session solo'}
+                    {is301 ? '301' : 'Défi 4 volées'}
+                    {group.sessions.length > 1 ? ` · à ${group.sessions.length}` : ' · solo'}
                     {total180 > 0 && <em className="board__180"> · {total180}× 180</em>}
                   </span>
                   <time className="history__date">{dateFormat.format(new Date(group.date))}</time>
                 </div>
                 <ul className="match-card__lines">
-                  {group.sessions.map((session, index) => (
-                    <li key={session.id} className="match-card__line">
-                      <span
-                        className={
-                          index === 0 && group.sessions.length > 1
-                            ? 'match-card__player match-card__player--winner'
-                            : 'match-card__player'
-                        }
-                      >
-                        {index === 0 && group.sessions.length > 1 && '🏆 '}
-                        {nameById.get(session.player_id) ?? 'Joueur supprimé'}
-                      </span>
-                      <span className="match-card__total">{session.total}</span>
-                    </li>
-                  ))}
+                  {group.sessions.map((session, index) => {
+                    const winner = is301
+                      ? session.won === true
+                      : index === 0 && group.sessions.length > 1
+                    return (
+                      <li key={session.id} className="match-card__line">
+                        <span
+                          className={
+                            winner
+                              ? 'match-card__player match-card__player--winner'
+                              : 'match-card__player'
+                          }
+                        >
+                          {winner && '🏆 '}
+                          {nameById.get(session.player_id) ?? 'Joueur supprimé'}
+                        </span>
+                        <span className="match-card__total">
+                          {is301 && !session.won ? `reste ${301 - session.total}` : session.total}
+                        </span>
+                      </li>
+                    )
+                  })}
                 </ul>
                 <div className="history__actions">
                   <button
@@ -81,14 +89,19 @@ export default function HistoriquePage() {
                       e.preventDefault()
                       e.stopPropagation()
                       const label = group.sessions.length > 1 ? 'cette partie' : 'cette session'
-                      if (window.confirm(`Supprimer ${label} ? Le classement sera recalculé.`)) {
-                        void removeMatch(group.sessions.map((s) => s.id)).then((err) => {
-                          if (!err) {
-                            reload()
-                            toast('Partie supprimée, classement recalculé')
-                          }
-                        })
-                      }
+                      if (!window.confirm(`Supprimer ${label} ? Le classement sera recalculé.`)) return
+                      const code = askDeleteCode()
+                      if (code === null) return
+                      void removeMatch(group.sessions.map((s) => s.id), code).then((err) => {
+                        if (err) {
+                          forgetDeleteCode()
+                          toast(err, 'error')
+                        } else {
+                          rememberDeleteCode(code)
+                          reload()
+                          toast('Partie supprimée, classement recalculé')
+                        }
+                      })
                     }}
                   >
                     Supprimer

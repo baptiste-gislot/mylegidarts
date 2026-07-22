@@ -1,9 +1,11 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
 import { SetupNotice } from '@/components/SetupNotice'
 import { useToast } from '@/components/Toaster'
+import { askDeleteCode, forgetDeleteCode, rememberDeleteCode } from '@/lib/deleteCode'
 import { useLeagueContext } from '@/lib/LeagueProvider'
 
 export default function JoueursPage() {
@@ -49,10 +51,16 @@ export default function JoueursPage() {
       count > 0
         ? `Supprimer ${playerName} ? Ses ${count} session${count > 1 ? 's seront supprimées' : ' sera supprimée'} et le classement recalculé.`
         : `Supprimer ${playerName} ?`
-    if (window.confirm(warning)) {
-      const err = await removePlayer(playerId)
-      if (err) setFormError(err)
-      else toast(`${playerName} quitte la ligue`)
+    if (!window.confirm(warning)) return
+    const code = askDeleteCode()
+    if (code === null) return
+    const err = await removePlayer(playerId, code)
+    if (err) {
+      forgetDeleteCode()
+      setFormError(err)
+    } else {
+      rememberDeleteCode(code)
+      toast(`${playerName} quitte la ligue`)
     }
   }
 
@@ -121,6 +129,10 @@ export default function JoueursPage() {
           })}
         </ul>
       )}
+
+      <Link href="/inviter" className="button-ghost invite-link">
+        Afficher le QR code d’installation →
+      </Link>
     </div>
   )
 }

@@ -4,7 +4,15 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Dart } from './scoring'
 import { supabase } from './supabaseClient'
 
-const SNAPSHOT_KEY = 'mylegidarts-cache-v2'
+const SNAPSHOT_KEY = 'mylegidarts-cache-v3'
+
+/** Version de schéma attendue en base (table schema_version). */
+export const EXPECTED_SCHEMA_VERSION = 4
+
+const OUTDATED_MESSAGE =
+  'La base de données n’est pas à jour : exécutez les fichiers de supabase/migrations/ dans le SQL Editor de Supabase.'
+
+export type GameMode = 'volees' | '301'
 
 export interface PlayerRow {
   id: string
@@ -20,6 +28,8 @@ export interface SessionRow {
   match_id: string | null
   darts: Dart[]
   total: number
+  mode: GameMode
+  won: boolean | null
   created_at: string
 }
 
@@ -32,6 +42,17 @@ export interface SessionStatRow {
   created_at: string
   best_volley: number
   count_180: number
+  mode: GameMode
+  won: boolean | null
+}
+
+/** Ligne de la vue duel_stats : bilan face-à-face entre deux joueurs. */
+export interface DuelStatRow {
+  player_id: string
+  opponent_id: string
+  played: number
+  wins: number
+  losses: number
 }
 
 /** Ligne de la vue player_month_stats (month au format 'YYYY-MM', Europe/Paris). */
@@ -57,13 +78,20 @@ export interface LeagueData {
   error: string | null
   configured: boolean
   addPlayer: (name: string) => Promise<string | null>
-  removePlayer: (playerId: string) => Promise<string | null>
+  removePlayer: (playerId: string, code: string) => Promise<string | null>
   setNickname: (playerId: string, nickname: string) => Promise<string | null>
   saveSessions: (
-    entries: { playerId: string; darts: Dart[]; total: number }[],
+    entries: { playerId: string; darts: Dart[]; total: number; won?: boolean | null }[],
     matchId?: string | null,
+    mode?: GameMode,
   ) => Promise<string | null>
-  removeMatch: (sessionIds: string[]) => Promise<string | null>
+  removeMatch: (sessionIds: string[], code: string) => Promise<string | null>
+}
+
+function deleteErrorMessage(message: string): string {
+  return message.includes('code invalide')
+    ? 'Code de suppression incorrect.'
+    : message
 }
 
 /**
@@ -81,10 +109,18 @@ export function useLeague(): LeagueData {
 
   const refetch = useCallback(async () => {
     if (!supabase) return
-    const [playersRes, statsRes] = await Promise.all([
+    const [playersRes, statsRes, versionRes] = await Promise.all([
       supabase.from('players').select('*').order('name'),
       supabase.from('player_month_stats').select('*'),
+      supabase.from('schema_version').select('version').eq('id', 1).maybeSingle(),
     ])
+    // Garde-fou : base pas migrée → message clair plutôt qu'erreurs cryptiques.
+    const version = versionRes.data?.version ?? 0
+    if (versionRes.error || version < EXPECTED_SCHEMA_VERSION) {
+      setError(OUTDATED_MESSAGE)
+      setLoading(false)
+      return
+    }
     if (playersRes.error || statsRes.error) {
       // Avec des données (fraîches ou en cache) déjà affichées, un échec de
       // rafraîchissement reste silencieux : mieux vaut du légèrement périmé
@@ -146,10 +182,10 @@ export function useLeague(): LeagueData {
     return null
   }
 
-  async function removePlayer(playerId: string): Promise<string | null> {
+  async function removePlayer(playerId: string, code: string): Promise<string | null> {
     if (!supabase) return 'Supabase n’est pas configuré.'
-    const { error: err } = await supabase.from('players').delete().eq('id', playerId)
-    if (err) return err.message
+    const { error: err } = await supabase.rpc('delete_player', { pid: playerId, code })
+    if (err) return deleteErrorMessage(err.message)
     await refetch()
     return null
   }
@@ -166,8 +202,9 @@ export function useLeague(): LeagueData {
   }
 
   async function saveSessions(
-    entries: { playerId: string; darts: Dart[]; total: number }[],
+    entries: { playerId: string; darts: Dart[]; total: number; won?: boolean | null }[],
     matchId: string | null = null,
+    mode: GameMode = 'volees',
   ): Promise<string | null> {
     if (!supabase) return 'Supabase n’est pas configuré.'
     const rows = entries.map((e) => ({
@@ -175,6 +212,8 @@ export function useLeague(): LeagueData {
       match_id: matchId,
       darts: e.darts,
       total: e.total,
+      mode,
+      won: e.won ?? null,
     }))
     const { error: err } = await supabase.from('sessions').insert(rows)
     if (err) return err.message
@@ -182,10 +221,10 @@ export function useLeague(): LeagueData {
     return null
   }
 
-  async function removeMatch(sessionIds: string[]): Promise<string | null> {
+  async function removeMatch(sessionIds: string[], code: string): Promise<string | null> {
     if (!supabase) return 'Supabase n’est pas configuré.'
-    const { error: err } = await supabase.from('sessions').delete().in('id', sessionIds)
-    if (err) return err.message
+    const { error: err } = await supabase.rpc('delete_sessions', { ids: sessionIds, code })
+    if (err) return deleteErrorMessage(err.message)
     await refetch()
     return null
   }
