@@ -17,7 +17,7 @@ import {
 import { useToast } from '@/components/Toaster'
 import { fireConfetti, vibrate } from '@/lib/effects'
 import { useLiveMatchPublisher } from '@/lib/liveMatch'
-import { fanfare, say, thock } from '@/lib/sound'
+import { fanfare, say, soundsEnabled, thock } from '@/lib/sound'
 import { praise, trashTalk } from '@/lib/trashTalk'
 import { useLeagueContext } from '@/lib/LeagueProvider'
 import type { PlayerRow } from '@/lib/useLeague'
@@ -58,6 +58,12 @@ export default function TirerPage() {
   const toast = useToast()
   const { players, stats, loading, error, configured, saveSessions } = useLeagueContext()
   const { publish, stop: stopLive } = useLiveMatchPublisher()
+
+  // L'annonceur parle ; son coupé, il écrit (toast) pour ne rien perdre.
+  const announce = (text: string) => {
+    if (soundsEnabled()) say(text)
+    else toast(text)
+  }
 
   const [order, setOrder] = useState<string[]>([])
   const [started, setStarted] = useState(false)
@@ -155,7 +161,7 @@ export default function TirerPage() {
       void fireConfetti('record')
       fanfare('record')
       const names = recordHolders.map((id) => stageName(players.find((p) => p.id === id)))
-      say(`Nouveau record pour ${names.join(' et ')} !`)
+      announce(`Nouveau record pour ${names.join(' et ')} !`)
     }
   }, [started, order, dartsByPlayer, bestByPlayer, players])
 
@@ -199,7 +205,7 @@ export default function TirerPage() {
     setStarted(true)
     setSaveError(null)
     const first = players.find((p) => p.id === order[0])
-    say(`C'est parti ! ${stageName(first)}, à la cible.`)
+    announce(`C'est parti ! ${stageName(first)}, à la cible.`)
   }
 
   function throwDart(dart: Dart) {
@@ -221,7 +227,11 @@ export default function TirerPage() {
         const nextPlayer = players.find((p) => p.id === order[nextIndex])
         const relais =
           !sessionDone && order.length > 1 ? ` À toi, ${stageName(nextPlayer)} !` : ''
-        if (commentaire || relais) say(`${commentaire ?? ''}${relais}`)
+        if (soundsEnabled()) {
+          if (commentaire || relais) say(`${commentaire ?? ''}${relais}`)
+        } else if (relais) {
+          toast(relais.trim())
+        }
       }
     }
 

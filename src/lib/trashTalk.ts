@@ -71,13 +71,10 @@ function pick(lines: string[]): string {
   return lines[Math.floor(Math.random() * lines.length)]
 }
 
-/**
- * Une pique aléatoire pour une volée faible, ou null.
- * Volontairement pas systématique pour ne pas lasser.
- */
+/** Une pique (au hasard mais systématique) dès que la volée est mauvaise. */
 export function trashTalk(volleyTotal: number): string | null {
   if (volleyTotal === 0) return pick(ZERO_VOLLEY_LINES)
-  if (volleyTotal > 20 || Math.random() > 0.45) return null
+  if (volleyTotal > 20) return null
   return pick(LOW_VOLLEY_LINES)
 }
 
