@@ -37,6 +37,36 @@ export function bestVolley(darts: Dart[]): number {
   return volleys(darts).reduce((best, v) => Math.max(best, sessionTotal(v)), 0)
 }
 
+export const PERFECT_VOLLEY = 180
+
+/** Nombre de volées parfaites (180) dans une session. */
+export function count180s(darts: Dart[]): number {
+  return volleys(darts).filter(
+    (v) => v.length === DARTS_PER_VOLLEY && sessionTotal(v) === PERFECT_VOLLEY,
+  ).length
+}
+
+export interface DartBreakdown {
+  triples: number
+  doubles: number
+  simples: number
+  bulls: number
+  rates: number
+  total: number
+}
+
+export function dartBreakdown(darts: Dart[]): DartBreakdown {
+  const breakdown: DartBreakdown = { triples: 0, doubles: 0, simples: 0, bulls: 0, rates: 0, total: darts.length }
+  for (const d of darts) {
+    if (d.sector === 0) breakdown.rates++
+    else if (d.sector === 25) breakdown.bulls++
+    else if (d.mult === 3) breakdown.triples++
+    else if (d.mult === 2) breakdown.doubles++
+    else breakdown.simples++
+  }
+  return breakdown
+}
+
 export function isValidDart(value: unknown): value is Dart {
   if (typeof value !== 'object' || value === null) return false
   const d = value as Dart

@@ -681,9 +681,260 @@ a {
   color: var(--craie-dim);
 }
 
+.board__180 {
+  font-style: normal;
+  color: var(--laiton);
+  font-weight: 600;
+}
+
+.b--180 {
+  color: var(--laiton) !important;
+}
+
+/* ---------- Profil ---------- */
+
+.profil-head {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.profil-head__who {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.profil-head__name {
+  font-family: var(--font-display-stack);
+  font-weight: 700;
+  font-size: 34px;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.history__player--gold {
+  color: var(--laiton);
+  font-family: var(--font-display-stack);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 13px;
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.tile {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 12px 8px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.tile--hero {
+  border-color: var(--laiton);
+}
+
+.tile--hero .tile__value {
+  color: var(--laiton);
+}
+
+.tile--180 .tile__value {
+  color: var(--rouge);
+}
+
+.tile__value {
+  font-family: var(--font-display-stack);
+  font-weight: 700;
+  font-size: 28px;
+  line-height: 1;
+}
+
+.tile__label {
+  font-size: 12px;
+  color: var(--craie-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* ---------- Graphique d'évolution ---------- */
+
+.chart {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 12px 12px 8px;
+}
+
+.chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.chart__grid {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.chart__grid--dashed {
+  stroke-dasharray: 3 4;
+}
+
+.chart__line {
+  fill: none;
+  stroke: var(--laiton);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.chart__dot {
+  fill: var(--laiton);
+  stroke: var(--surface);
+  stroke-width: 1.5;
+}
+
+.chart__dot--record {
+  fill: var(--craie);
+}
+
+.chart__label {
+  fill: var(--craie);
+  font-family: var(--font-display-stack);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.chart__label--muted {
+  fill: var(--craie-dim);
+}
+
+.chart__caption {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--craie-dim);
+  padding: 4px 2px 0;
+}
+
+/* ---------- Répartition des fléchettes ---------- */
+
+.bars {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bars__row {
+  display: grid;
+  grid-template-columns: 92px 1fr 74px;
+  align-items: center;
+  gap: 10px;
+}
+
+.bars__label {
+  font-size: 13px;
+  color: var(--craie-dim);
+}
+
+.bars__track {
+  height: 14px;
+  border-radius: 4px;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.bars__fill {
+  display: block;
+  height: 100%;
+  border-radius: 4px 3px 3px 4px;
+  background: var(--laiton);
+  min-width: 2px;
+}
+
+.bars__value {
+  font-family: var(--font-display-stack);
+  font-weight: 600;
+  font-size: 15px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.bars__value em {
+  font-style: normal;
+  font-family: var(--font-body-stack);
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--craie-dim);
+}
+
+/* ---------- Flash 180 ---------- */
+
+.flash180 {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: color-mix(in srgb, var(--rouge) 92%, black);
+  pointer-events: none;
+  animation: flash180 1.8s ease forwards;
+}
+
+.flash180__score {
+  font-family: var(--font-display-stack);
+  font-weight: 700;
+  font-size: clamp(90px, 34vw, 160px);
+  line-height: 1;
+  color: #fff;
+}
+
+.flash180__name {
+  font-family: var(--font-display-stack);
+  font-weight: 600;
+  font-size: 22px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--craie);
+}
+
+@keyframes flash180 {
+  0% {
+    opacity: 0;
+    transform: scale(1.06);
+  }
+  8% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  82% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     transition: none !important;
     animation: none !important;
+  }
+
+  /* le flash 180 reste visible sans animation, le timer JS le retire */
+  .flash180 {
+    opacity: 1;
   }
 }

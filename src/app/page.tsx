@@ -1,9 +1,13 @@
 'use client'
 
+import { useState } from 'react'
+import Link from 'next/link'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
 import { SetupNotice } from '@/components/SetupNotice'
-import { bestVolley } from '@/lib/scoring'
+import { bestVolley, count180s } from '@/lib/scoring'
 import { useLeague } from '@/lib/useLeague'
+
+type Period = 'mois' | 'toujours'
 
 interface Line {
   playerId: string
@@ -12,18 +16,29 @@ interface Line {
   bestVolley: number
   sessionsCount: number
   average: number
+  count180: number
 }
+
+const monthFormat = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' })
 
 export default function ClassementPage() {
   const { players, sessions, loading, error, configured } = useLeague()
+  const [period, setPeriod] = useState<Period>('mois')
 
   if (!configured) return <SetupNotice />
   if (loading) return <p className="empty">Chargement du classement…</p>
   if (error) return <p className="notice notice--error">Erreur : {error}</p>
 
+  const now = new Date()
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+  const inPeriod =
+    period === 'mois'
+      ? sessions.filter((s) => new Date(s.created_at) >= monthStart)
+      : sessions
+
   const lines: Line[] = players
     .map((player) => {
-      const own = sessions.filter((s) => s.player_id === player.id)
+      const own = inPeriod.filter((s) => s.player_id === player.id)
       if (own.length === 0) return null
       return {
         playerId: player.id,
@@ -32,6 +47,7 @@ export default function ClassementPage() {
         bestVolley: Math.max(...own.map((s) => bestVolley(s.darts))),
         sessionsCount: own.length,
         average: Math.round(own.reduce((sum, s) => sum + s.total, 0) / own.length),
+        count180: own.reduce((sum, s) => sum + count180s(s.darts), 0),
       }
     })
     .filter((line): line is Line => line !== null)
@@ -50,31 +66,63 @@ export default function ClassementPage() {
 
   return (
     <div className="stack">
+      <div className="chips" role="radiogroup" aria-label="Période du classement">
+        <button
+          type="button"
+          role="radio"
+          aria-checked={period === 'mois'}
+          className={period === 'mois' ? 'chip chip--on' : 'chip'}
+          onClick={() => setPeriod('mois')}
+        >
+          {monthFormat.format(now)}
+        </button>
+        <button
+          type="button"
+          role="radio"
+          aria-checked={period === 'toujours'}
+          className={period === 'toujours' ? 'chip chip--on' : 'chip'}
+          onClick={() => setPeriod('toujours')}
+        >
+          Depuis toujours
+        </button>
+      </div>
+
       {lines.length === 0 ? (
         <div className="empty">
-          <p className="empty__title">Aucune session jouée</p>
-          <p>Le classement apparaîtra après la première session dans l’onglet Tirer.</p>
+          <p className="empty__title">
+            {period === 'mois' ? 'Aucune session ce mois-ci' : 'Aucune session jouée'}
+          </p>
+          <p>
+            {period === 'mois'
+              ? 'Le mois repart de zéro : premier arrivé à la ligne de tir, premier au tableau.'
+              : 'Le classement apparaîtra après la première session dans l’onglet Tirer.'}
+          </p>
         </div>
       ) : (
         <ol className="board">
           {lines.map((line, index) => (
-            <li
-              key={line.playerId}
-              className={index === 0 ? 'board__row board__row--leader' : 'board__row'}
-            >
-              <span className="board__rank">{index + 1}</span>
-              <PlayerAvatar name={line.name} leader={index === 0} />
-              <span className="board__who">
-                <span className="board__name">{line.name}</span>
-                <span className="board__record">
-                  {line.sessionsCount} session{line.sessionsCount > 1 ? 's' : ''} · moy.{' '}
-                  {line.average} · volée max {line.bestVolley}
+            <li key={line.playerId}>
+              <Link
+                href={`/profil/${line.playerId}`}
+                className={index === 0 ? 'board__row board__row--leader' : 'board__row'}
+              >
+                <span className="board__rank">{index + 1}</span>
+                <PlayerAvatar name={line.name} leader={index === 0} />
+                <span className="board__who">
+                  <span className="board__name">{line.name}</span>
+                  <span className="board__record">
+                    {line.sessionsCount} session{line.sessionsCount > 1 ? 's' : ''} · moy.{' '}
+                    {line.average} · volée max {line.bestVolley}
+                    {line.count180 > 0 && (
+                      <em className="board__180"> · {line.count180}× 180</em>
+                    )}
+                  </span>
                 </span>
-              </span>
-              <span className="board__score">
-                <span className="board__points">{line.best}</span>
-                <span className="board__sub">record</span>
-              </span>
+                <span className="board__score">
+                  <span className="board__points">{line.best}</span>
+                  <span className="board__sub">record</span>
+                </span>
+              </Link>
             </li>
           ))}
         </ol>
@@ -82,16 +130,20 @@ export default function ClassementPage() {
 
       {idle.length > 0 && lines.length > 0 && (
         <section>
-          <h2 className="section-title">En attente d’une première session</h2>
+          <h2 className="section-title">
+            {period === 'mois' ? 'Pas encore tiré ce mois-ci' : 'En attente d’une première session'}
+          </h2>
           <ul className="board">
             {idle.map((player) => (
-              <li key={player.id} className="board__row">
-                <span className="board__rank">–</span>
-                <PlayerAvatar name={player.name} />
-                <span className="board__who">
-                  <span className="board__name">{player.name}</span>
-                  <span className="board__record">non classé</span>
-                </span>
+              <li key={player.id}>
+                <Link href={`/profil/${player.id}`} className="board__row">
+                  <span className="board__rank">–</span>
+                  <PlayerAvatar name={player.name} />
+                  <span className="board__who">
+                    <span className="board__name">{player.name}</span>
+                    <span className="board__record">non classé</span>
+                  </span>
+                </Link>
               </li>
             ))}
           </ul>

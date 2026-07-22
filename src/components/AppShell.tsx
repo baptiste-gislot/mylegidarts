@@ -25,16 +25,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <main className="content">{children}</main>
 
       <nav className="tabbar" aria-label="Navigation principale">
-        {TABS.map((tab) => (
-          <Link
-            key={tab.href}
-            href={tab.href}
-            className={pathname === tab.href ? 'tabbar__tab tabbar__tab--on' : 'tabbar__tab'}
-            aria-current={pathname === tab.href ? 'page' : undefined}
-          >
-            {tab.label}
-          </Link>
-        ))}
+        {TABS.map((tab) => {
+          const active =
+            pathname === tab.href || (tab.href === '/' && pathname.startsWith('/profil'))
+          return (
+            <Link
+              key={tab.href}
+              href={tab.href}
+              className={active ? 'tabbar__tab tabbar__tab--on' : 'tabbar__tab'}
+              aria-current={active ? 'page' : undefined}
+            >
+              {tab.label}
+            </Link>
+          )
+        })}
       </nav>
     </div>
   )

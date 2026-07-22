@@ -1,11 +1,12 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { SetupNotice } from '@/components/SetupNotice'
 import {
   DARTS_PER_SESSION,
   DARTS_PER_VOLLEY,
+  PERFECT_VOLLEY,
   VOLLEYS_PER_SESSION,
   dartLabel,
   dartValue,
@@ -27,6 +28,13 @@ export default function TirerPage() {
   const [mult, setMult] = useState<Mult>(1)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [flash180, setFlash180] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (flash180 === null) return
+    const timer = setTimeout(() => setFlash180(null), 1800)
+    return () => clearTimeout(timer)
+  }, [flash180])
 
   const bestByPlayer = useMemo(() => {
     const map = new Map<string, number>()
@@ -76,6 +84,14 @@ export default function TirerPage() {
 
   function throwDart(dart: Dart) {
     if (finished) return
+    const volleyAfterThrow = [...currentVolley, dart]
+    if (
+      volleyAfterThrow.length === DARTS_PER_VOLLEY &&
+      sessionTotal(volleyAfterThrow) === PERFECT_VOLLEY &&
+      currentPlayer
+    ) {
+      setFlash180(currentPlayer.name)
+    }
     setDartsByPlayer((current) =>
       current.map((darts, i) => (i === currentPlayerIndex ? [...darts, dart] : darts)),
     )
@@ -113,6 +129,13 @@ export default function TirerPage() {
       router.push('/')
     }
   }
+
+  const flashOverlay = flash180 !== null && (
+    <div className="flash180" role="status">
+      <span className="flash180__score">180&nbsp;!</span>
+      <span className="flash180__name">{flash180}</span>
+    </div>
+  )
 
   if (!started) {
     return (
@@ -186,6 +209,7 @@ export default function TirerPage() {
         <button type="button" className="button-ghost" onClick={reset}>
           Abandonner la session
         </button>
+        {flashOverlay}
       </div>
     )
   }
@@ -277,6 +301,7 @@ export default function TirerPage() {
           </button>
         </div>
       </div>
+      {flashOverlay}
     </div>
   )
 }

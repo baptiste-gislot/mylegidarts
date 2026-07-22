@@ -42,12 +42,16 @@ export default function HistoriquePage() {
           </div>
           <span className="history__total">{session.total}</span>
           <p className="history__darts">
-            {volleys(session.darts).map((volley, i) => (
-              <span key={i}>
-                {i > 0 && '   ·   '}
-                {volley.map(dartLabel).join(' ')} <b>{sessionTotal(volley)}</b>
-              </span>
-            ))}
+            {volleys(session.darts).map((volley, i) => {
+              const volleyTotal = sessionTotal(volley)
+              return (
+                <span key={i}>
+                  {i > 0 && '   ·   '}
+                  {volley.map(dartLabel).join(' ')}{' '}
+                  <b className={volleyTotal === 180 ? 'b--180' : undefined}>{volleyTotal}</b>
+                </span>
+              )
+            })}
           </p>
           <div className="history__actions">
             <button
