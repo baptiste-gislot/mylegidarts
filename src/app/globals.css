@@ -271,16 +271,38 @@ a {
   padding: 12px 14px;
 }
 
+/* Le champion : bordure or, halo pulsant, tout est plus grand. */
 .board__row--leader {
-  border-color: var(--laiton);
-  background: linear-gradient(180deg, var(--raised), var(--surface));
-  padding-top: 16px;
-  padding-bottom: 16px;
+  border: 2px solid var(--laiton);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--laiton) 14%, var(--raised)), var(--surface));
+  padding-top: 20px;
+  padding-bottom: 20px;
+  margin: 4px 0 6px;
+}
+
+/* Les dauphins : liséré argent et bronze, sans halo. */
+.board__row--second {
+  border-color: color-mix(in srgb, #c9cdd4 55%, var(--line));
+  background: linear-gradient(180deg, color-mix(in srgb, #c9cdd4 6%, var(--surface)), var(--surface));
+}
+
+.board__row--third {
+  border-color: color-mix(in srgb, #b87b4d 55%, var(--line));
+  background: linear-gradient(180deg, color-mix(in srgb, #b87b4d 6%, var(--surface)), var(--surface));
+}
+
+.board__row--second .board__points {
+  color: color-mix(in srgb, #d8dce2 80%, var(--craie));
+}
+
+.board__row--third .board__points {
+  color: color-mix(in srgb, #c98d5e 80%, var(--craie));
 }
 
 .board__rank {
   flex: none;
-  width: 26px;
+  width: 30px;
   text-align: center;
   font-family: var(--font-display-stack);
   font-weight: 700;
@@ -289,7 +311,7 @@ a {
 }
 
 .board__row--leader .board__rank {
-  color: var(--laiton);
+  font-size: 26px;
 }
 
 .board__who {
@@ -323,8 +345,17 @@ a {
 }
 
 .board__row--leader .board__points {
-  font-size: 38px;
+  font-size: 44px;
   color: var(--laiton);
+  text-shadow: 0 0 18px rgba(201, 162, 43, 0.45);
+}
+
+.board__row--leader .board__name {
+  font-family: var(--font-display-stack);
+  font-weight: 700;
+  font-size: 22px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 .board__sub {
@@ -898,16 +929,22 @@ a {
 /* ---------- Néon du leader ---------- */
 
 .board__row--leader {
-  animation: neon 2.6s ease-in-out infinite;
+  animation: neon 2.4s ease-in-out infinite;
 }
 
 @keyframes neon {
   0%,
   100% {
-    box-shadow: 0 0 6px rgba(201, 162, 43, 0.25);
+    box-shadow:
+      0 0 10px rgba(201, 162, 43, 0.35),
+      0 0 30px rgba(201, 162, 43, 0.12),
+      inset 0 0 14px rgba(201, 162, 43, 0.08);
   }
   50% {
-    box-shadow: 0 0 16px rgba(201, 162, 43, 0.55);
+    box-shadow:
+      0 0 22px rgba(201, 162, 43, 0.7),
+      0 0 52px rgba(201, 162, 43, 0.3),
+      inset 0 0 20px rgba(201, 162, 43, 0.16);
   }
 }
 

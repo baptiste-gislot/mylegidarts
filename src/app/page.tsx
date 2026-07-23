@@ -166,9 +166,19 @@ export default function ClassementPage() {
             <li key={line.playerId}>
               <Link
                 href={`/profil/${line.playerId}`}
-                className={index === 0 ? 'board__row board__row--leader' : 'board__row'}
+                className={`board__row${
+                  index === 0
+                    ? ' board__row--leader'
+                    : index === 1
+                      ? ' board__row--second'
+                      : index === 2
+                        ? ' board__row--third'
+                        : ''
+                }`}
               >
-                <span className="board__rank">{index + 1}</span>
+                <span className="board__rank">
+                  {index < 3 ? ['🥇', '🥈', '🥉'][index] : index + 1}
+                </span>
                 <PlayerAvatar name={line.name} leader={index === 0} />
                 <span className="board__who">
                   <span className="board__name">{line.name}</span>
