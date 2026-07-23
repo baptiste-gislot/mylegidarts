@@ -73,13 +73,14 @@ a {
   margin-bottom: 18px;
 }
 
-.masthead__eyebrow {
+.masthead__tagline {
   font-family: var(--font-display-stack);
   font-weight: 500;
-  font-size: 13px;
-  letter-spacing: 0.28em;
+  font-size: 12px;
+  letter-spacing: 0.3em;
   text-transform: uppercase;
   color: var(--laiton);
+  margin-top: 4px;
 }
 
 .masthead__title {

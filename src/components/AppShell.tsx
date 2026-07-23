@@ -33,10 +33,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <LeagueProvider>
         <div className="app">
         <header className="masthead">
-          <p className="masthead__eyebrow">Fléchettes</p>
           <h1 className="masthead__title">
             MyLegi<em>Darts</em>
           </h1>
+          <p className="masthead__tagline">Mes fléchettes juridiques</p>
           <button
             type="button"
             className="masthead__sound"
