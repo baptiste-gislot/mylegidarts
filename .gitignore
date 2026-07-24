@@ -40,3 +40,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 !.env.local.example
+
+# artefacts de tests navigateur (MCP Playwright)
+.playwright-mcp/
+flop-ranking.png

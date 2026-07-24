@@ -44,6 +44,16 @@ export function useLiveMatchPublisher() {
         if (status === 'SUBSCRIBED') {
           readyRef.current = true
           if (pendingRef.current) void channel.track(pendingRef.current)
+          return
+        }
+        // Canal mort (téléphone verrouillé, réseau coupé…) : on le jette pour
+        // que la prochaine publication reparte d'un canal neuf. Sans ça, les
+        // track() suivants échouent en silence et la partie disparaît du live.
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          if (channelRef.current !== channel) return // fermeture volontaire via stop()
+          channelRef.current = null
+          readyRef.current = false
+          if (supabase) void supabase.removeChannel(channel)
         }
       })
     }
@@ -52,13 +62,38 @@ export function useLiveMatchPublisher() {
   }, [])
 
   const stop = useCallback(() => {
-    if (channelRef.current && supabase) {
-      void supabase.removeChannel(channelRef.current)
-    }
+    const channel = channelRef.current
+    // Nullifier avant removeChannel : le statut CLOSED déclenché par la
+    // fermeture volontaire ne doit pas être pris pour une panne.
     channelRef.current = null
     readyRef.current = false
     pendingRef.current = null
+    if (channel && supabase) {
+      void supabase.removeChannel(channel)
+    }
   }, [])
+
+  // Au retour au premier plan (déverrouillage du téléphone, retour réseau),
+  // rediffuse l'état en attente : la présence a probablement expiré côté
+  // serveur pendant le gel de l'onglet.
+  useEffect(() => {
+    const republish = () => {
+      if (document.visibilityState !== 'visible') return
+      const pending = pendingRef.current
+      if (!pending) return
+      if (channelRef.current === null) {
+        publish(pending)
+      } else if (readyRef.current) {
+        void channelRef.current.track(pending)
+      }
+    }
+    document.addEventListener('visibilitychange', republish)
+    window.addEventListener('online', republish)
+    return () => {
+      document.removeEventListener('visibilitychange', republish)
+      window.removeEventListener('online', republish)
+    }
+  }, [publish])
 
   useEffect(() => stop, [stop])
 
@@ -68,9 +103,26 @@ export function useLiveMatchPublisher() {
 /** Côté spectateurs : la liste des parties en cours, mise à jour en direct. */
 export function useLiveMatches(): LiveMatch[] {
   const [matches, setMatches] = useState<LiveMatch[]>([])
+  // Incrémenté pour reconstruire le canal (panne, retour au premier plan) :
+  // un canal neuf force une resynchronisation complète de la présence.
+  const [epoch, setEpoch] = useState(0)
+
+  useEffect(() => {
+    const resync = () => {
+      if (document.visibilityState !== 'visible') return
+      setEpoch((e) => e + 1)
+    }
+    document.addEventListener('visibilitychange', resync)
+    window.addEventListener('online', resync)
+    return () => {
+      document.removeEventListener('visibilitychange', resync)
+      window.removeEventListener('online', resync)
+    }
+  }, [])
 
   useEffect(() => {
     if (!supabase) return
+    let alive = true
     const spectator = supabase.channel(CHANNEL)
 
     spectator
@@ -97,12 +149,22 @@ export function useLiveMatches(): LiveMatch[] {
           [...freshest.values()].sort((a, b) => a.startedAt.localeCompare(b.startedAt)),
         )
       })
-      .subscribe()
+      .subscribe((status) => {
+        // Canal irrécupérable : on le reconstruit plutôt que d'afficher un
+        // direct figé sur le dernier état reçu.
+        if (!alive) return
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          setTimeout(() => {
+            if (alive) setEpoch((e) => e + 1)
+          }, 3000)
+        }
+      })
 
     return () => {
+      alive = false
       void supabase?.removeChannel(spectator)
     }
-  }, [])
+  }, [epoch])
 
   return matches
 }
