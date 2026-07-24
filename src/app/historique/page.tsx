@@ -46,12 +46,13 @@ export default function HistoriquePage() {
         {groups.map((group) => {
           const total180 = group.sessions.reduce((sum, s) => sum + s.count_180, 0)
           const is301 = group.sessions[0]?.mode === '301'
+          const withPowers = group.sessions[0]?.powers != null
           return (
             <li key={group.id}>
               <Link href={`/partie/${group.id}`} className="match-card">
                 <div className="match-card__head">
                   <span className="match-card__type">
-                    {is301 ? '301' : 'Défi 4 volées'}
+                    {is301 ? '301' : withPowers ? 'Défi 4 volées · 🃏 Pouvoirs' : 'Défi 4 volées'}
                     {group.sessions.length > 1 ? ` · à ${group.sessions.length}` : ' · solo'}
                     {total180 > 0 && <em className="board__180"> · {total180}× 180</em>}
                   </span>

@@ -572,6 +572,88 @@ a {
   font-size: 16px;
 }
 
+/* ---------- Pouvoirs ---------- */
+
+.chips--powers {
+  margin-top: 8px;
+}
+
+.powers-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.power-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--craie-dim);
+  cursor: pointer;
+}
+
+.power-chip__emoji {
+  font-size: 15px;
+}
+
+.power-chip__who {
+  font-weight: 600;
+  color: var(--craie);
+}
+
+/* Activable maintenant : liséré laiton, comme une carte qu'on peut abattre. */
+.power-chip--ready {
+  border-color: color-mix(in srgb, var(--laiton) 65%, var(--line));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--laiton) 10%, var(--surface)), var(--surface));
+  color: var(--craie);
+}
+
+.power-chip--used {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.power-chip--used .power-chip__title {
+  text-decoration: line-through;
+}
+
+.power-dialog {
+  border: 1px solid color-mix(in srgb, var(--laiton) 55%, var(--line));
+  border-radius: var(--radius);
+  background: var(--raised);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.power-dialog__title {
+  font-family: var(--font-display-stack);
+  font-weight: 700;
+  font-size: 18px;
+}
+
+.power-dialog__desc {
+  font-size: 13px;
+  color: var(--craie-dim);
+}
+
+.match-detail__power {
+  font-size: 13px;
+  color: var(--craie-dim);
+  font-style: italic;
+  margin: 4px 0 8px;
+}
+
+.live-power--used {
+  opacity: 0.4;
+}
+
 /* ---------- Récap de session ---------- */
 
 .recap {

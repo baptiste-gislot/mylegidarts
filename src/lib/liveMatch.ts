@@ -6,6 +6,14 @@ import type { Dart } from './scoring'
 import { supabase } from './supabaseClient'
 import type { GameMode } from './useLeague'
 
+/** Résumé pouvoirs calculé côté tireur : le spectateur l'affiche tel quel. */
+export interface LiveMatchPowers {
+  byPlayer: { emoji: string; title: string; used: boolean }[]
+  totals: number[]
+  current: number | null
+  round: number
+}
+
 /** État d'une partie en cours, diffusé via Supabase Realtime Presence. */
 export interface LiveMatch {
   id: string
@@ -16,6 +24,8 @@ export interface LiveMatch {
   mode?: GameMode
   players: { id: string; name: string; nickname?: string | null }[]
   darts: Dart[][]
+  /** Présent quand la partie se joue avec pouvoirs (rétrocompatible). */
+  powers?: LiveMatchPowers
 }
 
 export type LiveMatchInput = Omit<LiveMatch, 'updatedAt'>
@@ -141,6 +151,7 @@ export function useLiveMatches(): LiveMatch[] {
             mode: meta.mode ?? 'volees',
             players: meta.players,
             darts: meta.darts,
+            powers: meta.powers,
           }
           const known = freshest.get(match.id)
           if (!known || match.updatedAt >= known.updatedAt) freshest.set(match.id, match)

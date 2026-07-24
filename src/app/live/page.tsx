@@ -42,13 +42,17 @@ export default function LivePage() {
 
 function LiveMatchCard({ match }: { match: LiveMatch }) {
   const is301 = match.mode === '301'
+  const powers = match.powers ?? null
   const thrownCount = match.darts.reduce((sum, d) => sum + d.length, 0)
   const playerCount = Math.max(1, match.players.length)
   const globalVolley = Math.floor(thrownCount / DARTS_PER_VOLLEY)
-  const currentPlayerIndex = globalVolley % playerCount
-  const currentRound = Math.floor(globalVolley / playerCount)
+  // Avec pouvoirs, la rotation (4e fléchette, volée de rab, relance) est
+  // calculée côté tireur : on affiche son résumé tel quel.
+  const currentPlayerIndex = powers ? powers.current : globalVolley % playerCount
+  const currentRound = powers ? powers.round : Math.floor(globalVolley / playerCount)
   const finished =
-    match.finished || (!is301 && thrownCount === match.players.length * DARTS_PER_SESSION)
+    match.finished ||
+    (!is301 && !powers && thrownCount === match.players.length * DARTS_PER_SESSION)
 
   return (
     <section className="live-card" aria-live="polite">
@@ -59,7 +63,9 @@ function LiveMatchCard({ match }: { match: LiveMatch }) {
             ? 'Terminée — en attente d’enregistrement'
             : is301
               ? `En direct · 301 · volée ${currentRound + 1}`
-              : `En direct · volée ${Math.min(currentRound + 1, VOLLEYS_PER_SESSION)}/${VOLLEYS_PER_SESSION}`}
+              : powers
+                ? `En direct · 🃏 Pouvoirs · volée ${Math.min(currentRound + 1, VOLLEYS_PER_SESSION)}/${VOLLEYS_PER_SESSION}`
+                : `En direct · volée ${Math.min(currentRound + 1, VOLLEYS_PER_SESSION)}/${VOLLEYS_PER_SESSION}`}
         </span>
       </div>
 
@@ -67,8 +73,9 @@ function LiveMatchCard({ match }: { match: LiveMatch }) {
         {match.players.map((player, i) => {
           const darts = match.darts[i] ?? []
           const active = !finished && i === currentPlayerIndex
-          const volleyStart = active ? currentRound * DARTS_PER_VOLLEY : darts.length - (darts.length % DARTS_PER_VOLLEY || DARTS_PER_VOLLEY)
+          const volleyStart = active && !powers ? currentRound * DARTS_PER_VOLLEY : darts.length - (darts.length % DARTS_PER_VOLLEY || DARTS_PER_VOLLEY)
           const lastVolley = darts.slice(Math.max(0, volleyStart))
+          const power = powers?.byPlayer[i]
 
           return (
             <li key={player.id} className={active ? 'live-row live-row--active' : 'live-row'}>
@@ -80,13 +87,22 @@ function LiveMatchCard({ match }: { match: LiveMatch }) {
                   {active && <em className="live-row__turn"> · à la cible</em>}
                 </span>
                 <span className="board__record">
+                  {power && (
+                    <span title={power.title} className={power.used ? 'live-power live-power--used' : 'live-power'}>
+                      {power.emoji}{' '}
+                    </span>
+                  )}
                   {lastVolley.length > 0
                     ? lastVolley.map(dartLabel).join(' ')
                     : 'pas encore tiré'}
                 </span>
               </span>
               <span className="board__points">
-                {is301 ? `↓ ${replay301(darts).remaining}` : sessionTotal(darts)}
+                {is301
+                  ? `↓ ${replay301(darts).remaining}`
+                  : powers
+                    ? powers.totals[i]
+                    : sessionTotal(darts)}
               </span>
             </li>
           )

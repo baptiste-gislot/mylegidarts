@@ -1,4 +1,4 @@
--- Schéma complet MyLegiDarts (version 5).
+-- Schéma complet MyLegiDarts (version 6).
 -- Pour une installation neuve : exécuter ce fichier dans le SQL Editor.
 -- Pour une base existante : exécuter les fichiers de migrations/ dans l'ordre.
 
@@ -17,9 +17,12 @@ create table if not exists public.sessions (
   match_id uuid,
   -- 12 fléchettes : [{ "sector": 20, "mult": 3 }, ...] (sector 0 = raté, 25 = bull)
   darts jsonb not null,
-  total int not null check (total between 0 and 720),
+  -- Les bonus des pouvoirs peuvent dépasser 720 (borne réservée aux parties classiques).
+  total int not null check (total >= 0 and (total <= 720 or powers is not null)),
   mode text not null default 'volees' check (mode in ('volees', '301')),
   won boolean,
+  -- Null = partie sans pouvoirs. Sinon : { power, used, copied?, bonus, volleySizes }.
+  powers jsonb,
   created_at timestamptz not null default now()
 );
 
@@ -51,8 +54,8 @@ create table if not exists public.schema_version (
 );
 alter table public.schema_version enable row level security;
 create policy "version open read" on public.schema_version for select using (true);
-insert into public.schema_version (id, version) values (1, 5)
-on conflict (id) do update set version = 5;
+insert into public.schema_version (id, version) values (1, 6)
+on conflict (id) do update set version = 6;
 
 -- ---------- Verrou de suppression ----------
 create table if not exists public.league_settings (
@@ -116,12 +119,13 @@ select s.id,
        coalesce(max(v.volley_total), 0)::int as best_volley,
        coalesce(count(*) filter (where v.volley_total = 180), 0)::int as count_180,
        s.mode,
-       s.won
+       s.won,
+       s.powers
 from public.sessions s
 left join volleys v on v.id = s.id
 group by s.id;
 
--- Le classement ne compte que le défi 4 volées.
+-- Le classement ne compte que le défi 4 volées joué sans pouvoirs.
 create view public.player_month_stats
 with (security_invoker = true) as
 select player_id,
@@ -133,7 +137,7 @@ select player_id,
        max(best_volley)::int as best_volley,
        sum(count_180)::int as count_180
 from public.session_stats
-where mode = 'volees'
+where mode = 'volees' and powers is null
 group by player_id, to_char(created_at at time zone 'Europe/Paris', 'YYYY-MM');
 
 -- ---------- Face-à-face (parties à exactement 2 joueurs) ----------

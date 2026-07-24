@@ -1,13 +1,14 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type { SessionPowers } from './powers'
 import type { Dart } from './scoring'
 import { supabase } from './supabaseClient'
 
 const SNAPSHOT_KEY = 'mylegidarts-cache-v4'
 
 /** Version de schéma attendue en base (table schema_version). */
-export const EXPECTED_SCHEMA_VERSION = 5
+export const EXPECTED_SCHEMA_VERSION = 6
 
 const OUTDATED_MESSAGE =
   'La base de données n’est pas à jour : exécutez les fichiers de supabase/migrations/ dans le SQL Editor de Supabase.'
@@ -30,6 +31,7 @@ export interface SessionRow {
   total: number
   mode: GameMode
   won: boolean | null
+  powers: SessionPowers | null
   created_at: string
 }
 
@@ -44,6 +46,7 @@ export interface SessionStatRow {
   count_180: number
   mode: GameMode
   won: boolean | null
+  powers: SessionPowers | null
 }
 
 /** Ligne de la vue duel_stats : bilan face-à-face entre deux joueurs. */
@@ -82,7 +85,13 @@ export interface LeagueData {
   removePlayer: (playerId: string, code: string) => Promise<string | null>
   setNickname: (playerId: string, nickname: string) => Promise<string | null>
   saveSessions: (
-    entries: { playerId: string; darts: Dart[]; total: number; won?: boolean | null }[],
+    entries: {
+      playerId: string
+      darts: Dart[]
+      total: number
+      won?: boolean | null
+      powers?: SessionPowers | null
+    }[],
     matchId?: string | null,
     mode?: GameMode,
   ) => Promise<string | null>
@@ -203,7 +212,13 @@ export function useLeague(): LeagueData {
   }
 
   async function saveSessions(
-    entries: { playerId: string; darts: Dart[]; total: number; won?: boolean | null }[],
+    entries: {
+      playerId: string
+      darts: Dart[]
+      total: number
+      won?: boolean | null
+      powers?: SessionPowers | null
+    }[],
     matchId: string | null = null,
     mode: GameMode = 'volees',
   ): Promise<string | null> {
@@ -215,6 +230,7 @@ export function useLeague(): LeagueData {
       total: e.total,
       mode,
       won: e.won ?? null,
+      powers: e.powers ?? null,
     }))
     const { error: err } = await supabase.from('sessions').insert(rows)
     if (err) return err.message

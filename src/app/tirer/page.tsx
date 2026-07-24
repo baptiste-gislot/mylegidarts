@@ -18,6 +18,16 @@ import { useToast } from '@/components/Toaster'
 import { fireConfetti, vibrate } from '@/lib/effects'
 import { useLiveMatchPublisher } from '@/lib/liveMatch'
 import { padVolley, replay301, START_301 } from '@/lib/play301'
+import {
+  POWER_BY_ID,
+  canActivate,
+  drawAssignments,
+  replayPowers,
+  sessionPowers,
+  type MatchEvent,
+  type PowerEvent,
+  type PowerId,
+} from '@/lib/powers'
 import { fanfare, say, soundsEnabled, thock } from '@/lib/sound'
 import { praise, trashTalk } from '@/lib/trashTalk'
 import { useLeagueContext } from '@/lib/LeagueProvider'
@@ -39,6 +49,8 @@ interface StoredMatch {
   order: string[]
   dartsByPlayer: Dart[][]
   gameMode: GameMode
+  /** Présent quand la session se joue avec pouvoirs : le journal fait foi. */
+  powers?: { assignments: PowerId[]; journal: MatchEvent[] }
 }
 
 interface Flash {
@@ -85,6 +97,12 @@ export default function TirerPage() {
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [flash, setFlash] = useState<Flash | null>(null)
+  // Pouvoirs : opt-in au lancement, journal unique (fléchettes + activations).
+  const [powersEnabled, setPowersEnabled] = useState(false)
+  const [assignments, setAssignments] = useState<PowerId[] | null>(null)
+  const [journal, setJournal] = useState<MatchEvent[]>([])
+  /** Index (dans order) du joueur dont le pouvoir attend un paramètre. */
+  const [powerDialog, setPowerDialog] = useState<number | null>(null)
 
   useEffect(() => {
     if (flash === null) return
@@ -112,6 +130,11 @@ export default function TirerPage() {
       setMatchId(stored.matchId)
       setStartedAt(stored.startedAt)
       setGameMode(stored.gameMode)
+      if (stored.powers) {
+        setAssignments(stored.powers.assignments)
+        setJournal(stored.powers.journal)
+        setPowersEnabled(true)
+      }
       setStarted(true)
     }
   }, [])
@@ -121,16 +144,32 @@ export default function TirerPage() {
     [gameMode, dartsByPlayer],
   )
 
+  // Rejeu du journal des pouvoirs : toute la partie en découle.
+  const powersActive = started && gameMode === 'volees' && assignments !== null
+  const powersReplay = useMemo(
+    () => (assignments !== null ? replayPowers(order.length, assignments, journal) : null),
+    [assignments, order.length, journal],
+  )
+
   // Sauvegarde locale de la session en cours + diffusion en direct.
   useEffect(() => {
     if (!started || matchId === null || startedAt === null) return
+    const withPowers = powersActive && powersReplay !== null && assignments !== null
     localStorage.setItem(
       IN_PROGRESS_KEY,
-      JSON.stringify({ matchId, startedAt, order, dartsByPlayer, gameMode } satisfies StoredMatch),
+      JSON.stringify({
+        matchId,
+        startedAt,
+        order,
+        dartsByPlayer: withPowers ? powersReplay.dartsByPlayer : dartsByPlayer,
+        gameMode,
+        ...(withPowers ? { powers: { assignments, journal } } : {}),
+      } satisfies StoredMatch),
     )
     const thrown = dartsByPlayer.reduce((sum, d) => sum + d.length, 0)
-    const done =
-      gameMode === '301'
+    const done = withPowers
+      ? powersReplay.finished
+      : gameMode === '301'
         ? replays.some((r) => r.finished)
         : thrown === order.length * DARTS_PER_SESSION
     publish({
@@ -142,9 +181,39 @@ export default function TirerPage() {
         const player = players.find((p) => p.id === id)
         return { id, name: player?.name ?? '?', nickname: player?.nickname ?? null }
       }),
-      darts: dartsByPlayer,
+      darts: withPowers ? powersReplay.dartsByPlayer : dartsByPlayer,
+      ...(withPowers
+        ? {
+            powers: {
+              byPlayer: assignments.map((powerId, i) => {
+                const held = powersReplay.holders[i]
+                const def = POWER_BY_ID[held ?? powerId]
+                return { emoji: def.emoji, title: def.title, used: held === null }
+              }),
+              totals: powersReplay.totals,
+              current:
+                powersReplay.current?.player ?? powersReplay.pendingHole?.player ?? null,
+              round:
+                powersReplay.current?.round ?? powersReplay.pendingHole?.round ?? 0,
+            },
+          }
+        : {}),
     })
-  }, [started, matchId, startedAt, order, dartsByPlayer, gameMode, replays, players, publish])
+  }, [
+    started,
+    matchId,
+    startedAt,
+    order,
+    dartsByPlayer,
+    gameMode,
+    replays,
+    players,
+    publish,
+    powersActive,
+    powersReplay,
+    assignments,
+    journal,
+  ])
 
   // Si un joueur de la session restaurée a été supprimé entre-temps, on repart à zéro.
   useEffect(() => {
@@ -172,9 +241,10 @@ export default function TirerPage() {
   const savedRef = useRef(false)
 
   // Célébration de fin de défi 4 volées : confettis si au moins un record tombe.
+  // (Partie avec pouvoirs : hors classement, donc pas de record à fêter.)
   const celebratedRef = useRef(false)
   useEffect(() => {
-    if (gameMode !== 'volees') return
+    if (gameMode !== 'volees' || powersActive) return
     const thrown = dartsByPlayer.reduce((sum, d) => sum + d.length, 0)
     const done = started && order.length > 0 && thrown === order.length * DARTS_PER_SESSION
     if (!done) {
@@ -213,14 +283,24 @@ export default function TirerPage() {
   const totalDarts = order.length * DARTS_PER_SESSION
   const finished =
     started &&
-    (gameMode === '301' ? replays.some((r) => r.finished) : thrownCount === totalDarts)
+    (powersActive && powersReplay !== null
+      ? powersReplay.finished
+      : gameMode === '301'
+        ? replays.some((r) => r.finished)
+        : thrownCount === totalDarts)
 
   // Les volées alternent entre joueurs : volée 1 de chacun, puis volée 2, etc.
   // (en 301, les volées écourtées sont complétées par des ratés neutres,
-  // la rotation reste donc exacte)
+  // la rotation reste donc exacte ; avec pouvoirs, le moteur fait foi)
   const globalVolley = Math.floor(thrownCount / DARTS_PER_VOLLEY)
-  const currentPlayerIndex = globalVolley % Math.max(1, order.length)
-  const currentRound = Math.floor(globalVolley / Math.max(1, order.length))
+  const currentPlayerIndex =
+    powersActive && powersReplay !== null
+      ? (powersReplay.current?.player ?? powersReplay.pendingHole?.player ?? 0)
+      : globalVolley % Math.max(1, order.length)
+  const currentRound =
+    powersActive && powersReplay !== null
+      ? (powersReplay.current?.round ?? powersReplay.pendingHole?.round ?? 0)
+      : Math.floor(globalVolley / Math.max(1, order.length))
   const currentDarts = dartsByPlayer[currentPlayerIndex] ?? []
   const currentVolley = currentDarts.slice(currentRound * DARTS_PER_VOLLEY)
   const currentPlayer = players.find((p) => p.id === order[currentPlayerIndex])
@@ -239,11 +319,28 @@ export default function TirerPage() {
     setStartedAt(new Date().toISOString())
     setStarted(true)
     setSaveError(null)
+    const withPowers = gameMode === 'volees' && powersEnabled
+    if (withPowers) {
+      const drawn = drawAssignments(order.length)
+      setAssignments(drawn)
+      setJournal([])
+      // Le tirage est révélé joueur par joueur, façon annonceur.
+      drawn.forEach((powerId, i) => {
+        const def = POWER_BY_ID[powerId]
+        const player = players.find((p) => p.id === order[i])
+        toast(`${def.emoji} ${player?.name ?? '?'} reçoit « ${def.title} » — ${def.description}`)
+      })
+    } else {
+      setAssignments(null)
+      setJournal([])
+    }
     const first = players.find((p) => p.id === order[0])
     announce(
       gameMode === '301'
         ? `301, c'est parti ! ${stageName(first)}, à la cible.`
-        : `C'est parti ! ${stageName(first)}, à la cible.`,
+        : withPowers
+          ? `Tirage des pouvoirs effectué ! ${stageName(first)}, à la cible.`
+          : `C'est parti ! ${stageName(first)}, à la cible.`,
     )
   }
 
@@ -264,7 +361,77 @@ export default function TirerPage() {
     setDartsByPlayer((current) => current.map((d, i) => (i === playerIndex ? darts : d)))
   }
 
+  /** Volée tout juste complétée par la dernière fléchette du journal, s'il y en a une. */
+  function completedTurnTotal(
+    before: NonNullable<typeof powersReplay>,
+    after: NonNullable<typeof powersReplay>,
+  ): number | null {
+    const full = (t: (typeof after.turns)[number]) =>
+      t.darts.length >= t.size && t.darts.every((d) => d !== null)
+    for (let i = 0; i < after.turns.length; i++) {
+      if (full(after.turns[i]) && (before.turns[i] === undefined || !full(before.turns[i]))) {
+        const turn = after.turns[i]
+        const volleyIndex = after.turns
+          .slice(0, i)
+          .filter((t) => t.player === turn.player).length
+        return after.effectiveVolleyTotals[turn.player][volleyIndex]
+      }
+    }
+    return null
+  }
+
+  function throwPowersDart(dart: Dart) {
+    if (powersReplay === null || assignments === null || powersReplay.finished) return
+    thock(dart.sector === 0 ? 'miss' : dart.sector === 25 && dart.mult === 2 ? 'bull' : 'normal')
+    setMult(1)
+    vibrate(12)
+    const nextJournal: MatchEvent[] = [...journal, { kind: 'dart', dart }]
+    const after = replayPowers(order.length, assignments, nextJournal)
+    setJournal(nextJournal)
+
+    const volleyTotal = completedTurnTotal(powersReplay, after)
+    if (volleyTotal === null) return
+    if (volleyTotal === PERFECT_VOLLEY && currentPlayer) {
+      setFlash({ title: '180 !', name: currentPlayer.name, kind: 'perfect' })
+      return
+    }
+    const commentaire = praise(volleyTotal) ?? trashTalk(volleyTotal)
+    if (commentaire) toast(commentaire)
+    const nextPlayer =
+      after.current !== null ? players.find((p) => p.id === order[after.current!.player]) : null
+    const relais =
+      !after.finished && nextPlayer && order.length > 1 ? ` À toi, ${stageName(nextPlayer)} !` : ''
+    if (soundsEnabled()) {
+      if (commentaire || relais) say(`${commentaire ?? ''}${relais}`)
+    } else if (relais) {
+      toast(relais.trim())
+    }
+  }
+
+  /** Active un pouvoir (après validation) et l'annonce. */
+  function activatePower(event: Omit<PowerEvent, 'kind'>) {
+    if (assignments === null) return
+    const check = canActivate(order.length, assignments, journal, event)
+    if (!check.ok) {
+      toast(check.reason)
+      return
+    }
+    setJournal([...journal, { kind: 'power', ...event }])
+    setPowerDialog(null)
+    const def = POWER_BY_ID[event.power]
+    const actor = players.find((p) => p.id === order[event.actor])
+    const targetId = event.target !== undefined ? order[event.target] : null
+    const target = targetId !== null ? players.find((p) => p.id === targetId) : null
+    announce(
+      `${stageName(actor)} dégaine ${def.title} !${target ? ` ${stageName(target)}, tiens-toi prêt.` : ''}`,
+    )
+  }
+
   function throwDart(dart: Dart) {
+    if (powersActive) {
+      throwPowersDart(dart)
+      return
+    }
     if (finished) return
     thock(dart.sector === 0 ? 'miss' : dart.sector === 25 && dart.mult === 2 ? 'bull' : 'normal')
     setMult(1)
@@ -309,6 +476,13 @@ export default function TirerPage() {
   }
 
   function undo() {
+    // Avec pouvoirs : on retire le dernier événement du journal (fléchette ou
+    // activation) — le rejeu restaure trous et pouvoirs automatiquement.
+    if (powersActive) {
+      if (journal.length === 0) return
+      setJournal(journal.slice(0, -1))
+      return
+    }
     // En 301, une volée passée peut avoir été annulée ou complétée :
     // on ne revient que sur la volée en cours.
     if (gameMode === '301') {
@@ -333,25 +507,39 @@ export default function TirerPage() {
     setStartedAt(null)
     setMult(1)
     setSaveError(null)
+    setAssignments(null)
+    setJournal([])
+    setPowerDialog(null)
   }
 
   async function save() {
     // Verrou anti double-clic : une partie ne s'enregistre qu'une fois.
     if (saving || savedRef.current) return
     setSaving(true)
+    const powersRows =
+      powersActive && powersReplay !== null && assignments !== null
+        ? sessionPowers(powersReplay, assignments)
+        : null
     const entries = order.map((playerId, i) =>
-      gameMode === '301'
+      powersRows !== null && powersReplay !== null
         ? {
             playerId,
-            darts: dartsByPlayer[i],
-            total: replays[i].scored,
-            won: replays[i].finished,
+            darts: powersReplay.dartsByPlayer[i],
+            total: powersReplay.totals[i],
+            powers: powersRows[i],
           }
-        : {
-            playerId,
-            darts: dartsByPlayer[i],
-            total: sessionTotal(dartsByPlayer[i]),
-          },
+        : gameMode === '301'
+          ? {
+              playerId,
+              darts: dartsByPlayer[i],
+              total: replays[i].scored,
+              won: replays[i].finished,
+            }
+          : {
+              playerId,
+              darts: dartsByPlayer[i],
+              total: sessionTotal(dartsByPlayer[i]),
+            },
     )
     const err = await saveSessions(entries, matchId, gameMode)
     if (err) {
@@ -368,7 +556,8 @@ export default function TirerPage() {
       setMatchId(null)
       setStartedAt(null)
       setSaving(false)
-      router.push(gameMode === '301' ? '/historique' : '/')
+      // Hors classement (301, pouvoirs) : direction l'historique plutôt que le tableau.
+      router.push(gameMode === '301' || powersRows !== null ? '/historique' : '/')
     }
   }
 
@@ -414,6 +603,24 @@ export default function TirerPage() {
               obligatoire. Ne compte pas au classement, mais nourrit les face-à-face.
             </p>
           )}
+          {gameMode === 'volees' && (
+            <div className="chips chips--powers">
+              <button
+                type="button"
+                aria-pressed={powersEnabled}
+                className={powersEnabled ? 'chip chip--on' : 'chip'}
+                onClick={() => setPowersEnabled((on) => !on)}
+              >
+                🃏 Pouvoirs
+              </button>
+            </div>
+          )}
+          {gameMode === 'volees' && powersEnabled && (
+            <p className="mode-hint">
+              Chaque joueur reçoit au hasard un pouvoir secret de l’équipe, utilisable une seule
+              fois. Partie hors classement, mais l’honneur est en jeu.
+            </p>
+          )}
         </section>
         <section>
           <h2 className="section-title">Qui tire ? (dans l’ordre de passage)</h2>
@@ -446,6 +653,16 @@ export default function TirerPage() {
     const recap = order
       .map((playerId, i) => {
         const player = players.find((p) => p.id === playerId)
+        if (powersActive && powersReplay !== null) {
+          return {
+            playerId,
+            name: player?.name ?? '?',
+            total: powersReplay.totals[i],
+            won: false,
+            record: false,
+            sub: powersReplay.bonuses[i] > 0 ? `dont +${powersReplay.bonuses[i]} de bonus` : null,
+          }
+        }
         return gameMode === '301'
           ? {
               playerId,
@@ -470,7 +687,11 @@ export default function TirerPage() {
       <div className="stack">
         <section>
           <h2 className="section-title">
-            {gameMode === '301' ? 'Fin de partie — 301' : 'Fin de session'}
+            {gameMode === '301'
+              ? 'Fin de partie — 301'
+              : powersActive
+                ? 'Fin de session — Pouvoirs'
+                : 'Fin de session'}
           </h2>
           <div className="recap">
             {recap.map((line) => (
@@ -505,6 +726,10 @@ export default function TirerPage() {
     )
   }
 
+  const activeTurn = powersActive ? (powersReplay?.activeTurn ?? null) : null
+  const slotCount = activeTurn ? activeTurn.size : DARTS_PER_VOLLEY
+  const pendingSlot = powersActive ? (powersReplay?.pendingSlot ?? null) : null
+
   return (
     <div className="scorer">
       <div className="scorer__status">
@@ -512,9 +737,14 @@ export default function TirerPage() {
           <p className="scorer__volley">
             {gameMode === '301'
               ? `301 · Volée ${currentRound + 1}`
-              : `Volée ${currentRound + 1}/${VOLLEYS_PER_SESSION}`}
+              : powersActive
+                ? `🃏 Volée ${currentRound + 1}/${VOLLEYS_PER_SESSION}`
+                : `Volée ${currentRound + 1}/${VOLLEYS_PER_SESSION}`}
           </p>
-          <p className="scorer__thrower">{currentPlayer?.name}</p>
+          <p className="scorer__thrower">
+            {currentPlayer?.name}
+            {pendingSlot !== null && ' — relance !'}
+          </p>
         </div>
         <button type="button" className="button-ghost" onClick={reset}>
           Abandonner
@@ -522,8 +752,8 @@ export default function TirerPage() {
       </div>
 
       <div className="scorer__slots">
-        {Array.from({ length: DARTS_PER_VOLLEY }, (_, i) => {
-          const dart = currentVolley[i]
+        {Array.from({ length: slotCount }, (_, i) => {
+          const dart = activeTurn ? activeTurn.darts[i] : currentVolley[i]
           return (
             <div key={i} className={dart ? 'slot slot--filled' : 'slot'}>
               {dart ? (
@@ -532,7 +762,9 @@ export default function TirerPage() {
                   <span className="slot__value">{dartValue(dart)} pts</span>
                 </>
               ) : (
-                <span className="slot__value">Fléchette {i + 1}</span>
+                <span className="slot__value">
+                  {i === pendingSlot ? 'Relance !' : `Fléchette ${i + 1}`}
+                </span>
               )}
             </div>
           )
@@ -549,14 +781,148 @@ export default function TirerPage() {
             >
               {player?.name}{' '}
               <strong>
-                {gameMode === '301'
-                  ? (replays[i]?.remaining ?? START_301)
-                  : sessionTotal(dartsByPlayer[i])}
+                {powersActive && powersReplay !== null
+                  ? powersReplay.totals[i]
+                  : gameMode === '301'
+                    ? (replays[i]?.remaining ?? START_301)
+                    : sessionTotal(dartsByPlayer[i])}
               </strong>
             </span>
           )
         })}
       </div>
+
+      {powersActive && powersReplay !== null && assignments !== null && (
+        <div className="powers-bar">
+          {order.map((playerId, i) => {
+            const held = powersReplay.holders[i]
+            const def = POWER_BY_ID[held ?? assignments[i]]
+            const player = players.find((p) => p.id === playerId)
+            const ready =
+              held !== null &&
+              canActivate(order.length, assignments, journal, { power: held, actor: i }).ok
+            return (
+              <button
+                key={playerId}
+                type="button"
+                className={
+                  held === null
+                    ? 'power-chip power-chip--used'
+                    : ready
+                      ? 'power-chip power-chip--ready'
+                      : 'power-chip'
+                }
+                disabled={held === null}
+                title={`${def.persona} — ${def.description}`}
+                onClick={() => {
+                  if (held === null) return
+                  const check = canActivate(order.length, assignments, journal, {
+                    power: held,
+                    actor: i,
+                  })
+                  if (!check.ok) {
+                    toast(check.reason)
+                    return
+                  }
+                  if (POWER_BY_ID[held].param === 'rien') activatePower({ power: held, actor: i })
+                  else setPowerDialog(i)
+                }}
+              >
+                <span className="power-chip__emoji" aria-hidden="true">
+                  {def.emoji}
+                </span>
+                <span className="power-chip__who">{player?.name}</span>
+                <span className="power-chip__title">{held === null ? 'utilisé' : def.title}</span>
+              </button>
+            )
+          })}
+        </div>
+      )}
+
+      {powersActive &&
+        powerDialog !== null &&
+        assignments !== null &&
+        powersReplay !== null &&
+        (() => {
+          const actor = powerDialog
+          const held = powersReplay.holders[actor]
+          if (held === null) return null
+          const def = POWER_BY_ID[held]
+          const copiables = [
+            ...new Set(
+              powersReplay.usedPowers.filter((u) => u.power !== 'copie').map((u) => u.power),
+            ),
+          ]
+          return (
+            <section className="power-dialog">
+              <p className="power-dialog__title">
+                {def.emoji} {def.title}
+              </p>
+              <p className="power-dialog__desc">{def.description}</p>
+              <div className="chips">
+                {def.param === 'cible' &&
+                  order.map(
+                    (pid, t) =>
+                      t !== actor && (
+                        <button
+                          key={pid}
+                          type="button"
+                          className="chip"
+                          onClick={() => activatePower({ power: held, actor, target: t })}
+                        >
+                          {players.find((p) => p.id === pid)?.name}
+                        </button>
+                      ),
+                  )}
+                {def.param === 'secteur' &&
+                  SECTORS.map((sector) => (
+                    <button
+                      key={sector}
+                      type="button"
+                      className="chip"
+                      onClick={() => activatePower({ power: held, actor, sector })}
+                    >
+                      {sector}
+                    </button>
+                  ))}
+                {def.param === 'vote' && (
+                  <>
+                    <button
+                      type="button"
+                      className="chip"
+                      onClick={() => activatePower({ power: held, actor, outcome: 'normal' })}
+                    >
+                      Vote : rien ne change
+                    </button>
+                    <button
+                      type="button"
+                      className="chip"
+                      onClick={() =>
+                        activatePower({ power: held, actor, outcome: 'triples-double' })
+                      }
+                    >
+                      Vote : triples valent double
+                    </button>
+                  </>
+                )}
+                {def.param === 'pouvoir' &&
+                  copiables.map((powerId) => (
+                    <button
+                      key={powerId}
+                      type="button"
+                      className="chip"
+                      onClick={() => activatePower({ power: held, actor, copied: powerId })}
+                    >
+                      {POWER_BY_ID[powerId].emoji} {POWER_BY_ID[powerId].title}
+                    </button>
+                  ))}
+              </div>
+              <button type="button" className="button-ghost" onClick={() => setPowerDialog(null)}>
+                Fermer
+              </button>
+            </section>
+          )
+        })()}
 
       <div className="keypad">
         <div className="keypad__mults">
@@ -598,7 +964,13 @@ export default function TirerPage() {
             type="button"
             className="key key--undo"
             onClick={undo}
-            disabled={gameMode === '301' ? currentVolley.length === 0 : thrownCount === 0}
+            disabled={
+              powersActive
+                ? journal.length === 0
+                : gameMode === '301'
+                  ? currentVolley.length === 0
+                  : thrownCount === 0
+            }
           >
             Annuler
           </button>

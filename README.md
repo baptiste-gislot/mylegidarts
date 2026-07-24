@@ -9,6 +9,7 @@ PWA de leaderboard de fléchettes. Le défi : **4 volées de 3 fléchettes**, sa
 - **Historique** : groupé par partie (vainqueur mis en avant), détail volée par volée sur `/partie/[id]`.
 - **Joueurs** : surnoms éditables, utilisés par l'annonceur et le live.
 - **301** : deuxième jeu (premier à zéro exactement, bust si dépassement, sortie sèche) — hors classement, mais compté dans les face-à-face.
+- **Pouvoirs** 🃏 : option du défi 4 volées — chaque joueur reçoit au hasard un pouvoir de l'équipe (relance, fléchette de rab, annulation adverse, bonus, vote de règle…), utilisable une seule fois. Parties hors classement, visibles en live et dans l'historique.
 - **Face-à-face** : bilan des duels (parties à 2) sur la page profil, tous modes confondus.
 - **Suppression verrouillée** : joueurs et parties ne se suppriment qu'avec le code d'équipe (fonctions SQL `security definer` ; code par défaut `180`, à changer dans `league_settings`).
 - **QR d'installation** : page `/inviter` imprimable, liée depuis Joueurs.

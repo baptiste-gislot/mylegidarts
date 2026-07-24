@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
 import { SetupNotice } from '@/components/SetupNotice'
 import { dartLabel, sessionTotal, volleys } from '@/lib/scoring'
+import { POWER_BY_ID, groupBySizes } from '@/lib/powers'
 import { useLeagueContext } from '@/lib/LeagueProvider'
 import { useMatchSessions } from '@/lib/useSessions'
 
@@ -69,6 +70,8 @@ export default function PartiePage() {
       {matchSessions.map((session, index) => {
         const name = nameById.get(session.player_id) ?? 'Joueur supprimé'
         const winnerRow = is301 ? session.won === true : index === 0 && isDuel
+        const power = session.powers ? POWER_BY_ID[session.powers.power] : null
+        const copied = session.powers?.copied ? POWER_BY_ID[session.powers.copied] : null
         return (
           <section
             key={session.id}
@@ -84,8 +87,19 @@ export default function PartiePage() {
                 {is301 && !session.won ? `reste ${301 - session.total}` : session.total}
               </span>
             </div>
+            {power && session.powers && (
+              <p className="match-detail__power">
+                {power.emoji} « {power.title} »
+                {copied ? ` → copie de « ${copied.title} »` : ''} —{' '}
+                {session.powers.used ? 'utilisé' : 'gardé en poche'}
+                {session.powers.bonus > 0 && ` · bonus +${session.powers.bonus}`}
+              </p>
+            )}
             <div className="match-detail__volleys">
-              {volleys(session.darts).map((volley, i) => {
+              {(session.powers
+                ? groupBySizes(session.darts, session.powers.volleySizes)
+                : volleys(session.darts)
+              ).map((volley, i) => {
                 const volleyTotal = sessionTotal(volley)
                 return (
                   <div key={i} className="volley-line">
