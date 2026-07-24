@@ -1,4 +1,4 @@
--- Schéma complet MyLegiDarts (version 4).
+-- Schéma complet MyLegiDarts (version 5).
 -- Pour une installation neuve : exécuter ce fichier dans le SQL Editor.
 -- Pour une base existante : exécuter les fichiers de migrations/ dans l'ordre.
 
@@ -51,8 +51,8 @@ create table if not exists public.schema_version (
 );
 alter table public.schema_version enable row level security;
 create policy "version open read" on public.schema_version for select using (true);
-insert into public.schema_version (id, version) values (1, 4)
-on conflict (id) do update set version = 4;
+insert into public.schema_version (id, version) values (1, 5)
+on conflict (id) do update set version = 5;
 
 -- ---------- Verrou de suppression ----------
 create table if not exists public.league_settings (
@@ -128,6 +128,7 @@ select player_id,
        to_char(created_at at time zone 'Europe/Paris', 'YYYY-MM') as month,
        count(*)::int as sessions_count,
        max(total)::int as best_total,
+       min(total)::int as worst_total,
        sum(total)::int as sum_total,
        max(best_volley)::int as best_volley,
        sum(count_180)::int as count_180

@@ -1,0 +1,34 @@
+- generic [active] [ref=f1e1]:
+  - generic [ref=f1e2]:
+    - banner [ref=f1e3]:
+      - heading [level=1] [ref=f1e4]:
+        - text: MyLegi
+        - emphasis [ref=f1e5]: Darts
+      - paragraph [ref=f1e6]: Mes fléchettes juridiques
+      - button "Couper les sons et l’annonceur" [pressed] [ref=f1e7] [cursor=pointer]: 🔊
+    - main [ref=f1e8]:
+      - generic [ref=f1e9]:
+        - generic [ref=f1e11]:
+          - heading "Jeu" [level=2] [ref=f1e12]
+          - radiogroup "Type de jeu" [ref=f1e13]:
+            - radio "Défi 4 volées" [checked] [ref=f1e14] [cursor=pointer]
+            - radio "301" [ref=f1e15] [cursor=pointer]
+        - generic [ref=f1e16]:
+          - heading "Qui tire ? (dans l’ordre de passage)" [level=2] [ref=f1e17]
+          - generic [ref=f1e18]:
+            - button "Baptiste" [ref=f1e19] [cursor=pointer]
+            - button "Camille" [ref=f1e20] [cursor=pointer]
+            - button "Nico" [ref=f1e21] [cursor=pointer]
+        - button "Commencer la session" [disabled] [ref=f1e22]
+    - navigation "Navigation principale" [ref=f1e23]:
+      - link "Classement" [ref=f1e24] [cursor=pointer]:
+        - /url: /
+      - link "Tirer" [ref=f1e25] [cursor=pointer]:
+        - /url: /tirer
+      - link "Historique" [ref=f1e26] [cursor=pointer]:
+        - /url: /historique
+      - link "Joueurs" [ref=f1e27] [cursor=pointer]:
+        - /url: /joueurs
+  - status
+  - button "Open Next.js Dev Tools" [ref=f1e33] [cursor=pointer]
+  - alert [ref=f1e37]

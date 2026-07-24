@@ -4,10 +4,10 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Dart } from './scoring'
 import { supabase } from './supabaseClient'
 
-const SNAPSHOT_KEY = 'mylegidarts-cache-v3'
+const SNAPSHOT_KEY = 'mylegidarts-cache-v4'
 
 /** Version de schéma attendue en base (table schema_version). */
-export const EXPECTED_SCHEMA_VERSION = 4
+export const EXPECTED_SCHEMA_VERSION = 5
 
 const OUTDATED_MESSAGE =
   'La base de données n’est pas à jour : exécutez les fichiers de supabase/migrations/ dans le SQL Editor de Supabase.'
@@ -61,6 +61,7 @@ export interface PlayerMonthStats {
   month: string
   sessions_count: number
   best_total: number
+  worst_total: number
   sum_total: number
   best_volley: number
   count_180: number

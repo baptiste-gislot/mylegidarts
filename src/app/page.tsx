@@ -7,15 +7,17 @@ import { PlayerAvatar } from '@/components/PlayerAvatar'
 import { SetupNotice } from '@/components/SetupNotice'
 import { useLiveMatches } from '@/lib/liveMatch'
 import { useLeagueContext } from '@/lib/LeagueProvider'
+import { flopLine } from '@/lib/trashTalk'
 import { monthKey, type PlayerMonthStats } from '@/lib/useLeague'
 
 type Period = 'mois' | 'toujours'
-type Ranking = 'record' | 'moyenne'
+type Ranking = 'record' | 'moyenne' | 'flop'
 
 interface Line {
   playerId: string
   name: string
   best: number
+  worst: number
   bestVolley: number
   sessionsCount: number
   average: number
@@ -51,6 +53,7 @@ export default function ClassementPage() {
         playerId: player.id,
         name: player.name,
         best: Math.max(...own.map((s) => s.best_total)),
+        worst: Math.min(...own.map((s) => s.worst_total)),
         bestVolley: Math.max(...own.map((s) => s.best_volley)),
         sessionsCount,
         average: Math.round(own.reduce((sum, s) => sum + s.sum_total, 0) / sessionsCount),
@@ -61,7 +64,9 @@ export default function ClassementPage() {
     .sort((a, b) =>
       ranking === 'record'
         ? b.best - a.best || b.average - a.average || a.name.localeCompare(b.name)
-        : b.average - a.average || b.best - a.best || a.name.localeCompare(b.name),
+        : ranking === 'moyenne'
+          ? b.average - a.average || b.best - a.best || a.name.localeCompare(b.name)
+          : a.worst - b.worst || a.average - b.average || a.name.localeCompare(b.name),
     )
 
   const idle = players.filter((p) => !lines.some((l) => l.playerId === p.id))
@@ -147,6 +152,15 @@ export default function ClassementPage() {
         >
           Moyenne / partie
         </button>
+        <button
+          type="button"
+          role="radio"
+          aria-checked={ranking === 'flop'}
+          className={ranking === 'flop' ? 'chip chip--on' : 'chip'}
+          onClick={() => setRanking('flop')}
+        >
+          Plus petit score
+        </button>
       </div>
 
       {lines.length === 0 ? (
@@ -167,35 +181,49 @@ export default function ClassementPage() {
               <Link
                 href={`/profil/${line.playerId}`}
                 className={`board__row${
-                  index === 0
-                    ? ' board__row--leader'
-                    : index === 1
-                      ? ' board__row--second'
-                      : index === 2
-                        ? ' board__row--third'
-                        : ''
+                  ranking === 'flop'
+                    ? index === 0
+                      ? ' board__row--flop'
+                      : ''
+                    : index === 0
+                      ? ' board__row--leader'
+                      : index === 1
+                        ? ' board__row--second'
+                        : index === 2
+                          ? ' board__row--third'
+                          : ''
                 }`}
               >
                 <span className="board__rank">
-                  {index < 3 ? ['🥇', '🥈', '🥉'][index] : index + 1}
+                  {index < 3
+                    ? (ranking === 'flop' ? ['🤡', '🫣', '😬'] : ['🥇', '🥈', '🥉'])[index]
+                    : index + 1}
                 </span>
-                <PlayerAvatar name={line.name} leader={index === 0} />
+                <PlayerAvatar name={line.name} leader={index === 0 && ranking !== 'flop'} />
                 <span className="board__who">
                   <span className="board__name">{line.name}</span>
-                  <span className="board__record">
-                    {line.sessionsCount} session{line.sessionsCount > 1 ? 's' : ''} ·{' '}
-                    {ranking === 'record' ? `moy. ${line.average}` : `record ${line.best}`} ·
-                    volée max {line.bestVolley}
-                    {line.count180 > 0 && (
-                      <em className="board__180"> · {line.count180}× 180</em>
-                    )}
-                  </span>
+                  {ranking === 'flop' ? (
+                    <span className="board__record board__record--pique">
+                      {flopLine(line.playerId + line.worst)}
+                    </span>
+                  ) : (
+                    <span className="board__record">
+                      {line.sessionsCount} session{line.sessionsCount > 1 ? 's' : ''} ·{' '}
+                      {ranking === 'record' ? `moy. ${line.average}` : `record ${line.best}`} ·
+                      volée max {line.bestVolley}
+                      {line.count180 > 0 && (
+                        <em className="board__180"> · {line.count180}× 180</em>
+                      )}
+                    </span>
+                  )}
                 </span>
                 <span className="board__score">
                   <span className="board__points">
-                    {ranking === 'record' ? line.best : line.average}
+                    {ranking === 'record' ? line.best : ranking === 'moyenne' ? line.average : line.worst}
                   </span>
-                  <span className="board__sub">{ranking === 'record' ? 'record' : 'moyenne'}</span>
+                  <span className="board__sub">
+                    {ranking === 'record' ? 'record' : ranking === 'moyenne' ? 'moyenne' : 'pire score'}
+                  </span>
                 </span>
               </Link>
             </li>

@@ -1,0 +1,63 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - heading [level=1] [ref=e4]:
+        - text: MyLegi
+        - emphasis [ref=e5]: Darts
+      - paragraph [ref=e6]: Mes fléchettes juridiques
+      - button "Couper les sons et l’annonceur" [pressed] [ref=e7] [cursor=pointer]: 🔊
+    - main [ref=e8]:
+      - generic [ref=e15]:
+        - radiogroup "Période du classement" [ref=e16]:
+          - radio "juillet 2026" [checked] [ref=e17] [cursor=pointer]
+          - radio "Depuis toujours" [ref=e18] [cursor=pointer]
+        - radiogroup "Critère de classement" [ref=e19]:
+          - radio "Meilleur score" [ref=e20] [cursor=pointer]
+          - radio "Moyenne / partie" [ref=e21] [cursor=pointer]
+          - radio "Plus petit score" [checked] [active] [ref=e22] [cursor=pointer]
+        - list [ref=e23]:
+          - listitem [ref=e42]:
+            - link "🤡 Camille Même le stagiaire n’ose pas commenter. 18 pire score" [ref=e61] [cursor=pointer]:
+              - /url: /profil/22222222-2222-2222-2222-222222222222
+              - generic [ref=e44]: 🤡
+              - generic [ref=e45]: C
+              - generic [ref=e46]:
+                - generic [ref=e47]: Camille
+                - generic [ref=e48]: Même le stagiaire n’ose pas commenter.
+              - generic [ref=e49]:
+                - text: "18"
+                - generic [ref=e50]: pire score
+          - listitem [ref=e24]:
+            - link "🫣 Baptiste Un score pareil, ça se fête. Ou pas. 50 pire score" [ref=e62] [cursor=pointer]:
+              - /url: /profil/11111111-1111-1111-1111-111111111111
+              - generic [ref=e26]: 🫣
+              - generic [ref=e27]: B
+              - generic [ref=e28]:
+                - generic [ref=e29]: Baptiste
+                - generic [ref=e30]: Un score pareil, ça se fête. Ou pas.
+              - generic [ref=e31]:
+                - text: "50"
+                - generic [ref=e32]: pire score
+          - listitem [ref=e33]:
+            - 'link "😬 Nico On a vérifié : la cible était bien accrochée. 166 pire score" [ref=e63] [cursor=pointer]':
+              - /url: /profil/33333333-3333-3333-3333-333333333333
+              - generic [ref=e35]: 😬
+              - generic [ref=e36]: "N"
+              - generic [ref=e37]:
+                - generic [ref=e38]: Nico
+                - generic [ref=e39]: "On a vérifié : la cible était bien accrochée."
+              - generic [ref=e40]:
+                - text: "166"
+                - generic [ref=e41]: pire score
+    - navigation "Navigation principale" [ref=e10]:
+      - link "Classement" [ref=e11] [cursor=pointer]:
+        - /url: /
+      - link "Tirer" [ref=e12] [cursor=pointer]:
+        - /url: /tirer
+      - link "Historique" [ref=e13] [cursor=pointer]:
+        - /url: /historique
+      - link "Joueurs" [ref=e14] [cursor=pointer]:
+        - /url: /joueurs
+  - status
+  - button "Open Next.js Dev Tools" [ref=e56] [cursor=pointer]
+  - alert [ref=e60]

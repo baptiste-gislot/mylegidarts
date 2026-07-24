@@ -301,6 +301,20 @@ a {
   color: color-mix(in srgb, #c98d5e 80%, var(--craie));
 }
 
+/* Le bonnet d'âne : liséré rouge, « champion » du plus petit score. */
+.board__row--flop {
+  border-color: color-mix(in srgb, var(--rouge) 55%, var(--line));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--rouge) 9%, var(--surface)), var(--surface));
+}
+
+.board__row--flop .board__points {
+  color: color-mix(in srgb, var(--rouge) 75%, var(--craie));
+}
+
+.board__record--pique {
+  font-style: italic;
+}
+
 .board__rank {
   flex: none;
   width: 30px;

@@ -4,7 +4,7 @@ PWA de leaderboard de fléchettes. Le défi : **4 volées de 3 fléchettes**, sa
 
 ## Fonctionnalités
 
-- **Classement** : deux critères (meilleur score / moyenne par partie) × deux périodes (mois en cours / depuis toujours), palmarès des vainqueurs mensuels, podium célébré au changement de mois, néon sur le leader.
+- **Classement** : trois critères (meilleur score / moyenne par partie / plus petit score, ce dernier assorti d'une pique de l'annonceur) × deux périodes (mois en cours / depuis toujours), palmarès des vainqueurs mensuels, podium célébré au changement de mois, néon sur le leader.
 - **Ambiance** : annonceur vocal (180, records, relais entre joueurs, trash-talk sur les volées ratées), bruitages d'impact synthétisés (WebAudio, PC et mobile), confettis, vibrations, toasts. Bouton 🔊 dans l'en-tête pour tout couper.
 - **Historique** : groupé par partie (vainqueur mis en avant), détail volée par volée sur `/partie/[id]`.
 - **Joueurs** : surnoms éditables, utilisés par l'annonceur et le live.

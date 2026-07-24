@@ -67,6 +67,21 @@ const BIG_VOLLEY_LINES = [
   'On va devoir reculer la ligne de tir pour toi.',
 ]
 
+const FLOP_BOARD_LINES = [
+  'Le tableau a demandé à rester anonyme.',
+  'Gardien officiel du bas du tableau.',
+  'La cible se souvient surtout du mur.',
+  'Un score pareil, ça se fête. Ou pas.',
+  'Le sisal a porté plainte.',
+  'Champion, mais dans l’autre sens.',
+  'Ce record-là, personne ne viendra le chercher.',
+  'La craie a refusé de l’écrire deux fois.',
+  'Validé par huissier, malheureusement.',
+  'On a vérifié : la cible était bien accrochée.',
+  'La moyenne de l’équipe te remercie d’exister.',
+  'Même le stagiaire n’ose pas commenter.',
+]
+
 function pick(lines: string[]): string {
   return lines[Math.floor(Math.random() * lines.length)]
 }
@@ -83,4 +98,14 @@ export function praise(volleyTotal: number): string | null {
   if (volleyTotal >= 140) return pick(BIG_VOLLEY_LINES)
   if (volleyTotal >= 100 && Math.random() <= 0.6) return pick(GOOD_VOLLEY_LINES)
   return null
+}
+
+/**
+ * Pique du classement « plus petit score » : déterministe (même graine,
+ * même réplique) pour que le tableau ne se réécrive pas à chaque rendu.
+ */
+export function flopLine(seed: string): string {
+  let hash = 0
+  for (const char of seed) hash = (hash * 31 + char.charCodeAt(0)) >>> 0
+  return FLOP_BOARD_LINES[hash % FLOP_BOARD_LINES.length]
 }

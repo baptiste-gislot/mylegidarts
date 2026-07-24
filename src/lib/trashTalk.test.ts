@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { praise, trashTalk } from './trashTalk'
+import { flopLine, praise, trashTalk } from './trashTalk'
 
 describe('trashTalk', () => {
   it('chambre systématiquement une volée faible', () => {
@@ -18,6 +18,22 @@ describe('trashTalk', () => {
       expect(trashTalk(21)).toBeNull()
       expect(trashTalk(60)).toBeNull()
     }
+  })
+})
+
+describe('flopLine', () => {
+  it('rend toujours la même pique pour la même graine', () => {
+    const first = flopLine('abc-42')
+    for (let i = 0; i < 20; i++) {
+      expect(flopLine('abc-42')).toBe(first)
+    }
+    expect(first).toBeTypeOf('string')
+    expect(first.length).toBeGreaterThan(0)
+  })
+
+  it('varie selon la graine', () => {
+    const seen = new Set(Array.from({ length: 50 }, (_, i) => flopLine(`joueur-${i}`)))
+    expect(seen.size).toBeGreaterThan(1)
   })
 })
 
