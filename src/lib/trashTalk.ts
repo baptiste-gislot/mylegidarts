@@ -28,6 +28,11 @@ const LOW_VOLLEY_LINES = [
   'T’auras peut-être plus de succès si tu fais le canard comme César.',
   'Tu galères plus que Privel en compétition. Dur.',
   'Bientôt Baptiste aura plus d’enfants que t’as de points.',
+  'T’allais passer pro, mais les croisés, tu connais.',
+  'Sam Neill se retourne dans sa tombe.',
+  'Si t’es pas content, va te plaindre à la RH.',
+  'Reprends une dose de whey, c’est pour ton bien.',
+  'Un score moins élevé que le degré des bières d’Aloïs.',
 ]
 
 const ZERO_VOLLEY_LINES = [
