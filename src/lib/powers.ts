@@ -12,6 +12,7 @@ import {
   VOLLEYS_PER_SESSION,
   dartValue,
   type Dart,
+  type Mult,
 } from './scoring'
 
 export type PowerId =
@@ -28,9 +29,11 @@ export type PowerId =
   | 'motion'
   | 'tentacules'
   | 'defile'
+  | 'virage'
+  | 'ticket'
 
 /** Paramètre à demander au moment de l'activation. */
-export type PowerParam = 'rien' | 'cible' | 'secteur' | 'vote' | 'pouvoir'
+export type PowerParam = 'rien' | 'cible' | 'secteur' | 'vote' | 'pouvoir' | 'virage'
 
 export interface PowerDef {
   id: PowerId
@@ -146,6 +149,24 @@ export const POWERS: PowerDef[] = [
     description: 'Un joueur pose en mannequin : +15 points pour Léa par fléchette totalement ratée.',
     param: 'cible',
   },
+  {
+    id: 'virage',
+    persona: 'Mathieu — Toujours à la corde',
+    emoji: '🏁',
+    title: 'Dernier virage',
+    description:
+      'Après sa volée, déplace une de ses fléchettes vers la case voisine (19 → 20, ou le fil du triple).',
+    param: 'virage',
+  },
+  {
+    id: 'ticket',
+    persona: 'Thomas — Contrôleur intraitable',
+    emoji: '🎫',
+    title: 'Ticket refusé',
+    description:
+      'Une fois par manche, annule le pouvoir qu’un autre joueur vient d’activer (le pouvoir est perdu).',
+    param: 'rien',
+  },
 ]
 
 export const POWER_BY_ID: Record<PowerId, PowerDef> = Object.fromEntries(
@@ -161,6 +182,10 @@ export interface PowerEvent {
   sector?: number
   outcome?: 'normal' | 'triples-double'
   copied?: PowerId
+  /** Dernier virage : emplacement de la fléchette déplacée dans la volée… */
+  slot?: number
+  /** …et sa nouvelle valeur (case voisine ou fil du triple). */
+  dart?: Dart
 }
 
 export type MatchEvent = { kind: 'dart'; dart: Dart } | PowerEvent
@@ -223,6 +248,29 @@ interface ReplayInternals {
   usedPowers: { power: PowerId; actor: number }[]
   fixedBonuses: number[]
   triplesDoubleRounds: Set<number>
+  /** Manches où chaque détenteur de « Ticket refusé » l'a déjà joué. */
+  ticketRounds: Map<number, Set<number>>
+}
+
+/**
+ * « Ticket refusé » annule l'activation qui le précède immédiatement :
+ * on repère ces événements avant le rejeu pour sauter leurs effets
+ * (le pouvoir annulé reste consommé pour sa victime).
+ */
+function canceledEvents(journal: MatchEvent[]): Set<number> {
+  const canceled = new Set<number>()
+  journal.forEach((event, index) => {
+    if (event.kind !== 'power' || event.power !== 'ticket') return
+    for (let i = index - 1; i >= 0; i--) {
+      const previous = journal[i]
+      if (previous.kind === 'dart') break // trop tard : une fléchette est passée
+      if (previous.power !== 'ticket' && !canceled.has(i)) {
+        canceled.add(i)
+        break
+      }
+    }
+  })
+  return canceled
 }
 
 function effectiveDartValue(dart: Dart, round: number, triplesDouble: Set<number>): number {
@@ -265,7 +313,9 @@ function replayInternals(
     usedPowers: [],
     fixedBonuses: new Array<number>(playerCount).fill(0),
     triplesDoubleRounds: new Set<number>(),
+    ticketRounds: new Map<number, Set<number>>(),
   }
+  const canceled = canceledEvents(journal)
 
   const advance = () => {
     while (state.currentTurn < turns.length && isFull(turns[state.currentTurn])) {
@@ -273,7 +323,7 @@ function replayInternals(
     }
   }
 
-  for (const event of journal) {
+  for (const [index, event] of journal.entries()) {
     if (event.kind === 'dart') {
       if (state.hole) {
         state.hole.turn.darts[state.hole.slot] = event.dart
@@ -293,8 +343,18 @@ function replayInternals(
     // Activation d'un pouvoir. La validation a eu lieu via canActivate ;
     // le rejeu applique en confiance (journal = source de vérité).
     state.usedPowers.push({ power: event.power, actor: event.actor })
+    if (event.power === 'ticket') {
+      // Multi-usage (une fois par manche) : le détenteur le garde.
+      const round = turns[Math.min(state.currentTurn, turns.length - 1)].round
+      const rounds = state.ticketRounds.get(event.actor) ?? new Set<number>()
+      rounds.add(round)
+      state.ticketRounds.set(event.actor, rounds)
+      continue // l'annulation elle-même est résolue par canceledEvents()
+    }
     state.holders[event.actor] =
-      event.power === 'copie' && event.copied ? event.copied : null
+      event.power === 'copie' && event.copied && !canceled.has(index) ? event.copied : null
+    // Pouvoir refusé par un ticket : consommé, mais sans effet.
+    if (canceled.has(index)) continue
 
     switch (event.power) {
       case 'controle':
@@ -383,14 +443,38 @@ function replayInternals(
         }
         break
       }
+      case 'virage': {
+        const turn = lastCompletedTurn(state)
+        if (turn && event.slot !== undefined && event.dart !== undefined) {
+          turn.darts[event.slot] = event.dart
+        }
+        break
+      }
       case 'tentacules':
       case 'copie':
-        break // cérémonie / méta : aucun effet sur les scores
+        break // cérémonie / méta : aucun effet direct sur les scores
     }
     advance()
   }
 
   return state
+}
+
+/**
+ * « Dernier virage » : les déplacements légaux d'une volée — secteur voisin
+ * (19 → 20) à multiplicateur égal, ou changement d'anneau par le fil
+ * (simple ↔ double, simple ↔ triple). Ratés et bull ne bougent pas.
+ */
+export function virageOptions(turn: PowerTurn): { slot: number; dart: Dart }[] {
+  const options: { slot: number; dart: Dart }[] = []
+  turn.darts.forEach((dart, slot) => {
+    if (dart === null || dart.sector < 1 || dart.sector > 20) return
+    if (dart.sector > 1) options.push({ slot, dart: { sector: dart.sector - 1, mult: dart.mult } })
+    if (dart.sector < 20) options.push({ slot, dart: { sector: dart.sector + 1, mult: dart.mult } })
+    const rings: Mult[] = dart.mult === 1 ? [2, 3] : [1]
+    for (const mult of rings) options.push({ slot, dart: { sector: dart.sector, mult } })
+  })
+  return options
 }
 
 export function replayPowers(
@@ -464,7 +548,11 @@ export function canActivate(
   if (state.holders[event.actor] !== event.power) {
     return refuse('Ce joueur ne détient pas ce pouvoir (ou l’a déjà utilisé).')
   }
-  if (state.hole !== null) return refuse('Une relance est en attente : jouez-la d’abord.')
+  // Le ticket peut refuser un pouvoir qui vient d'ouvrir une relance — c'est
+  // même son heure de gloire : il est seul exempté du blocage.
+  if (state.hole !== null && event.power !== 'ticket') {
+    return refuse('Une relance est en attente : jouez-la d’abord.')
+  }
   const finished = state.currentTurn >= turns.length
   if (finished) return refuse('La partie est terminée.')
 
@@ -556,6 +644,31 @@ export function canActivate(
         return { ok: true }
       }
       if (copiable.length === 0) return refuse('Aucun pouvoir déjà utilisé à copier.')
+      return { ok: true }
+    }
+    case 'virage': {
+      if (!completed || completed.player !== event.actor)
+        return refuse('Valable juste après sa propre volée complète.')
+      const options = virageOptions(completed)
+      if (options.length === 0) return refuse('Aucune fléchette à décaler (raté ou bull).')
+      if (event.slot !== undefined && event.dart !== undefined) {
+        const dart = event.dart
+        const legal = options.some(
+          (o) => o.slot === event.slot && o.dart.sector === dart.sector && o.dart.mult === dart.mult,
+        )
+        if (!legal) return refuse('Ce déplacement n’est pas une case voisine.')
+      }
+      return { ok: true }
+    }
+    case 'ticket': {
+      const round = turns[Math.min(state.currentTurn, turns.length - 1)].round
+      if (state.ticketRounds.get(event.actor)?.has(round))
+        return refuse('Déjà un ticket refusé cette manche.')
+      const lastEvent = journal[journal.length - 1]
+      if (!lastEvent || lastEvent.kind !== 'power' || lastEvent.power === 'ticket')
+        return refuse('Valable juste après l’activation d’un pouvoir adverse.')
+      if (lastEvent.actor === event.actor)
+        return refuse('On ne refuse pas son propre ticket.')
       return { ok: true }
     }
   }

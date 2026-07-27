@@ -24,6 +24,7 @@ import {
   drawAssignments,
   replayPowers,
   sessionPowers,
+  virageOptions,
   type MatchEvent,
   type PowerEvent,
   type PowerId,
@@ -916,6 +917,28 @@ export default function TirerPage() {
                       {POWER_BY_ID[powerId].emoji} {POWER_BY_ID[powerId].title}
                     </button>
                   ))}
+                {def.param === 'virage' &&
+                  (() => {
+                    const turn = [...powersReplay.turns]
+                      .reverse()
+                      .find(
+                        (t) =>
+                          t.player === actor &&
+                          t.darts.length >= t.size &&
+                          t.darts.every((x) => x !== null),
+                      )
+                    if (!turn) return null
+                    return virageOptions(turn).map(({ slot, dart }) => (
+                      <button
+                        key={`${slot}-${dart.sector}-${dart.mult}`}
+                        type="button"
+                        className="chip"
+                        onClick={() => activatePower({ power: held, actor, slot, dart })}
+                      >
+                        {dartLabel(turn.darts[slot]!)} → {dartLabel(dart)}
+                      </button>
+                    ))
+                  })()}
               </div>
               <button type="button" className="button-ghost" onClick={() => setPowerDialog(null)}>
                 Fermer

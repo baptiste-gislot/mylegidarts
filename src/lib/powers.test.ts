@@ -6,6 +6,7 @@ import {
   drawAssignments,
   replayPowers,
   sessionPowers,
+  virageOptions,
   type MatchEvent,
   type PowerId,
 } from './powers'
@@ -296,10 +297,136 @@ describe('annulation par retrait du dernier événement', () => {
   })
 })
 
+describe('virage (Mathieu) — case voisine après sa volée', () => {
+  const assignments: PowerId[] = ['virage', 'bug']
+
+  it('déplace une fléchette vers le secteur voisin', () => {
+    const journal: MatchEvent[] = [
+      ...volley([19], [20, 3], [5]),
+      { kind: 'power', power: 'virage', actor: A, slot: 0, dart: { sector: 20, mult: 1 } },
+    ]
+    const replay = replayPowers(2, assignments, journal)
+    expect(replay.dartsByPlayer[A].map((x) => x.sector)).toEqual([20, 20, 5])
+    expect(replay.totals[A]).toBe(20 + 60 + 5)
+  })
+
+  it('permet de passer sur le fil du triple, mais refuse les sauts', () => {
+    const journal = volley([19], [20, 3], [5])
+    expect(
+      canActivate(2, assignments, journal, {
+        power: 'virage',
+        actor: A,
+        slot: 0,
+        dart: { sector: 19, mult: 3 },
+      }).ok,
+    ).toBe(true)
+    expect(
+      canActivate(2, assignments, journal, {
+        power: 'virage',
+        actor: A,
+        slot: 0,
+        dart: { sector: 17, mult: 1 },
+      }).ok,
+    ).toBe(false)
+  })
+
+  it('ne propose rien sur une volée de ratés, et n’offre que la sortie de l’anneau aux triples', () => {
+    const missTurn = { player: A, size: 3, round: 0, darts: [
+      { sector: 0, mult: 1 }, { sector: 0, mult: 1 }, { sector: 0, mult: 1 },
+    ] as Dart[] }
+    expect(virageOptions(missTurn)).toHaveLength(0)
+    expect(
+      canActivate(2, assignments, volley([0], [0], [0]), { power: 'virage', actor: A }).ok,
+    ).toBe(false)
+    const tripleTurn = { player: A, size: 3, round: 0, darts: [
+      { sector: 20, mult: 3 }, { sector: 0, mult: 1 }, { sector: 0, mult: 1 },
+    ] as Dart[] }
+    const moves = virageOptions(tripleTurn).map((o) => `${o.dart.sector}x${o.dart.mult}`)
+    // Un T20 peut glisser vers T19 (secteur voisin) ou retomber en S20 (le
+    // fil), mais jamais sauter en double : la zone double n'est pas voisine.
+    expect(moves).toContain('19x3')
+    expect(moves).toContain('20x1')
+    expect(moves).not.toContain('20x2')
+    expect(moves).not.toContain('21x3')
+  })
+})
+
+describe('ticket (Thomas) — refuse le pouvoir qui vient d’être activé', () => {
+  it('annule un bug : la fléchette est rétablie, le bug est perdu, le ticket reste', () => {
+    const assignments: PowerId[] = ['bug', 'ticket']
+    const journal: MatchEvent[] = [
+      ...volley([20], [20], [20]),
+      d(19),
+      { kind: 'power', power: 'bug', actor: A },
+      { kind: 'power', power: 'ticket', actor: B },
+    ]
+    const replay = replayPowers(2, assignments, journal)
+    expect(replay.dartsByPlayer[B].map((x) => x.sector)).toEqual([19])
+    expect(replay.holders[A]).toBeNull() // le bug est consommé pour rien
+    expect(replay.holders[B]).toBe('ticket') // Thomas garde son carnet
+  })
+
+  it('annule une réclamation avant la relance : plus de trou', () => {
+    const assignments: PowerId[] = ['reclamation', 'ticket']
+    const journal: MatchEvent[] = [
+      ...volley([5], [5], [5]),
+      ...volley([1], [20, 3], [5]),
+      { kind: 'power', power: 'reclamation', actor: A, target: B },
+      { kind: 'power', power: 'ticket', actor: B },
+    ]
+    const replay = replayPowers(2, assignments, journal)
+    expect(replay.pendingHole).toBeNull()
+    expect(replay.totals[B]).toBe(1 + 60 + 5)
+  })
+
+  it('une seule fois par manche, de nouveau disponible à la manche suivante', () => {
+    const assignments: PowerId[] = ['classe', 'ticket', 'simulation', 'motion']
+    const journal: MatchEvent[] = [
+      { kind: 'power', power: 'classe', actor: A, sector: 20 },
+      { kind: 'power', power: 'ticket', actor: B },
+      ...volley([20], [20], [20]), // A (aucun bonus : classe refusée)
+      ...volley([5], [5], [5]), // B
+      d(0),
+      { kind: 'power', power: 'simulation', actor: 2, sector: 16 },
+    ]
+    expect(canActivate(4, assignments, journal, { power: 'ticket', actor: B }).ok).toBe(false)
+
+    const nextRound: MatchEvent[] = [
+      ...journal,
+      ...volley([5], [5]), // C finit sa volée
+      ...volley([5], [5], [5]), // D — fin de la manche 0
+      { kind: 'power', power: 'motion', actor: 3, outcome: 'normal' },
+    ]
+    expect(canActivate(4, assignments, nextRound, { power: 'ticket', actor: B }).ok).toBe(true)
+
+    const replay = replayPowers(4, assignments, journal)
+    expect(replay.bonuses[A]).toBe(0) // la classe refusée ne rapporte rien
+  })
+
+  it('refuse quand la dernière action est une fléchette, et un copie annulé ne donne rien', () => {
+    const assignments: PowerId[] = ['controle', 'copie', 'ticket']
+    expect(
+      canActivate(3, assignments, volley([5]), { power: 'ticket', actor: 2 }).ok,
+    ).toBe(false)
+
+    const journal: MatchEvent[] = [
+      d(0),
+      { kind: 'power', power: 'controle', actor: A },
+      d(20),
+      d(5),
+      d(1),
+      { kind: 'power', power: 'copie', actor: B, copied: 'controle' },
+      { kind: 'power', power: 'ticket', actor: 2 },
+    ]
+    const replay = replayPowers(3, assignments, journal)
+    expect(replay.holders[B]).toBeNull() // la copie refusée n'accorde rien
+  })
+})
+
 describe('tirage et persistance', () => {
-  it('assigne des pouvoirs distincts jusqu’à 13 joueurs', () => {
-    const drawn = drawAssignments(13)
-    expect(new Set(drawn).size).toBe(13)
+  it('assigne des pouvoirs distincts jusqu’à 15 joueurs', () => {
+    const drawn = drawAssignments(15)
+    expect(new Set(drawn).size).toBe(15)
     expect(drawAssignments(3)).toHaveLength(3)
   })
 
@@ -320,7 +447,7 @@ describe('tirage et persistance', () => {
     expect(rows[B].used).toBe(false)
   })
 
-  it('expose 13 pouvoirs définis', () => {
-    expect(POWERS).toHaveLength(13)
+  it('expose 15 pouvoirs définis', () => {
+    expect(POWERS).toHaveLength(15)
   })
 })
