@@ -238,6 +238,15 @@ export default function TirerPage() {
     return map
   }, [stats])
 
+  // Moyenne de volée maison (toutes sessions classées confondues) : l'annonceur
+  // calibre ses compliments sur le niveau réel de l'équipe, pas sur celui des pros.
+  const averageVolley = useMemo(() => {
+    const sessionsCount = stats.reduce((sum, s) => sum + s.sessions_count, 0)
+    if (sessionsCount === 0) return null
+    const totalSum = stats.reduce((sum, s) => sum + s.sum_total, 0)
+    return totalSum / sessionsCount / VOLLEYS_PER_SESSION
+  }, [stats])
+
   // Verrou d'enregistrement : empêche d'insérer deux fois la même partie.
   const savedRef = useRef(false)
 
@@ -346,7 +355,7 @@ export default function TirerPage() {
   }
 
   function announceVolley(volleyTotal: number, sessionDone: boolean) {
-    const commentaire = praise(volleyTotal) ?? trashTalk(volleyTotal)
+    const commentaire = praise(volleyTotal, averageVolley) ?? trashTalk(volleyTotal)
     if (commentaire) toast(commentaire)
     const nextIndex = (globalVolley + 1) % Math.max(1, order.length)
     const nextPlayer = players.find((p) => p.id === order[nextIndex])
@@ -396,7 +405,7 @@ export default function TirerPage() {
       setFlash({ title: '180 !', name: currentPlayer.name, kind: 'perfect' })
       return
     }
-    const commentaire = praise(volleyTotal) ?? trashTalk(volleyTotal)
+    const commentaire = praise(volleyTotal, averageVolley) ?? trashTalk(volleyTotal)
     if (commentaire) toast(commentaire)
     const nextPlayer =
       after.current !== null ? players.find((p) => p.id === order[after.current!.player]) : null

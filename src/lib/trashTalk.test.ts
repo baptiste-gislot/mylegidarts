@@ -38,17 +38,33 @@ describe('flopLine', () => {
 })
 
 describe('praise', () => {
-  it('félicite systématiquement à 140 et plus', () => {
+  it('sans historique : félicite systématiquement dès 60 (double de la volée maison supposée)', () => {
     for (let i = 0; i < 20; i++) {
-      expect(praise(140)).toBeTypeOf('string')
+      expect(praise(60)).toBeTypeOf('string')
       expect(praise(180)).toBeTypeOf('string')
     }
   })
 
-  it('ne félicite jamais sous 100', () => {
+  it('sans historique : ne félicite jamais sous 35', () => {
     for (let i = 0; i < 20; i++) {
-      expect(praise(99)).toBeNull()
+      expect(praise(34)).toBeNull()
       expect(praise(21)).toBeNull()
+    }
+  })
+
+  it('se calibre sur la moyenne réelle de l’équipe', () => {
+    for (let i = 0; i < 20; i++) {
+      // Équipe modeste (20/volée) : 50 points, c'est déjà énorme.
+      expect(praise(50, 20)).toBeTypeOf('string')
+      // Équipe forte (60/volée) : 80 points ne mérite même pas un mot.
+      expect(praise(80, 60)).toBeNull()
+      expect(praise(120, 60)).toBeTypeOf('string')
+    }
+  })
+
+  it('plafonne l’exigence à 140, même pour une équipe de tueurs', () => {
+    for (let i = 0; i < 20; i++) {
+      expect(praise(140, 100)).toBeTypeOf('string')
     }
   })
 })

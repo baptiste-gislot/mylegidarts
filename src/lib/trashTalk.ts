@@ -24,6 +24,10 @@ const LOW_VOLLEY_LINES = [
   'Le stagiaire fait mieux. Et il n’a pas de bras.',
   'Ce n’est plus du sport, c’est de l’art abstrait.',
   'Rassure-moi, tu tenais la fléchette dans le bon sens ?',
+  'À peine plus de points que le nombre de cheveux d’Adrien.',
+  'T’auras peut-être plus de succès si tu fais le canard comme César.',
+  'Tu galères plus que Privel en compétition. Dur.',
+  'Bientôt Baptiste aura plus d’enfants que t’as de points.',
 ]
 
 const ZERO_VOLLEY_LINES = [
@@ -93,10 +97,22 @@ export function trashTalk(volleyTotal: number): string | null {
   return pick(LOW_VOLLEY_LINES)
 }
 
-/** Un compliment pour une belle volée (systématique à 140+, occasionnel à 100+). */
-export function praise(volleyTotal: number): string | null {
-  if (volleyTotal >= 140) return pick(BIG_VOLLEY_LINES)
-  if (volleyTotal >= 100 && Math.random() <= 0.6) return pick(GOOD_VOLLEY_LINES)
+/** Sans historique, on suppose une volée maison à 30 points (~120 par session). */
+const DEFAULT_AVERAGE_VOLLEY = 30
+
+/**
+ * Un compliment calibré sur le niveau réel de l'équipe : systématique quand
+ * la volée double la moyenne maison, fréquent (60 %) dès qu'elle la dépasse
+ * d'un bon tiers. Les planchers gardent les compliments au-dessus de la zone
+ * de chambrage (≤ 20), les plafonds évitent d'exiger un niveau de pro.
+ */
+export function praise(volleyTotal: number, averageVolley: number | null = null): string | null {
+  const reference =
+    averageVolley !== null && averageVolley > 0 ? averageVolley : DEFAULT_AVERAGE_VOLLEY
+  const bigThreshold = Math.min(140, Math.max(50, reference * 2))
+  const goodThreshold = Math.min(100, Math.max(35, reference * 1.35))
+  if (volleyTotal >= bigThreshold) return pick(BIG_VOLLEY_LINES)
+  if (volleyTotal >= goodThreshold && Math.random() <= 0.6) return pick(GOOD_VOLLEY_LINES)
   return null
 }
 
