@@ -1,7 +1,9 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type { RealtimeChannel } from '@supabase/supabase-js'
 import type { SessionPowers } from './powers'
+import { channelHealthy, onReconnectHints, useWatchdog } from './realtimeHealth'
 import type { Dart } from './scoring'
 import { supabase } from './supabaseClient'
 
@@ -169,16 +171,49 @@ export function useLeague(): LeagueData {
     } catch {
       // instantané corrompu : on attend simplement le réseau
     }
+  }, [])
+
+  // Fiabilité du canal de notifications : un canal mort laisserait un
+  // classement silencieusement périmé. À chaque reconstruction (époque),
+  // refetch pour rattraper les changements manqués pendant la coupure.
+  const [epoch, setEpoch] = useState(0)
+  const channelRef = useRef<RealtimeChannel | null>(null)
+  const revive = useCallback(() => {
+    void refetch()
+    setEpoch((e) => e + 1)
+  }, [refetch])
+
+  useEffect(() => onReconnectHints(revive), [revive])
+
+  const watchdogCheck = useCallback(() => {
+    if (!supabase) return
+    if (!channelHealthy(channelRef.current)) revive()
+  }, [revive])
+  useWatchdog(watchdogCheck)
+
+  useEffect(() => {
+    if (!supabase) return
+    let alive = true
     void refetch()
     const channel = supabase
       .channel('league-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'players' }, () => void refetch())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'sessions' }, () => void refetch())
-      .subscribe()
+      .subscribe((status) => {
+        if (!alive) return
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          setTimeout(() => {
+            if (alive) setEpoch((e) => e + 1)
+          }, 3_000)
+        }
+      })
+    channelRef.current = channel
     return () => {
+      alive = false
+      if (channelRef.current === channel) channelRef.current = null
       void supabase?.removeChannel(channel)
     }
-  }, [refetch])
+  }, [refetch, epoch])
 
   async function addPlayer(name: string): Promise<string | null> {
     if (!supabase) return 'Supabase n’est pas configuré.'
