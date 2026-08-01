@@ -1,6 +1,6 @@
 import { dartLabel } from '@/lib/scoring'
 import type { Dart, Mult } from '@/lib/scoring'
-import { BOARD_SECTORS, heatKey, heatmapCounts } from '@/lib/heatmap'
+import { BOARD_SECTORS, HEAT_LEVELS, heatKey, heatLevel, heatmapCounts } from '@/lib/heatmap'
 
 interface DartHeatmapProps {
   /** Toutes les fléchettes du joueur, ratés compris. */
@@ -45,12 +45,6 @@ function circlePath(r: number): string {
   return `M ${C - r} ${C} A ${r} ${r} 0 1 1 ${C + r} ${C} A ${r} ${r} 0 1 1 ${C - r} ${C} Z`
 }
 
-/** Racine carrée pour étaler les faibles effectifs, plancher pour qu'un impact isolé reste visible. */
-function heatOpacity(count: number, max: number): number {
-  if (count === 0 || max === 0) return 0
-  return 0.15 + 0.85 * Math.sqrt(count / max)
-}
-
 export function DartHeatmap({ darts }: DartHeatmapProps) {
   if (darts.length === 0) return null
 
@@ -59,6 +53,11 @@ export function DartHeatmap({ darts }: DartHeatmapProps) {
   const segTitle = (sector: number, mult: Mult, count: number) => {
     const share = onTarget > 0 ? ` (${Math.round((count / onTarget) * 100)} %)` : ''
     return `${dartLabel({ sector, mult })} : ${count} impact${count > 1 ? 's' : ''}${share}`
+  }
+
+  const segClass = (count: number) => {
+    const level = heatLevel(count, max)
+    return level === 0 ? 'heatmap__seg' : `heatmap__seg heatmap__seg--l${level}`
   }
 
   return (
@@ -78,12 +77,7 @@ export function DartHeatmap({ darts }: DartHeatmapProps) {
               {RINGS.map(({ r0, r1, mult }, j) => {
                 const count = hits.get(heatKey(sector, mult)) ?? 0
                 return (
-                  <path
-                    key={j}
-                    d={ringSector(r0, r1, a0, a1)}
-                    className="heatmap__seg"
-                    fillOpacity={heatOpacity(count, max)}
-                  >
+                  <path key={j} d={ringSector(r0, r1, a0, a1)} className={segClass(count)}>
                     <title>{segTitle(sector, mult, count)}</title>
                   </path>
                 )
@@ -98,25 +92,22 @@ export function DartHeatmap({ darts }: DartHeatmapProps) {
         <path
           d={`${circlePath(BULL_R)} ${circlePath(BULLSEYE_R)}`}
           fillRule="evenodd"
-          className="heatmap__seg"
-          fillOpacity={heatOpacity(hits.get(heatKey(25, 1)) ?? 0, max)}
+          className={segClass(hits.get(heatKey(25, 1)) ?? 0)}
         >
           <title>{segTitle(25, 1, hits.get(heatKey(25, 1)) ?? 0)}</title>
         </path>
-        <circle
-          cx={C}
-          cy={C}
-          r={BULLSEYE_R}
-          className="heatmap__seg"
-          fillOpacity={heatOpacity(hits.get(heatKey(25, 2)) ?? 0, max)}
-        >
+        <circle cx={C} cy={C} r={BULLSEYE_R} className={segClass(hits.get(heatKey(25, 2)) ?? 0)}>
           <title>{segTitle(25, 2, hits.get(heatKey(25, 2)) ?? 0)}</title>
         </circle>
       </svg>
 
       <div className="heatmap__legend" aria-hidden="true">
         <span>0</span>
-        <span className="heatmap__gradient" />
+        <span className="heatmap__steps">
+          {Array.from({ length: HEAT_LEVELS }, (_, i) => (
+            <span key={i} className={`heatmap__step heatmap__seg--l${i + 1}`} />
+          ))}
+        </span>
         <span>
           {max} impact{max > 1 ? 's' : ''}
         </span>

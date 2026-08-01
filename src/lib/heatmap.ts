@@ -8,6 +8,20 @@ export function heatKey(sector: number, mult: Mult): string {
   return `${sector}:${mult}`
 }
 
+/** Nombre de paliers de couleur de la heatmap. */
+export const HEAT_LEVELS = 5
+
+/**
+ * Palier de couleur d'un segment : 0 pour un segment vierge, 1 à HEAT_LEVELS
+ * sinon, en linéaire par rapport au segment le plus touché. Des paliers
+ * discrets plutôt qu'une opacité continue : l'œil distingue mal deux
+ * opacités proches, très bien deux paliers.
+ */
+export function heatLevel(count: number, max: number): number {
+  if (count === 0 || max === 0) return 0
+  return Math.max(1, Math.ceil((count / max) * HEAT_LEVELS))
+}
+
 export interface HeatmapCounts {
   /** Impacts par segment (voir heatKey). Les segments jamais touchés sont absents. */
   hits: Map<string, number>

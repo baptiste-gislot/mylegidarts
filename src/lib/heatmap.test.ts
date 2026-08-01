@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { BOARD_SECTORS, heatKey, heatmapCounts } from './heatmap'
+import { BOARD_SECTORS, HEAT_LEVELS, heatKey, heatLevel, heatmapCounts } from './heatmap'
 import type { Dart } from './scoring'
 
 const d = (sector: number, mult: 1 | 2 | 3 = 1): Dart => ({ sector, mult })
@@ -14,6 +14,29 @@ describe('BOARD_SECTORS', () => {
     expect(BOARD_SECTORS[0]).toBe(20)
     expect(BOARD_SECTORS[1]).toBe(1)
     expect(BOARD_SECTORS[19]).toBe(5)
+  })
+})
+
+describe('heatLevel', () => {
+  it('vaut 0 pour un segment vierge ou une cible vide', () => {
+    expect(heatLevel(0, 4)).toBe(0)
+    expect(heatLevel(0, 0)).toBe(0)
+  })
+
+  it('répartit linéairement les paliers jusqu’au segment le plus touché', () => {
+    expect(heatLevel(1, 4)).toBe(2)
+    expect(heatLevel(2, 4)).toBe(3)
+    expect(heatLevel(3, 4)).toBe(4)
+    expect(heatLevel(4, 4)).toBe(HEAT_LEVELS)
+  })
+
+  it('garde un impact isolé visible même avec un max élevé', () => {
+    expect(heatLevel(1, 20)).toBe(1)
+  })
+
+  it('le max touche toujours le palier le plus chaud', () => {
+    expect(heatLevel(1, 1)).toBe(HEAT_LEVELS)
+    expect(heatLevel(7, 7)).toBe(HEAT_LEVELS)
   })
 })
 

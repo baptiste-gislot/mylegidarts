@@ -10,6 +10,12 @@
   --vert: #3f8f5b;
   --vert-fonce: #2e6b44;
   --laiton: #c9a22b;
+  /* Rampe séquentielle de la heatmap : luminosité monotone, ~×1,6 entre paliers. */
+  --heat-1: #453913;
+  --heat-2: #6f5a1c;
+  --heat-3: #9c7f24;
+  --heat-4: #c9a22b;
+  --heat-5: #f2cf5b;
   --radius: 10px;
   --font-display-stack: var(--font-display), 'Arial Narrow', sans-serif;
   --font-body-stack: var(--font-body), system-ui, sans-serif;
@@ -1028,9 +1034,35 @@ a {
 }
 
 .heatmap__seg {
-  fill: var(--laiton);
+  fill: transparent;
   stroke: var(--surface);
   stroke-width: 1;
+}
+
+/* fill pour les segments SVG, background pour les swatches de la légende */
+.heatmap__seg--l1 {
+  fill: var(--heat-1);
+  background: var(--heat-1);
+}
+
+.heatmap__seg--l2 {
+  fill: var(--heat-2);
+  background: var(--heat-2);
+}
+
+.heatmap__seg--l3 {
+  fill: var(--heat-3);
+  background: var(--heat-3);
+}
+
+.heatmap__seg--l4 {
+  fill: var(--heat-4);
+  background: var(--heat-4);
+}
+
+.heatmap__seg--l5 {
+  fill: var(--heat-5);
+  background: var(--heat-5);
 }
 
 .heatmap__num {
@@ -1052,12 +1084,15 @@ a {
   color: var(--craie-dim);
 }
 
-.heatmap__gradient {
-  width: 140px;
+.heatmap__steps {
+  display: flex;
+  gap: 2px;
+}
+
+.heatmap__step {
+  width: 24px;
   height: 8px;
-  border-radius: 4px;
-  border: 1px solid var(--line);
-  background: linear-gradient(90deg, var(--ink), var(--laiton));
+  border-radius: 2px;
 }
 
 /* ---------- Répartition des fléchettes ---------- */
