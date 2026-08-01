@@ -2,12 +2,15 @@
 
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
+import { useState } from 'react'
+import { BadgeGrid } from '@/components/BadgeGrid'
 import { DartHeatmap } from '@/components/DartHeatmap'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
 import { ScoreChart } from '@/components/ScoreChart'
 import { SetupNotice } from '@/components/SetupNotice'
+import { computeBadges } from '@/lib/badges'
+import { bestVolleyDetail, consistency, FORM_WINDOW, hotStreak, recentForm } from '@/lib/profileStats'
 import {
-  bestVolley,
   count180s,
   dartBreakdown,
   dartLabel,
@@ -31,6 +34,7 @@ export default function ProfilPage() {
   const { players, loading, error, configured } = useLeagueContext()
   const { sessions: own, error: sessionsError } = usePlayerSessions(id)
   const duels = useDuels(id)
+  const [heatScope, setHeatScope] = useState<'all' | 'month'>('all')
 
   if (!configured) return <SetupNotice />
   if (loading) return <p className="empty">Chargement du profil…</p>
@@ -66,11 +70,26 @@ export default function ProfilPage() {
 
   const allDarts = own.flatMap((s) => s.darts)
   const breakdown = dartBreakdown(allDarts)
-  const record = Math.max(...own.map((s) => s.total))
-  const average = Math.round(own.reduce((sum, s) => sum + s.total, 0) / own.length)
-  const maxVolley = Math.max(...own.map((s) => bestVolley(s.darts)))
+  const totals = own.map((s) => s.total)
+  const record = Math.max(...totals)
+  const average = Math.round(totals.reduce((sum, t) => sum + t, 0) / totals.length)
+  const bestV = bestVolleyDetail(own)
   const total180 = own.reduce((sum, s) => sum + count180s(s.darts), 0)
   const perDart = (allDarts.reduce((sum, d) => sum + d.sector * d.mult, 0) / allDarts.length).toFixed(1)
+  const form = recentForm(totals)
+  const sigma = consistency(totals)
+  const streak = hotStreak(totals)
+  const badges = computeBadges(own, duels ?? [])
+  const earnedBadges = badges.filter((b) => b.earned).length
+
+  const now = new Date()
+  const monthDarts = own
+    .filter((s) => {
+      const date = new Date(s.created_at)
+      return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth()
+    })
+    .flatMap((s) => s.darts)
+  const heatDarts = heatScope === 'all' ? allDarts : monthDarts
 
   const breakdownRows = [
     { label: 'Triples', value: breakdown.triples },
@@ -94,13 +113,23 @@ export default function ProfilPage() {
           <span className="tile__value">{average}</span>
           <span className="tile__label">moyenne</span>
         </div>
-        <div className="tile">
-          <span className="tile__value">{maxVolley}</span>
+        {form && (
+          <div className="tile" title={`Moyenne des ${FORM_WINDOW} dernières sessions, contre ${average} en général`}>
+            <span className="tile__value">{form.recent}</span>
+            <span className="tile__label">forme</span>
+            <span
+              className={
+                form.delta > 0 ? 'tile__sub tile__sub--up' : form.delta < 0 ? 'tile__sub tile__sub--down' : 'tile__sub'
+              }
+            >
+              {form.delta > 0 ? `↑ +${form.delta}` : form.delta < 0 ? `↓ ${form.delta}` : '='}
+            </span>
+          </div>
+        )}
+        <div className="tile" title={bestV ? dateFormat.format(new Date(bestV.createdAt)) : undefined}>
+          <span className="tile__value">{bestV?.total ?? 0}</span>
           <span className="tile__label">volée max</span>
-        </div>
-        <div className="tile">
-          <span className="tile__value">{own.length}</span>
-          <span className="tile__label">session{own.length > 1 ? 's' : ''}</span>
+          {bestV && <span className="tile__sub">{bestV.darts.map(dartLabel).join(' ')}</span>}
         </div>
         <div className="tile">
           <span className="tile__value">{perDart}</span>
@@ -110,7 +139,28 @@ export default function ProfilPage() {
           <span className="tile__value">{total180}</span>
           <span className="tile__label">180</span>
         </div>
+        <div className="tile">
+          <span className="tile__value">{own.length}</span>
+          <span className="tile__label">session{own.length > 1 ? 's' : ''}</span>
+        </div>
+        {own.length >= 2 && (
+          <div className="tile" title="Écart-type des totaux de session : plus c’est bas, plus le jeu est régulier">
+            <span className="tile__value">± {sigma}</span>
+            <span className="tile__label">constance</span>
+          </div>
+        )}
+        <div className="tile" title="Sessions consécutives au moins au niveau de la moyenne">
+          <span className="tile__value">{streak}</span>
+          <span className="tile__label">série ≥ moy.</span>
+        </div>
       </div>
+
+      <section>
+        <h2 className="section-title">
+          Trophées · {earnedBadges}/{badges.length}
+        </h2>
+        <BadgeGrid badges={badges} />
+      </section>
 
       {own.length >= 2 && (
         <section>
@@ -171,7 +221,27 @@ export default function ProfilPage() {
 
       <section>
         <h2 className="section-title">Heatmap de la cible</h2>
-        <DartHeatmap darts={allDarts} />
+        <div className="chips chips--scope">
+          <button
+            type="button"
+            className={heatScope === 'all' ? 'chip chip--on' : 'chip'}
+            onClick={() => setHeatScope('all')}
+          >
+            Tout
+          </button>
+          <button
+            type="button"
+            className={heatScope === 'month' ? 'chip chip--on' : 'chip'}
+            onClick={() => setHeatScope('month')}
+          >
+            Ce mois-ci
+          </button>
+        </div>
+        {heatDarts.length > 0 ? (
+          <DartHeatmap darts={heatDarts} />
+        ) : (
+          <p className="empty">Aucune fléchette ce mois-ci.</p>
+        )}
       </section>
 
       <section>

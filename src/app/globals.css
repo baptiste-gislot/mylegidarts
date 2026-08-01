@@ -893,6 +893,62 @@ a {
   letter-spacing: 0.08em;
 }
 
+.tile__sub {
+  font-size: 11px;
+  color: var(--craie-dim);
+  white-space: nowrap;
+}
+
+.tile__sub--up {
+  color: var(--vert);
+}
+
+.tile__sub--down {
+  color: var(--rouge);
+}
+
+/* ---------- Trophées ---------- */
+
+.badges {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.badge {
+  background: var(--surface);
+  border: 1px solid var(--laiton);
+  border-radius: var(--radius);
+  padding: 12px 8px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  text-align: center;
+}
+
+.badge--locked {
+  border-color: var(--line);
+  opacity: 0.45;
+  filter: grayscale(1);
+}
+
+.badge__icon {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.badge__name {
+  font-family: var(--font-display-stack);
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.badge__desc {
+  font-size: 11px;
+  color: var(--craie-dim);
+}
+
 /* ---------- Graphique d'évolution ---------- */
 
 .chart {
@@ -955,6 +1011,11 @@ a {
 }
 
 /* ---------- Heatmap de la cible ---------- */
+
+.chips--scope {
+  justify-content: center;
+  margin-bottom: 12px;
+}
 
 .heatmap svg {
   max-width: 300px;
