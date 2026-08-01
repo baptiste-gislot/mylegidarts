@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
+import { DartHeatmap } from '@/components/DartHeatmap'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
 import { ScoreChart } from '@/components/ScoreChart'
 import { SetupNotice } from '@/components/SetupNotice'
@@ -166,6 +167,11 @@ export default function ProfilPage() {
             </div>
           ))}
         </div>
+      </section>
+
+      <section>
+        <h2 className="section-title">Heatmap de la cible</h2>
+        <DartHeatmap darts={allDarts} />
       </section>
 
       <section>
