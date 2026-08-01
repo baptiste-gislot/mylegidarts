@@ -180,18 +180,23 @@ export default function ProfilPage() {
                 const draws = duel.played - duel.wins - duel.losses
                 const leading = duel.wins > duel.losses
                 return (
-                  <li key={duel.opponent_id} className="duels__row">
-                    <PlayerAvatar name={opponent?.name ?? '?'} />
-                    <span className="duels__who">
-                      <span className="board__name">contre {opponent?.name ?? 'Joueur supprimé'}</span>
-                      <span className="board__record">
-                        {duel.played} partie{duel.played > 1 ? 's' : ''}
-                        {draws > 0 && ` · ${draws} nul${draws > 1 ? 's' : ''}`}
+                  <li key={duel.opponent_id}>
+                    <Link href={`/comparer/${id}/${duel.opponent_id}`} className="duels__row">
+                      <PlayerAvatar name={opponent?.name ?? '?'} />
+                      <span className="duels__who">
+                        <span className="board__name">contre {opponent?.name ?? 'Joueur supprimé'}</span>
+                        <span className="board__record">
+                          {duel.played} partie{duel.played > 1 ? 's' : ''}
+                          {draws > 0 && ` · ${draws} nul${draws > 1 ? 's' : ''}`}
+                        </span>
                       </span>
-                    </span>
-                    <span className={leading ? 'duels__score duels__score--up' : 'duels__score'}>
-                      {duel.wins} V – {duel.losses} D
-                    </span>
+                      <span className={leading ? 'duels__score duels__score--up' : 'duels__score'}>
+                        {duel.wins} V – {duel.losses} D
+                      </span>
+                      <span className="duels__go" aria-hidden="true">
+                        ›
+                      </span>
+                    </Link>
                   </li>
                 )
               })}

@@ -269,6 +269,10 @@ export default function ClassementPage() {
       )}
 
       <MonthPodium players={players} stats={stats} />
+
+      <Link href="/records" className="button-ghost records-link">
+        🏅 Records de la ligue
+      </Link>
     </div>
   )
 }

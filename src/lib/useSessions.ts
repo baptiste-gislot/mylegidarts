@@ -88,6 +88,35 @@ export function usePlayerSessions(playerId: string | undefined) {
   return { sessions, error }
 }
 
+/**
+ * Toutes les sessions défi de la ligue, sans le détail des fléchettes
+ * (vue session_stats), pour la page des records.
+ */
+export function useAllSessionStats() {
+  const [rows, setRows] = useState<SessionStatRow[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!supabase) return
+    let cancelled = false
+    void supabase
+      .from('session_stats')
+      .select('*')
+      .eq('mode', 'volees')
+      .order('created_at', { ascending: true })
+      .then(({ data, error: err }) => {
+        if (cancelled) return
+        if (err) setError(err.message)
+        else setRows(data as SessionStatRow[])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  return { rows, error }
+}
+
 /** Bilan des face-à-face d'un joueur (parties à 2, tous modes confondus). */
 export function useDuels(playerId: string | undefined) {
   const [duels, setDuels] = useState<DuelStatRow[] | null>(null)

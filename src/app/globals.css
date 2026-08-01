@@ -1694,6 +1694,192 @@ a {
   color: var(--vert);
 }
 
+.duels__go {
+  color: var(--craie-dim);
+  font-size: 20px;
+  line-height: 1;
+}
+
+/* ---------- Records de la ligue ---------- */
+
+.records-link {
+  align-self: center;
+}
+
+.records {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.records__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+}
+
+.records__icon {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.records__what {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.records__label {
+  font-weight: 600;
+}
+
+.records__detail {
+  font-size: 12px;
+  color: var(--craie-dim);
+}
+
+.records__who {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.records__avatars {
+  display: flex;
+  gap: 4px;
+}
+
+.records__holder {
+  display: inline-flex;
+}
+
+.records__names {
+  font-size: 11px;
+  color: var(--craie-dim);
+  max-width: 90px;
+  text-align: center;
+}
+
+.records__value {
+  font-family: var(--font-display-stack);
+  font-weight: 700;
+  font-size: 24px;
+  color: var(--laiton);
+  min-width: 48px;
+  text-align: right;
+}
+
+/* ---------- Comparateur de joueurs ---------- */
+
+.versus-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.versus-head__side {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.versus-head__vs {
+  font-family: var(--font-display-stack);
+  font-weight: 700;
+  color: var(--laiton);
+  text-transform: uppercase;
+}
+
+.versus-duel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  text-align: center;
+}
+
+.versus-duel__score {
+  font-family: var(--font-display-stack);
+  font-weight: 700;
+  font-size: 20px;
+  color: var(--laiton);
+}
+
+.versus-duel__hint {
+  display: block;
+  font-size: 12px;
+  color: var(--craie-dim);
+  margin-top: 4px;
+}
+
+.versus {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.versus__row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 8px 14px;
+}
+
+.versus__label {
+  font-size: 12px;
+  color: var(--craie-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  text-align: center;
+}
+
+.versus__value {
+  font-family: var(--font-display-stack);
+  font-weight: 700;
+  font-size: 20px;
+}
+
+.versus__value:first-child {
+  text-align: left;
+}
+
+.versus__value:last-child {
+  text-align: right;
+}
+
+.versus__value--win {
+  color: var(--vert);
+}
+
+.versus-heatmaps {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  align-items: start;
+}
+
+.versus-heatmaps__name {
+  text-align: center;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.versus-heatmaps .heatmap svg {
+  max-width: 100%;
+}
+
 /* ---------- Note de mode (301) ---------- */
 
 .mode-hint {

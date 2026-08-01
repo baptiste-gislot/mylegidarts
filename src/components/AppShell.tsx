@@ -57,7 +57,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {TABS.map((tab) => {
             const active =
               pathname === tab.href ||
-              (tab.href === '/' && pathname.startsWith('/profil')) ||
+              (tab.href === '/' &&
+                ['/profil', '/records', '/comparer'].some((p) => pathname.startsWith(p))) ||
               (tab.href === '/historique' && pathname.startsWith('/partie'))
             return (
               <Link
