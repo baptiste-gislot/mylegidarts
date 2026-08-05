@@ -69,6 +69,8 @@ interface Flash {
   title: string
   name: string
   kind: 'perfect' | 'win'
+  /** Thème musical du vainqueur, rejoué avant l'annonce (301). */
+  signature?: string | null
 }
 
 function loadStoredMatch(): StoredMatch | null {
@@ -132,8 +134,11 @@ export default function TirerPage() {
     } else {
       void fireConfetti('record')
       fanfare('record')
-      say(`${flash.name} remporte le 301 !`)
       vibrate([80, 60, 80])
+      // Le vainqueur ressort sur son thème, l'annonce enchaîne.
+      const text = `${flash.name} remporte le 301 !`
+      if (flash.signature && soundsEnabled()) void playSignature(flash.signature).then(() => say(text))
+      else say(text)
     }
     const timer = setTimeout(() => setFlash(null), 1800)
     return () => clearTimeout(timer)
@@ -267,13 +272,19 @@ export default function TirerPage() {
   // Verrou d'enregistrement : empêche d'insérer deux fois la même partie.
   const savedRef = useRef(false)
 
-  // Célébration de fin de défi 4 volées : confettis si au moins un record tombe.
-  // (Partie avec pouvoirs : hors classement, donc pas de record à fêter.)
+  // Célébration de fin de défi 4 volées : le vainqueur est annoncé et ressort
+  // sur son thème musical ; confettis si au moins un record tombe. Le 301
+  // fête son vainqueur via le flash « Gagné ! » ; avec pouvoirs, pas de
+  // record à fêter (partie hors classement), mais un vainqueur quand même.
   const celebratedRef = useRef(false)
   useEffect(() => {
-    if (gameMode !== 'volees' || powersActive) return
+    if (gameMode !== 'volees') return
+    const withPowers = powersActive && powersReplay !== null
     const thrown = dartsByPlayer.reduce((sum, d) => sum + d.length, 0)
-    const done = started && order.length > 0 && thrown === order.length * DARTS_PER_SESSION
+    const done =
+      started &&
+      order.length > 0 &&
+      (withPowers ? powersReplay.finished : thrown === order.length * DARTS_PER_SESSION)
     if (!done) {
       celebratedRef.current = false
       return
@@ -281,17 +292,38 @@ export default function TirerPage() {
     if (celebratedRef.current) return
     celebratedRef.current = true
     vibrate([40, 60, 40])
-    const recordHolders = order.filter(
-      (playerId, i) => sessionTotal(dartsByPlayer[i]) > (bestByPlayer.get(playerId) ?? -1),
-    )
+    const recordHolders = withPowers
+      ? []
+      : order.filter(
+          (playerId, i) => sessionTotal(dartsByPlayer[i]) > (bestByPlayer.get(playerId) ?? -1),
+        )
     if (recordHolders.length > 0) {
       void fireConfetti('record')
       fanfare('record')
-      const names = recordHolders.map((id) => stageName(players.find((p) => p.id === id)))
-      announce(`Nouveau record pour ${names.join(' et ')} !`)
     }
+    const recordNames = recordHolders.map((id) => stageName(players.find((p) => p.id === id)))
+    const records =
+      recordNames.length > 0 ? `Nouveau record pour ${recordNames.join(' et ')} ! ` : ''
+    // En solo, pas de vainqueur à proclamer : on s'en tient aux records.
+    if (order.length < 2) {
+      if (records) announce(records.trim())
+      return
+    }
+    const totals = withPowers
+      ? powersReplay.totals
+      : order.map((_, i) => sessionTotal(dartsByPlayer[i]))
+    const best = Math.max(...totals)
+    const winnerIds = order.filter((_, i) => totals[i] === best)
+    const winner = winnerIds.length === 1 ? players.find((p) => p.id === winnerIds[0]) : undefined
+    const winnerNames = winnerIds.map((id) => stageName(players.find((p) => p.id === id)))
+    announce(
+      winner
+        ? `${records}${stageName(winner)} remporte la partie !`
+        : `${records}Égalité entre ${winnerNames.join(' et ')} !`,
+      signatureOf(winner),
+    )
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameMode, started, order, dartsByPlayer, bestByPlayer, players])
+  }, [gameMode, started, order, dartsByPlayer, bestByPlayer, players, powersActive, powersReplay])
 
   if (!configured) return <SetupNotice />
   if (loading) return <p className="empty">Chargement…</p>
@@ -482,7 +514,14 @@ export default function TirerPage() {
 
       if (result.finished) {
         setPlayerDarts(currentPlayerIndex, padVolley(own))
-        if (currentPlayer) setFlash({ title: 'Gagné !', name: currentPlayer.name, kind: 'win' })
+        if (currentPlayer) {
+          setFlash({
+            title: 'Gagné !',
+            name: currentPlayer.name,
+            kind: 'win',
+            signature: signatureOf(currentPlayer),
+          })
+        }
         return
       }
       if (result.lastVolleyBusted) {
