@@ -1975,6 +1975,19 @@ a {
   align-self: center;
 }
 
+/* ---------- Page Joueurs : rangée gérable ---------- */
+/* Les actions (signature, surnom, suppression) passent à la ligne quand
+   l'écran est trop étroit, au lieu d'écraser le nom du joueur. */
+.board__row--manage {
+  flex-wrap: wrap;
+}
+
+.board__actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
 @media print {
   .masthead__sound,
   .tabbar,

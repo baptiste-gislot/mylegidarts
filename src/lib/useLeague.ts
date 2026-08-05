@@ -5,12 +5,13 @@ import type { RealtimeChannel } from '@supabase/supabase-js'
 import type { SessionPowers } from './powers'
 import { channelHealthy, onReconnectHints, useWatchdog } from './realtimeHealth'
 import type { Dart } from './scoring'
+import { removeSignatureFile, uploadSignature } from './signatures'
 import { supabase } from './supabaseClient'
 
 const SNAPSHOT_KEY = 'mylegidarts-cache-v4'
 
 /** Version de schéma attendue en base (table schema_version). */
-export const EXPECTED_SCHEMA_VERSION = 6
+export const EXPECTED_SCHEMA_VERSION = 7
 
 const OUTDATED_MESSAGE =
   'La base de données n’est pas à jour : exécutez les fichiers de supabase/migrations/ dans le SQL Editor de Supabase.'
@@ -21,6 +22,8 @@ export interface PlayerRow {
   id: string
   name: string
   nickname: string | null
+  /** Chemin du MP3 de signature dans le bucket storage « signatures ». */
+  signature_path: string | null
   created_at: string
 }
 
@@ -86,6 +89,7 @@ export interface LeagueData {
   addPlayer: (name: string) => Promise<string | null>
   removePlayer: (playerId: string, code: string) => Promise<string | null>
   setNickname: (playerId: string, nickname: string) => Promise<string | null>
+  setSignature: (playerId: string, file: File | null) => Promise<string | null>
   saveSessions: (
     entries: {
       playerId: string
@@ -229,8 +233,11 @@ export function useLeague(): LeagueData {
 
   async function removePlayer(playerId: string, code: string): Promise<string | null> {
     if (!supabase) return 'Supabase n’est pas configuré.'
+    const signaturePath = players.find((p) => p.id === playerId)?.signature_path ?? null
     const { error: err } = await supabase.rpc('delete_player', { pid: playerId, code })
     if (err) return deleteErrorMessage(err.message)
+    // Le joueur parti, sa signature sonore n'a plus de raison d'encombrer le bucket.
+    if (signaturePath !== null) removeSignatureFile(signaturePath)
     await refetch()
     return null
   }
@@ -242,6 +249,29 @@ export function useLeague(): LeagueData {
       .update({ nickname: nickname.trim() || null })
       .eq('id', playerId)
     if (err) return err.message
+    await refetch()
+    return null
+  }
+
+  /** Dépose (file) ou retire (null) la signature sonore d'un joueur. */
+  async function setSignature(playerId: string, file: File | null): Promise<string | null> {
+    if (!supabase) return 'Supabase n’est pas configuré.'
+    const previous = players.find((p) => p.id === playerId)?.signature_path ?? null
+    let path: string | null = null
+    if (file !== null) {
+      const uploaded = await uploadSignature(playerId, file)
+      if ('error' in uploaded) return uploaded.error
+      path = uploaded.path
+    }
+    const { error: err } = await supabase
+      .from('players')
+      .update({ signature_path: path })
+      .eq('id', playerId)
+    if (err) {
+      if (path !== null) removeSignatureFile(path) // ne pas laisser un fichier orphelin
+      return err.message
+    }
+    if (previous !== null && previous !== path) removeSignatureFile(previous)
     await refetch()
     return null
   }
@@ -290,6 +320,7 @@ export function useLeague(): LeagueData {
     addPlayer,
     removePlayer,
     setNickname,
+    setSignature,
     saveSessions,
     removeMatch,
   }

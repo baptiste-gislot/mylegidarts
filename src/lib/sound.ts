@@ -1,9 +1,10 @@
 'use client'
 
-// Bruitages (WebAudio synthétisé, aucun fichier audio) et annonceur vocal
-// (synthèse vocale native). Fonctionne sur mobile comme sur desktop ; les
-// navigateurs exigent un geste utilisateur avant de jouer du son, ce qui est
-// toujours notre cas (les sons partent de clics sur le clavier de saisie).
+// Bruitages (WebAudio synthétisé), annonceur vocal (synthèse vocale native)
+// et signatures sonores des joueurs (MP3 déposés par la ligue). Fonctionne
+// sur mobile comme sur desktop ; les navigateurs exigent un geste utilisateur
+// avant de jouer du son, ce qui est toujours notre cas (les sons partent de
+// clics sur le clavier de saisie).
 
 const SOUND_KEY = 'mylegidarts-sons'
 
@@ -14,7 +15,10 @@ export function soundsEnabled(): boolean {
 
 export function setSoundsEnabled(on: boolean): void {
   localStorage.setItem(SOUND_KEY, on ? 'on' : 'off')
-  if (!on && 'speechSynthesis' in window) window.speechSynthesis.cancel()
+  if (!on) {
+    stopSignature?.()
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel()
+  }
 }
 
 let ctx: AudioContext | null = null
@@ -89,17 +93,76 @@ export function fanfare(kind: 'perfect' | 'record'): void {
   })
 }
 
-/** L'annonceur : voix française du navigateur/téléphone. */
+/** Durée maximale d'une signature de joueur : au-delà, fondu puis coupure. */
+const SIGNATURE_MAX_MS = 6_000
+
+/** Coupe la signature en cours, s'il y en a une (résout sa promesse). */
+let stopSignature: (() => void) | null = null
+
+/**
+ * Joue la signature MP3 d'un joueur et résout à la fin de la lecture, pour
+ * enchaîner l'annonce vocale sans chevauchement. Une nouvelle signature coupe
+ * la précédente. Résout immédiatement si le fichier ne charge pas ou si la
+ * lecture est refusée : l'annonce qui suit ne doit jamais rester bloquée.
+ * (Le respect du réglage « sons coupés » est à la charge de l'appelant,
+ * pour que la pré-écoute depuis la page Joueurs reste toujours audible.)
+ */
+export function playSignature(url: string): Promise<void> {
+  if (typeof window === 'undefined') return Promise.resolve()
+  stopSignature?.()
+  return new Promise((resolve) => {
+    const audio = new Audio(url)
+    let fade: ReturnType<typeof setInterval> | undefined
+    let done = false
+    const finish = () => {
+      if (done) return
+      done = true
+      if (stopSignature === finish) stopSignature = null
+      clearTimeout(cap)
+      clearInterval(fade)
+      audio.pause()
+      resolve()
+    }
+    stopSignature = finish
+    const cap = setTimeout(() => {
+      // Fondu de sortie (~400 ms) pour les fichiers plus longs que le plafond.
+      fade = setInterval(() => {
+        audio.volume = Math.max(0, audio.volume - 0.1)
+        if (audio.volume <= 0) finish()
+      }, 40)
+    }, SIGNATURE_MAX_MS)
+    audio.addEventListener('ended', finish)
+    audio.addEventListener('error', finish)
+    void audio.play().catch(finish)
+  })
+}
+
+/**
+ * Voix préférées de l'annonceur, par ordre de priorité. L'accent belge
+ * d'abord : le kiosque Ubuntu expose la variante fr-BE d'espeak-ng via
+ * speech-dispatcher. À défaut, n'importe quelle voix française.
+ */
+const VOICE_PREFERENCES = ['fr-be', 'fr']
+
+function pickVoice(): SpeechSynthesisVoice | null {
+  const voices = window.speechSynthesis.getVoices()
+  for (const preference of VOICE_PREFERENCES) {
+    // speech-dispatcher annonce parfois « fr_BE » avec un underscore.
+    const voice = voices.find((v) => v.lang.toLowerCase().replace('_', '-').startsWith(preference))
+    if (voice) return voice
+  }
+  return null
+}
+
+/** L'annonceur : voix du navigateur, belge quand l'appareil en a une. */
 export function say(text: string): void {
   if (typeof window === 'undefined' || !soundsEnabled() || !('speechSynthesis' in window)) return
   const utterance = new SpeechSynthesisUtterance(text)
-  utterance.lang = 'fr-FR'
+  const voice = pickVoice()
+  if (voice) utterance.voice = voice
+  utterance.lang = voice?.lang ?? 'fr-FR'
   utterance.rate = 1.05
   utterance.pitch = 1.05
-  const voice = window.speechSynthesis
-    .getVoices()
-    .find((v) => v.lang.toLowerCase().startsWith('fr'))
-  if (voice) utterance.voice = voice
   window.speechSynthesis.cancel()
   window.speechSynthesis.speak(utterance)
 }

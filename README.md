@@ -7,7 +7,7 @@ PWA de leaderboard de fléchettes. Le défi : **4 volées de 3 fléchettes**, sa
 - **Classement** : trois critères (meilleur score / moyenne par partie / plus petit score, ce dernier assorti d'une pique de l'annonceur) × deux périodes (mois en cours / depuis toujours), palmarès des vainqueurs mensuels, podium célébré au changement de mois, néon sur le leader.
 - **Ambiance** : annonceur vocal (180, records, relais entre joueurs, trash-talk sur les volées ratées), bruitages d'impact synthétisés (WebAudio, PC et mobile), confettis, vibrations, toasts. Bouton 🔊 dans l'en-tête pour tout couper.
 - **Historique** : groupé par partie (vainqueur mis en avant), détail volée par volée sur `/partie/[id]`.
-- **Joueurs** : surnoms éditables, utilisés par l'annonceur et le live.
+- **Joueurs** : surnoms éditables, utilisés par l'annonceur et le live. Signature sonore par joueur (MP3 de 2 Mo max, stocké dans Supabase Storage) : jouée à son entrée en piste — son premier tour de la partie — juste avant l'annonce « {surnom} entre en piste ! ».
 - **301** : deuxième jeu (premier à zéro exactement, bust si dépassement, sortie sèche) — hors classement, mais compté dans les face-à-face.
 - **Pouvoirs** 🃏 : option du défi 4 volées — chaque joueur reçoit au hasard un pouvoir de l'équipe (relance, fléchette de rab, annulation adverse, bonus, vote de règle…), utilisable une seule fois. Parties hors classement, visibles en live et dans l'historique.
 - **Face-à-face** : bilan des duels (parties à 2) sur la page profil, tous modes confondus.
