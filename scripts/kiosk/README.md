@@ -30,6 +30,11 @@ Voix par défaut : `fr_FR-siwis-medium` (femme). Alternatives :
    serveur (le JSON passe par `jq`, les apostrophes des piques survivent).
 5. Fait de Piper le seul module actif (sinon Chromium continuerait de proposer
    les voix espeak) et redémarre speech-dispatcher.
+6. Écarte le binaire `sd_espeak-ng` (renommé `.off`) : speech-dispatcher le
+   charge sinon d'office comme module de secours — invisible dans
+   `spd-say -O` mais joignable — et Chrome route la parole dessus.
+   Attention : une mise à jour du paquet speech-dispatcher peut le restaurer ;
+   relancer le script dans ce cas.
 
 ## Dépannage
 
@@ -43,6 +48,7 @@ Voix par défaut : `fr_FR-siwis-medium` (femme). Alternatives :
 
 ```bash
 sudo cp /etc/speech-dispatcher/speechd.conf.avant-piper /etc/speech-dispatcher/speechd.conf
+sudo mv /usr/lib/speech-dispatcher-modules/sd_espeak-ng.off /usr/lib/speech-dispatcher-modules/sd_espeak-ng
 sudo systemctl disable --now piper-tts
 sudo pkill -f speech-dispatcher
 ```

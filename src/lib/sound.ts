@@ -94,18 +94,18 @@ export function fanfare(kind: 'perfect' | 'record'): void {
 }
 
 /** Durée maximale d'une signature de joueur : au-delà, fondu puis coupure. */
-const SIGNATURE_MAX_MS = 6_000
+const SIGNATURE_MAX_MS = 10_000
 
 /** Coupe la signature en cours, s'il y en a une (résout sa promesse). */
 let stopSignature: (() => void) | null = null
 
 /**
- * Joue la signature MP3 d'un joueur et résout à la fin de la lecture, pour
- * enchaîner l'annonce vocale sans chevauchement. Une nouvelle signature coupe
- * la précédente. Résout immédiatement si le fichier ne charge pas ou si la
- * lecture est refusée : l'annonce qui suit ne doit jamais rester bloquée.
- * (Le respect du réglage « sons coupés » est à la charge de l'appelant,
- * pour que la pré-écoute depuis la page Joueurs reste toujours audible.)
+ * Joue la signature MP3 d'un joueur (10 s max) et résout à la fin de la
+ * lecture, pour enchaîner l'annonce vocale sans chevauchement. Une nouvelle
+ * signature coupe la précédente. Résout immédiatement si le fichier ne charge
+ * pas ou si la lecture est refusée : l'annonce qui suit ne doit jamais rester
+ * bloquée. (Le respect du réglage « sons coupés » est à la charge de
+ * l'appelant, pour que la pré-écoute depuis la page Joueurs reste audible.)
  */
 export function playSignature(url: string): Promise<void> {
   if (typeof window === 'undefined') return Promise.resolve()
@@ -138,14 +138,19 @@ export function playSignature(url: string): Promise<void> {
 }
 
 /**
- * Voix préférées de l'annonceur, par ordre de priorité. L'accent belge
- * d'abord : le kiosque Ubuntu expose la variante fr-BE d'espeak-ng via
- * speech-dispatcher. À défaut, n'importe quelle voix française.
+ * Voix préférées de l'annonceur, par ordre de priorité :
+ * 1. La voix Piper du kiosque, reconnaissable à son nom de modèle
+ *    (« fr_FR-upmc-medium »…) — sans ça, la préférence fr-BE ferait
+ *    retomber l'annonceur sur l'espeak robotique de secours.
+ * 2. L'accent belge (fr-BE, espeak) pour les appareils sans Piper.
+ * 3. N'importe quelle voix française.
  */
 const VOICE_PREFERENCES = ['fr-be', 'fr']
 
 function pickVoice(): SpeechSynthesisVoice | null {
   const voices = window.speechSynthesis.getVoices()
+  const piper = voices.find((v) => /^fr_[A-Z]{2}-/.test(v.name))
+  if (piper) return piper
   for (const preference of VOICE_PREFERENCES) {
     // speech-dispatcher annonce parfois « fr_BE » avec un underscore.
     const voice = voices.find((v) => v.lang.toLowerCase().replace('_', '-').startsWith(preference))

@@ -70,6 +70,14 @@ grep -q '^AddModule "piper"' "$SPEECHD_CONF" ||
 sed -i -E 's/^#? *DefaultModule .*/DefaultModule piper/' "$SPEECHD_CONF"
 grep -q '^DefaultModule' "$SPEECHD_CONF" || echo 'DefaultModule piper' >> "$SPEECHD_CONF"
 
+echo "── Neutralisation du module espeak-ng de secours"
+# speech-dispatcher charge toujours espeak-ng en secours (chemin codé en dur,
+# invisible dans « spd-say -O ») et Chrome peut router la parole dessus.
+# On écarte le binaire du module ; sd_dummy reste pour les messages d'erreur.
+if [[ -f /usr/lib/speech-dispatcher-modules/sd_espeak-ng ]]; then
+  mv /usr/lib/speech-dispatcher-modules/sd_espeak-ng /usr/lib/speech-dispatcher-modules/sd_espeak-ng.off
+fi
+
 echo "── Redémarrage de speech-dispatcher"
 pkill -f speech-dispatcher || true
 
