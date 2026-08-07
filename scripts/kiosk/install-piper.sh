@@ -14,6 +14,7 @@ VOICE="${1:-fr_FR-siwis-medium}"
 PIPER_HOME=/opt/piper
 PORT=5005
 SPEECHD_CONF=/etc/speech-dispatcher/speechd.conf
+ESPEAK_MODULE=/usr/lib/speech-dispatcher-modules/sd_espeak-ng
 
 [[ $EUID -eq 0 ]] || { echo "Lance-moi avec sudo." >&2; exit 1; }
 
@@ -52,8 +53,10 @@ echo "── Module speech-dispatcher « piper »"
 # jq -Rs construit le JSON : les apostrophes des piques de l'annonceur survivent.
 # aplay joue le WAV reçu ; si la sortie son passe par PulseAudio/PipeWire,
 # remplacer « aplay -q - » par « paplay ».
+# --retry-connrefused : au démarrage du kiosque, Piper charge encore son modèle
+# quand la première annonce tombe — mieux vaut l'attendre que la perdre.
 cat > /etc/speech-dispatcher/modules/piper.conf <<CONF
-GenericExecuteSynth "printf %s \"\$DATA\" | jq -Rs '{text: .}' | curl -s -X POST -H 'Content-Type: application/json' -d @- -o - http://127.0.0.1:$PORT/synthesize | aplay -q -"
+GenericExecuteSynth "printf %s \"\$DATA\" | jq -Rs '{text: .}' | curl -s --retry 5 --retry-connrefused --retry-delay 1 --max-time 30 -X POST -H 'Content-Type: application/json' -d @- -o - http://127.0.0.1:$PORT/synthesize | aplay -q -"
 GenericCmdDependency "jq"
 GenericCmdDependency "curl"
 GenericCmdDependency "aplay"
@@ -73,9 +76,28 @@ grep -q '^DefaultModule' "$SPEECHD_CONF" || echo 'DefaultModule piper' >> "$SPEE
 echo "── Neutralisation du module espeak-ng de secours"
 # speech-dispatcher charge toujours espeak-ng en secours (chemin codé en dur,
 # invisible dans « spd-say -O ») et Chrome peut router la parole dessus.
-# On écarte le binaire du module ; sd_dummy reste pour les messages d'erreur.
-if [[ -f /usr/lib/speech-dispatcher-modules/sd_espeak-ng ]]; then
-  mv /usr/lib/speech-dispatcher-modules/sd_espeak-ng /usr/lib/speech-dispatcher-modules/sd_espeak-ng.off
+# Un simple renommage serait défait par la prochaine mise à jour du paquet
+# speech-dispatcher — et la voix robotique reviendrait au redémarrage suivant.
+# Une diversion dpkg, elle, est respectée à chaque réinstallation.
+# (sd_dummy reste en place pour les messages d'erreur.)
+if [[ -f "$ESPEAK_MODULE.off" && ! -e "$ESPEAK_MODULE" ]]; then
+  # Rattrape les installations précédentes, qui déplaçaient le binaire à la main.
+  mv "$ESPEAK_MODULE.off" "$ESPEAK_MODULE"
+fi
+if ! dpkg-divert --list "$ESPEAK_MODULE" | grep -q .; then
+  dpkg-divert --quiet --rename --divert "$ESPEAK_MODULE.off" --add "$ESPEAK_MODULE"
+fi
+
+echo "── Config utilisateur : elle masquerait tout ce qui précède"
+# speech-dispatcher lit ~/.config/speech-dispatcher/speechd.conf s'il existe,
+# et ignore alors complètement /etc. Le test ci-dessous tourne en root : il ne
+# verrait pas le problème, seul l'utilisateur du kiosque est concerné.
+if [[ -n "${SUDO_USER:-}" ]]; then
+  USER_CONF="$(getent passwd "$SUDO_USER" | cut -d: -f6)/.config/speech-dispatcher/speechd.conf"
+  if [[ -f "$USER_CONF" ]]; then
+    echo "⚠ $USER_CONF existe et masque $SPEECHD_CONF."
+    echo "  À écarter à la main : mv '$USER_CONF' '$USER_CONF.avant-piper'"
+  fi
 fi
 
 echo "── Redémarrage de speech-dispatcher"
@@ -88,4 +110,5 @@ spd-say -o piper -l fr "Cent quatre-vingts ! L'annonceur a une nouvelle voix." |
 
 echo
 echo "Terminé. Redémarrer Chromium (ou le service kiosk) pour qu'il recharge les voix."
-echo "Vérification côté navigateur : speechSynthesis.getVoices() doit lister la voix fr de Piper."
+echo "Ce test-ci a tourné en root : pour valider la chaîne telle que Chromium la voit,"
+echo "lancer « bash diagnostic-voix.sh » avec l'utilisateur du kiosque."

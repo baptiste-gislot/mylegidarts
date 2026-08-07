@@ -147,16 +147,48 @@ export function playSignature(url: string): Promise<void> {
  */
 const VOICE_PREFERENCES = ['fr-be', 'fr']
 
+/** Voix Piper, une fois trouvée : elle ne change plus de la session. */
+let piperVoice: SpeechSynthesisVoice | null = null
+
 function pickVoice(): SpeechSynthesisVoice | null {
+  if (piperVoice) return piperVoice
   const voices = window.speechSynthesis.getVoices()
-  const piper = voices.find((v) => /^fr_[A-Z]{2}-/.test(v.name))
-  if (piper) return piper
+  piperVoice = voices.find((v) => /^fr_[A-Z]{2}-/.test(v.name)) ?? null
+  if (piperVoice) return piperVoice
+  // Pas (encore) de Piper : voix de secours, jamais mémorisée — la liste peut
+  // se compléter entre deux annonces, Piper doit pouvoir reprendre la main.
   for (const preference of VOICE_PREFERENCES) {
     // speech-dispatcher annonce parfois « fr_BE » avec un underscore.
     const voice = voices.find((v) => v.lang.toLowerCase().replace('_', '-').startsWith(preference))
     if (voice) return voice
   }
   return null
+}
+
+let warmed = false
+
+/**
+ * Amorce la liste des voix, à appeler une fois au montage de l'app.
+ *
+ * Chromium ne connaît pas les voix de speech-dispatcher au démarrage : il les
+ * découvre de façon asynchrone et signale la liste complète par
+ * « voiceschanged ». Sur le kiosque fraîchement redémarré, la première annonce
+ * arrive volontiers avant — sans amorçage, elle part sur la voix par défaut du
+ * système (l'espeak robotique) au lieu de Piper.
+ */
+export function warmUpVoices(): void {
+  if (typeof window === 'undefined' || warmed || !('speechSynthesis' in window)) return
+  warmed = true
+  pickVoice()
+  window.speechSynthesis.addEventListener('voiceschanged', () => {
+    pickVoice()
+  })
+}
+
+/** Voix réellement utilisée par l'annonceur — diagnostic de la chaîne Piper. */
+export function announcerVoice(): string | null {
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return null
+  return pickVoice()?.name ?? null
 }
 
 /**
