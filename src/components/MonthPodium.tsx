@@ -43,7 +43,9 @@ export function MonthPodium({ players, stats }: { players: PlayerRow[]; stats: P
     if (localStorage.getItem(SEEN_KEY) === previousMonth) return
     setVisible(true)
     void fireConfetti('record')
-    say(`Le podium de ${monthFormat.format(previousMonthDate)} : ${podium[0].name}, champion du mois !`)
+    void say(
+      `Le podium de ${monthFormat.format(previousMonthDate)} : ${podium[0].name}, champion du mois !`,
+    )
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [podium.length, previousMonth])
 

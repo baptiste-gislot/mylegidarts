@@ -47,7 +47,19 @@ function signatureOf(player: PlayerRow | undefined): string | null {
 
 /** Relais annoncé : entrée en piste au premier tour du joueur, « À toi » ensuite. */
 function relayText(player: PlayerRow | undefined, firstTurn: boolean): string {
-  return firstTurn ? ` ${stageName(player)} entre en piste !` : ` À toi, ${stageName(player)} !`
+  return firstTurn ? `${stageName(player)} entre en piste !` : `À toi, ${stageName(player)} !`
+}
+
+/**
+ * Une annonce en trois temps, toujours dans cet ordre : ce qui vient de se
+ * passer (commentaire de volée, bust, records…), le thème du joueur qui prend
+ * la main, puis son relais. Le commentaire ne doit jamais s'intercaler entre
+ * la signature et l'entrée en piste qu'elle annonce.
+ */
+interface Announcement {
+  lead?: string
+  signature?: string | null
+  relay?: string
 }
 
 const SECTORS = Array.from({ length: 20 }, (_, i) => i + 1)
@@ -96,15 +108,25 @@ export default function TirerPage() {
   const { publish, stop: stopLive } = useLiveMatchPublisher()
 
   // L'annonceur parle ; son coupé, il écrit (toast) pour ne rien perdre.
-  // Quand le joueur qui prend la main a une signature (MP3), elle ouvre le
-  // bal et la voix enchaîne à la fin de la lecture.
-  const announce = (text: string, signature?: string | null) => {
-    if (soundsEnabled()) {
-      if (signature) void playSignature(signature).then(() => say(text))
-      else say(text)
-    } else {
-      toast(text)
+  // Quand le joueur qui prend la main a une signature (MP3), le commentaire de
+  // la volée qui s'achève passe d'abord, puis le thème ouvre le bal, puis la
+  // voix annonce l'entrée en piste. Sans signature, tout tient en un énoncé.
+  const announce = ({ lead = '', signature = null, relay = '' }: Announcement) => {
+    const full = [lead, relay].filter(Boolean).join(' ')
+    if (!soundsEnabled()) {
+      if (full) toast(full)
+      return
     }
+    if (!signature) {
+      if (full) void say(full)
+      return
+    }
+    void (async () => {
+      if (lead) await say(lead)
+      // Le son a pu être coupé pendant le commentaire ; say le vérifie déjà.
+      if (soundsEnabled()) await playSignature(signature)
+      if (relay) void say(relay)
+    })()
   }
 
   const [gameMode, setGameMode] = useState<GameMode>('volees')
@@ -129,7 +151,7 @@ export default function TirerPage() {
     if (flash.kind === 'perfect') {
       void fireConfetti('perfect')
       fanfare('perfect')
-      say('Cent quatre-vingts !')
+      void say('Cent quatre-vingts !')
       vibrate([60, 60, 60, 60, 120])
     } else {
       void fireConfetti('record')
@@ -137,8 +159,11 @@ export default function TirerPage() {
       vibrate([80, 60, 80])
       // Le vainqueur ressort sur son thème, l'annonce enchaîne.
       const text = `${flash.name} remporte le 301 !`
-      if (flash.signature && soundsEnabled()) void playSignature(flash.signature).then(() => say(text))
-      else say(text)
+      if (flash.signature && soundsEnabled()) {
+        void playSignature(flash.signature).then(() => say(text))
+      } else {
+        void say(text)
+      }
     }
     const timer = setTimeout(() => setFlash(null), 1800)
     return () => clearTimeout(timer)
@@ -306,7 +331,7 @@ export default function TirerPage() {
       recordNames.length > 0 ? `Nouveau record pour ${recordNames.join(' et ')} ! ` : ''
     // En solo, pas de vainqueur à proclamer : on s'en tient aux records.
     if (order.length < 2) {
-      if (records) announce(records.trim())
+      if (records) announce({ lead: records.trim() })
       return
     }
     const totals = withPowers
@@ -316,12 +341,13 @@ export default function TirerPage() {
     const winnerIds = order.filter((_, i) => totals[i] === best)
     const winner = winnerIds.length === 1 ? players.find((p) => p.id === winnerIds[0]) : undefined
     const winnerNames = winnerIds.map((id) => stageName(players.find((p) => p.id === id)))
-    announce(
-      winner
-        ? `${records}${stageName(winner)} remporte la partie !`
-        : `${records}Égalité entre ${winnerNames.join(' et ')} !`,
-      signatureOf(winner),
-    )
+    announce({
+      lead: records.trim(),
+      signature: signatureOf(winner),
+      relay: winner
+        ? `${stageName(winner)} remporte la partie !`
+        : `Égalité entre ${winnerNames.join(' et ')} !`,
+    })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameMode, started, order, dartsByPlayer, bestByPlayer, players, powersActive, powersReplay])
 
@@ -394,32 +420,33 @@ export default function TirerPage() {
       setJournal([])
     }
     const first = players.find((p) => p.id === order[0])
-    announce(
-      gameMode === '301'
-        ? `301, c'est parti !${relayText(first, true)}`
-        : withPowers
-          ? `Tirage des pouvoirs effectué !${relayText(first, true)}`
-          : `C'est parti !${relayText(first, true)}`,
-      signatureOf(first),
-    )
+    announce({
+      lead:
+        gameMode === '301'
+          ? `301, c'est parti !`
+          : withPowers
+            ? 'Tirage des pouvoirs effectué !'
+            : `C'est parti !`,
+      signature: signatureOf(first),
+      relay: relayText(first, true),
+    })
   }
 
   function announceVolley(volleyTotal: number, sessionDone: boolean) {
     const commentaire = praise(volleyTotal, averageVolley) ?? trashTalk(volleyTotal)
-    if (commentaire) toast(commentaire)
+    // Le commentaire s'affiche pendant que l'annonceur le dit ; son coupé,
+    // c'est announce qui l'écrit, relais compris.
+    if (commentaire && soundsEnabled()) toast(commentaire)
     const nextIndex = (globalVolley + 1) % Math.max(1, order.length)
     const nextPlayer = players.find((p) => p.id === order[nextIndex])
     const firstTurn = (dartsByPlayer[nextIndex] ?? []).length === 0
     const relais = !sessionDone && order.length > 1 ? relayText(nextPlayer, firstTurn) : ''
     // La signature n'accompagne que l'entrée en piste, pas les tours suivants.
-    const signature = relais && firstTurn ? signatureOf(nextPlayer) : null
-    if (soundsEnabled()) {
-      const text = `${commentaire ?? ''}${relais}`
-      if (signature) void playSignature(signature).then(() => say(text))
-      else if (text) say(text)
-    } else if (relais) {
-      toast(relais.trim())
-    }
+    announce({
+      lead: commentaire ?? '',
+      signature: relais && firstTurn ? signatureOf(nextPlayer) : null,
+      relay: relais,
+    })
   }
 
   function setPlayerDarts(playerIndex: number, darts: Dart[]) {
@@ -461,7 +488,7 @@ export default function TirerPage() {
       return
     }
     const commentaire = praise(volleyTotal, averageVolley) ?? trashTalk(volleyTotal)
-    if (commentaire) toast(commentaire)
+    if (commentaire && soundsEnabled()) toast(commentaire)
     const nextPlayer =
       after.current !== null ? players.find((p) => p.id === order[after.current!.player]) : null
     const firstTurn =
@@ -469,14 +496,11 @@ export default function TirerPage() {
     const relais =
       !after.finished && nextPlayer && order.length > 1 ? relayText(nextPlayer, firstTurn) : ''
     // La signature n'accompagne que l'entrée en piste, pas les tours suivants.
-    const signature = relais && firstTurn ? signatureOf(nextPlayer ?? undefined) : null
-    if (soundsEnabled()) {
-      const text = `${commentaire ?? ''}${relais}`
-      if (signature) void playSignature(signature).then(() => say(text))
-      else if (text) say(text)
-    } else if (relais) {
-      toast(relais.trim())
-    }
+    announce({
+      lead: commentaire ?? '',
+      signature: relais && firstTurn ? signatureOf(nextPlayer ?? undefined) : null,
+      relay: relais,
+    })
   }
 
   /** Active un pouvoir (après validation) et l'annonce. */
@@ -493,9 +517,9 @@ export default function TirerPage() {
     const actor = players.find((p) => p.id === order[event.actor])
     const targetId = event.target !== undefined ? order[event.target] : null
     const target = targetId !== null ? players.find((p) => p.id === targetId) : null
-    announce(
-      `${stageName(actor)} dégaine ${def.title} !${target ? ` ${stageName(target)}, tiens-toi prêt.` : ''}`,
-    )
+    announce({
+      lead: `${stageName(actor)} dégaine ${def.title} !${target ? ` ${stageName(target)}, tiens-toi prêt.` : ''}`,
+    })
   }
 
   function throwDart(dart: Dart) {
@@ -531,10 +555,11 @@ export default function TirerPage() {
         const nextPlayer = players.find((p) => p.id === order[nextIndex])
         const firstTurn = (dartsByPlayer[nextIndex] ?? []).length === 0
         const relais = order.length > 1 ? relayText(nextPlayer, firstTurn) : ''
-        announce(
-          `Bust ! La volée est annulée.${relais}`,
-          relais && firstTurn ? signatureOf(nextPlayer) : null,
-        )
+        announce({
+          lead: 'Bust ! La volée est annulée.',
+          signature: relais && firstTurn ? signatureOf(nextPlayer) : null,
+          relay: relais,
+        })
         return
       }
       setPlayerDarts(currentPlayerIndex, own)

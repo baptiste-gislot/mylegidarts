@@ -159,15 +159,43 @@ function pickVoice(): SpeechSynthesisVoice | null {
   return null
 }
 
-/** L'annonceur : voix du navigateur, belge quand l'appareil en a une. */
-export function say(text: string): void {
-  if (typeof window === 'undefined' || !soundsEnabled() || !('speechSynthesis' in window)) return
+/**
+ * Plafond de sécurité d'un énoncé : certains backends (speech-dispatcher)
+ * n'émettent jamais « end ». Large marge sur le débit réel (~15 caractères
+ * par seconde) pour ne pas couper la parole à l'annonceur.
+ */
+function speechCapMs(text: string): number {
+  return 2_000 + text.length * 120
+}
+
+/**
+ * L'annonceur : voix du navigateur, belge quand l'appareil en a une. Résout à
+ * la fin de l'énoncé, pour enchaîner sans chevauchement (signature du joueur,
+ * relais…) ; résout aussi tout seul au bout du plafond de sécurité, une suite
+ * d'annonce ne doit jamais rester bloquée.
+ */
+export function say(text: string): Promise<void> {
+  if (typeof window === 'undefined' || !soundsEnabled() || !('speechSynthesis' in window)) {
+    return Promise.resolve()
+  }
   const utterance = new SpeechSynthesisUtterance(text)
   const voice = pickVoice()
   if (voice) utterance.voice = voice
   utterance.lang = voice?.lang ?? 'fr-FR'
   utterance.rate = 1.05
   utterance.pitch = 1.05
-  window.speechSynthesis.cancel()
-  window.speechSynthesis.speak(utterance)
+  return new Promise((resolve) => {
+    let done = false
+    const finish = () => {
+      if (done) return
+      done = true
+      clearTimeout(cap)
+      resolve()
+    }
+    const cap = setTimeout(finish, speechCapMs(text))
+    utterance.addEventListener('end', finish)
+    utterance.addEventListener('error', finish)
+    window.speechSynthesis.cancel()
+    window.speechSynthesis.speak(utterance)
+  })
 }
