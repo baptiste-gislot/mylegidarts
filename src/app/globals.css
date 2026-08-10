@@ -1988,6 +1988,44 @@ a {
   margin-left: auto;
 }
 
+/* ---------- Page Punchlines ---------- */
+
+/* Le seuil de déclenchement reste compact à côté du texte de la punchline. */
+.add-form input.punchline-threshold {
+  flex: 0 0 84px;
+  text-align: center;
+}
+
+/* Le répertoire d'origine se lit comme une feuille de répliques : une carte
+   par famille, avec sa condition de déclenchement en tête. */
+.punchline-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  margin-top: 8px;
+}
+
+.punchline-card__title {
+  font-weight: 600;
+}
+
+.punchline-card__trigger {
+  font-weight: 400;
+  font-size: 13px;
+  color: var(--craie-dim);
+}
+
+.punchline-card__lines {
+  list-style: none;
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+  color: var(--craie-dim);
+}
+
 @media print {
   .masthead__sound,
   .tabbar,

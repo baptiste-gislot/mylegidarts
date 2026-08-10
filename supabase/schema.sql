@@ -1,4 +1,4 @@
--- Schéma complet MyLegiDarts (version 7).
+-- Schéma complet MyLegiDarts (version 8).
 -- Pour une installation neuve : exécuter ce fichier dans le SQL Editor.
 -- Pour une base existante : exécuter les fichiers de migrations/ dans l'ordre.
 
@@ -28,6 +28,18 @@ create table if not exists public.sessions (
   created_at timestamptz not null default now()
 );
 
+-- Punchlines maison : piques (taunt) et compliments (congrat) ajoutés par les
+-- joueurs, avec leur seuil de déclenchement sur le total de la volée.
+create table if not exists public.punchlines (
+  id uuid primary key default gen_random_uuid(),
+  -- taunt : dite quand la volée fait AU PLUS `threshold` points.
+  -- congrat : dite quand la volée fait AU MOINS `threshold` points.
+  kind text not null check (kind in ('taunt', 'congrat')),
+  text text not null check (char_length(btrim(text)) between 1 and 200),
+  threshold int not null check (threshold between 0 and 180),
+  created_at timestamptz not null default now()
+);
+
 create index if not exists sessions_player_id_idx on public.sessions (player_id);
 create index if not exists sessions_match_id_idx on public.sessions (match_id);
 create index if not exists sessions_created_at_idx on public.sessions (created_at desc);
@@ -37,6 +49,7 @@ create index if not exists sessions_created_at_idx on public.sessions (created_a
 -- d'update sauf sur players (surnoms).
 alter table public.players enable row level security;
 alter table public.sessions enable row level security;
+alter table public.punchlines enable row level security;
 
 create policy "players open read" on public.players for select using (true);
 create policy "players open insert" on public.players for insert with check (true);
@@ -45,9 +58,16 @@ create policy "players open update" on public.players for update using (true) wi
 create policy "sessions open read" on public.sessions for select using (true);
 create policy "sessions open insert" on public.sessions for insert with check (true);
 
+-- Contenu léger et collectif : la suppression d'une punchline est ouverte,
+-- elle ne fait perdre aucun score (contrairement aux sessions).
+create policy "punchlines open read" on public.punchlines for select using (true);
+create policy "punchlines open insert" on public.punchlines for insert with check (true);
+create policy "punchlines open delete" on public.punchlines for delete using (true);
+
 -- Diffusion temps réel des changements vers les clients connectés.
 alter publication supabase_realtime add table public.players;
 alter publication supabase_realtime add table public.sessions;
+alter publication supabase_realtime add table public.punchlines;
 
 -- ---------- Version de schéma (garde-fou côté app) ----------
 create table if not exists public.schema_version (
@@ -56,8 +76,8 @@ create table if not exists public.schema_version (
 );
 alter table public.schema_version enable row level security;
 create policy "version open read" on public.schema_version for select using (true);
-insert into public.schema_version (id, version) values (1, 7)
-on conflict (id) do update set version = 7;
+insert into public.schema_version (id, version) values (1, 8)
+on conflict (id) do update set version = 8;
 
 -- ---------- Signatures sonores (storage) ----------
 -- Bucket public : le MP3 de chaque joueur se lit par URL directe.

@@ -73,7 +73,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               pathname === tab.href ||
               (tab.href === '/' &&
                 ['/profil', '/records', '/comparer'].some((p) => pathname.startsWith(p))) ||
-              (tab.href === '/historique' && pathname.startsWith('/partie'))
+              (tab.href === '/historique' && pathname.startsWith('/partie')) ||
+              (tab.href === '/joueurs' && pathname.startsWith('/punchlines'))
             return (
               <Link
                 key={tab.href}

@@ -236,6 +236,10 @@ export default function JoueursPage() {
         </ul>
       )}
 
+      <Link href="/punchlines" className="button-ghost invite-link">
+        Punchlines de l’annonceur →
+      </Link>
+
       <Link href="/inviter" className="button-ghost invite-link">
         Afficher le QR code d’installation →
       </Link>

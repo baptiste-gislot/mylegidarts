@@ -1,5 +1,16 @@
 // Piques et compliments de l'annonceur. Bienveillant, mais à peine.
 
+/** Punchline maison : ajoutée par un joueur, avec son seuil de déclenchement. */
+export interface Punchline {
+  /** taunt : dite quand la volée fait AU PLUS `threshold` points ; congrat : AU MOINS. */
+  kind: 'taunt' | 'congrat'
+  text: string
+  threshold: number
+}
+
+/** Plafond de la zone de chambrage d'origine (piques systématiques en dessous). */
+export const LOW_VOLLEY_MAX = 20
+
 const LOW_VOLLEY_LINES = [
   'La cible est en face, pourtant.',
   'Le mur, lui, n’avait rien demandé.',
@@ -91,34 +102,99 @@ const FLOP_BOARD_LINES = [
   'Même le stagiaire n’ose pas commenter.',
 ]
 
+/** Répertoire d'origine, exposé pour la page récapitulative des punchlines. */
+export const BUILT_IN_LINES = {
+  zero: ZERO_VOLLEY_LINES,
+  low: LOW_VOLLEY_LINES,
+  good: GOOD_VOLLEY_LINES,
+  big: BIG_VOLLEY_LINES,
+  flop: FLOP_BOARD_LINES,
+} as const
+
 function pick(lines: string[]): string {
   return lines[Math.floor(Math.random() * lines.length)]
 }
 
+/**
+ * Tirage dans un pot commun où les punchlines maison éligibles raflent une
+ * pièce sur deux : noyées dans le répertoire d'origine (bien plus fourni),
+ * on ne les entendrait presque jamais.
+ */
+function pickWithCustom(builtIn: string[], custom: string[]): string {
+  if (custom.length > 0 && Math.random() < 0.5) return pick(custom)
+  return pick(builtIn)
+}
+
+/** Textes des punchlines maison que cette volée déclenche. */
+function eligibleCustom(
+  punchlines: Punchline[],
+  kind: Punchline['kind'],
+  volleyTotal: number,
+): string[] {
+  return punchlines
+    .filter(
+      (p) =>
+        p.kind === kind &&
+        (kind === 'taunt' ? volleyTotal <= p.threshold : volleyTotal >= p.threshold),
+    )
+    .map((p) => p.text)
+}
+
 /** Une pique (au hasard mais systématique) dès que la volée est mauvaise. */
-export function trashTalk(volleyTotal: number): string | null {
-  if (volleyTotal === 0) return pick(ZERO_VOLLEY_LINES)
-  if (volleyTotal > 20) return null
-  return pick(LOW_VOLLEY_LINES)
+export function trashTalk(volleyTotal: number, punchlines: Punchline[] = []): string | null {
+  const custom = eligibleCustom(punchlines, 'taunt', volleyTotal)
+  if (volleyTotal === 0) return pickWithCustom(ZERO_VOLLEY_LINES, custom)
+  if (volleyTotal <= LOW_VOLLEY_MAX) return pickWithCustom(LOW_VOLLEY_LINES, custom)
+  // Au-dessus de la zone d'origine, seules les piques maison dont le seuil
+  // couvre cette volée prennent la parole — et alors systématiquement.
+  return custom.length > 0 ? pick(custom) : null
 }
 
 /** Sans historique, on suppose une volée maison à 30 points (~120 par session). */
 const DEFAULT_AVERAGE_VOLLEY = 30
 
 /**
- * Un compliment calibré sur le niveau réel de l'équipe : systématique quand
- * la volée double la moyenne maison, fréquent (60 %) dès qu'elle la dépasse
- * d'un bon tiers. Les planchers gardent les compliments au-dessus de la zone
- * de chambrage (≤ 20), les plafonds évitent d'exiger un niveau de pro.
+ * Seuils de compliment du moment, calibrés sur la moyenne maison. Les
+ * planchers gardent les compliments au-dessus de la zone de chambrage
+ * (≤ 20), les plafonds évitent d'exiger un niveau de pro.
  */
-export function praise(volleyTotal: number, averageVolley: number | null = null): string | null {
+export function praiseThresholds(averageVolley: number | null): { good: number; big: number } {
   const reference =
     averageVolley !== null && averageVolley > 0 ? averageVolley : DEFAULT_AVERAGE_VOLLEY
-  const bigThreshold = Math.min(140, Math.max(50, reference * 2))
-  const goodThreshold = Math.min(100, Math.max(35, reference * 1.35))
-  if (volleyTotal >= bigThreshold) return pick(BIG_VOLLEY_LINES)
-  if (volleyTotal >= goodThreshold && Math.random() <= 0.6) return pick(GOOD_VOLLEY_LINES)
-  return null
+  return {
+    big: Math.min(140, Math.max(50, reference * 2)),
+    good: Math.min(100, Math.max(35, reference * 1.35)),
+  }
+}
+
+/**
+ * Un compliment calibré sur le niveau réel de l'équipe : systématique quand
+ * la volée double la moyenne maison, fréquent (60 %) dès qu'elle la dépasse
+ * d'un bon tiers. Un compliment maison dont le seuil est atteint se déclenche
+ * toujours, même quand le barème d'origine serait resté muet.
+ */
+export function praise(
+  volleyTotal: number,
+  averageVolley: number | null = null,
+  punchlines: Punchline[] = [],
+): string | null {
+  const custom = eligibleCustom(punchlines, 'congrat', volleyTotal)
+  const { good, big } = praiseThresholds(averageVolley)
+  if (volleyTotal >= big) return pickWithCustom(BIG_VOLLEY_LINES, custom)
+  if (volleyTotal >= good && Math.random() <= 0.6) return pickWithCustom(GOOD_VOLLEY_LINES, custom)
+  return custom.length > 0 ? pick(custom) : null
+}
+
+/**
+ * Le commentaire de volée complet : compliment d'abord, pique sinon.
+ * En cas de chevauchement de seuils maison, le compliment gagne donc.
+ */
+export function volleyComment(
+  volleyTotal: number,
+  averageVolley: number | null,
+  punchlines: Punchline[] = [],
+): string | null {
+  return praise(volleyTotal, averageVolley, punchlines) ?? trashTalk(volleyTotal, punchlines)
 }
 
 /**

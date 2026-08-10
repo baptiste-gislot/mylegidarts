@@ -31,9 +31,9 @@ import {
 } from '@/lib/powers'
 import { signatureUrl } from '@/lib/signatures'
 import { fanfare, playSignature, say, soundsEnabled, thock } from '@/lib/sound'
-import { praise, trashTalk } from '@/lib/trashTalk'
+import { volleyComment } from '@/lib/trashTalk'
 import { useLeagueContext } from '@/lib/LeagueProvider'
-import type { GameMode, PlayerRow } from '@/lib/useLeague'
+import { averageVolleyOf, type GameMode, type PlayerRow } from '@/lib/useLeague'
 
 /** Nom d'annonce : le surnom s'il existe, sinon le prénom. */
 function stageName(player: PlayerRow | undefined): string {
@@ -104,7 +104,8 @@ function loadStoredMatch(): StoredMatch | null {
 export default function TirerPage() {
   const router = useRouter()
   const toast = useToast()
-  const { players, stats, loading, error, configured, saveSessions } = useLeagueContext()
+  const { players, stats, punchlines, loading, error, configured, saveSessions } =
+    useLeagueContext()
   const { publish, stop: stopLive } = useLiveMatchPublisher()
 
   // L'annonceur parle ; son coupé, il écrit (toast) pour ne rien perdre.
@@ -287,12 +288,7 @@ export default function TirerPage() {
 
   // Moyenne de volée maison (toutes sessions classées confondues) : l'annonceur
   // calibre ses compliments sur le niveau réel de l'équipe, pas sur celui des pros.
-  const averageVolley = useMemo(() => {
-    const sessionsCount = stats.reduce((sum, s) => sum + s.sessions_count, 0)
-    if (sessionsCount === 0) return null
-    const totalSum = stats.reduce((sum, s) => sum + s.sum_total, 0)
-    return totalSum / sessionsCount / VOLLEYS_PER_SESSION
-  }, [stats])
+  const averageVolley = useMemo(() => averageVolleyOf(stats), [stats])
 
   // Verrou d'enregistrement : empêche d'insérer deux fois la même partie.
   const savedRef = useRef(false)
@@ -433,7 +429,7 @@ export default function TirerPage() {
   }
 
   function announceVolley(volleyTotal: number, sessionDone: boolean) {
-    const commentaire = praise(volleyTotal, averageVolley) ?? trashTalk(volleyTotal)
+    const commentaire = volleyComment(volleyTotal, averageVolley, punchlines)
     // Le commentaire s'affiche pendant que l'annonceur le dit ; son coupé,
     // c'est announce qui l'écrit, relais compris.
     if (commentaire && soundsEnabled()) toast(commentaire)
@@ -487,7 +483,7 @@ export default function TirerPage() {
       setFlash({ title: '180 !', name: currentPlayer.name, kind: 'perfect' })
       return
     }
-    const commentaire = praise(volleyTotal, averageVolley) ?? trashTalk(volleyTotal)
+    const commentaire = volleyComment(volleyTotal, averageVolley, punchlines)
     if (commentaire && soundsEnabled()) toast(commentaire)
     const nextPlayer =
       after.current !== null ? players.find((p) => p.id === order[after.current!.player]) : null

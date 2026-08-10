@@ -4,14 +4,15 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import type { SessionPowers } from './powers'
 import { channelHealthy, onReconnectHints, useWatchdog } from './realtimeHealth'
-import type { Dart } from './scoring'
+import { VOLLEYS_PER_SESSION, type Dart } from './scoring'
 import { removeSignatureFile, uploadSignature } from './signatures'
 import { supabase } from './supabaseClient'
+import type { Punchline } from './trashTalk'
 
-const SNAPSHOT_KEY = 'mylegidarts-cache-v4'
+const SNAPSHOT_KEY = 'mylegidarts-cache-v5'
 
 /** Version de schéma attendue en base (table schema_version). */
-export const EXPECTED_SCHEMA_VERSION = 7
+export const EXPECTED_SCHEMA_VERSION = 8
 
 const OUTDATED_MESSAGE =
   'La base de données n’est pas à jour : exécutez les fichiers de supabase/migrations/ dans le SQL Editor de Supabase.'
@@ -75,14 +76,28 @@ export interface PlayerMonthStats {
   count_180: number
 }
 
+/** Ligne de la table punchlines : une punchline maison et son seuil. */
+export interface PunchlineRow extends Punchline {
+  id: string
+  created_at: string
+}
+
 /** Clé 'YYYY-MM' d'une date, pour comparer avec player_month_stats.month. */
 export function monthKey(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
 }
 
+/** Moyenne de volée maison, toutes sessions classées confondues (null sans historique). */
+export function averageVolleyOf(stats: PlayerMonthStats[]): number | null {
+  const sessionsCount = stats.reduce((sum, s) => sum + s.sessions_count, 0)
+  if (sessionsCount === 0) return null
+  return stats.reduce((sum, s) => sum + s.sum_total, 0) / sessionsCount / VOLLEYS_PER_SESSION
+}
+
 export interface LeagueData {
   players: PlayerRow[]
   stats: PlayerMonthStats[]
+  punchlines: PunchlineRow[]
   loading: boolean
   error: string | null
   configured: boolean
@@ -90,6 +105,8 @@ export interface LeagueData {
   removePlayer: (playerId: string, code: string) => Promise<string | null>
   setNickname: (playerId: string, nickname: string) => Promise<string | null>
   setSignature: (playerId: string, file: File | null) => Promise<string | null>
+  addPunchline: (punchline: Punchline) => Promise<string | null>
+  removePunchline: (id: string) => Promise<string | null>
   saveSessions: (
     entries: {
       playerId: string
@@ -119,15 +136,17 @@ function deleteErrorMessage(message: string): string {
 export function useLeague(): LeagueData {
   const [players, setPlayers] = useState<PlayerRow[]>([])
   const [stats, setStats] = useState<PlayerMonthStats[]>([])
+  const [punchlines, setPunchlines] = useState<PunchlineRow[]>([])
   const [loading, setLoading] = useState(supabase !== null)
   const [error, setError] = useState<string | null>(null)
   const hasDataRef = useRef(false)
 
   const refetch = useCallback(async () => {
     if (!supabase) return
-    const [playersRes, statsRes, versionRes] = await Promise.all([
+    const [playersRes, statsRes, punchlinesRes, versionRes] = await Promise.all([
       supabase.from('players').select('*').order('name'),
       supabase.from('player_month_stats').select('*'),
+      supabase.from('punchlines').select('*').order('created_at'),
       supabase.from('schema_version').select('version').eq('id', 1).maybeSingle(),
     ])
     // Garde-fou : base pas migrée → message clair plutôt qu'erreurs cryptiques.
@@ -137,20 +156,27 @@ export function useLeague(): LeagueData {
       setLoading(false)
       return
     }
-    if (playersRes.error || statsRes.error) {
+    if (playersRes.error || statsRes.error || punchlinesRes.error) {
       // Avec des données (fraîches ou en cache) déjà affichées, un échec de
       // rafraîchissement reste silencieux : mieux vaut du légèrement périmé
       // qu'un écran d'erreur.
-      if (!hasDataRef.current) setError((playersRes.error ?? statsRes.error)!.message)
+      if (!hasDataRef.current) {
+        setError((playersRes.error ?? statsRes.error ?? punchlinesRes.error)!.message)
+      }
     } else {
       hasDataRef.current = true
       const nextPlayers = playersRes.data as PlayerRow[]
       const nextStats = statsRes.data as PlayerMonthStats[]
+      const nextPunchlines = punchlinesRes.data as PunchlineRow[]
       setPlayers(nextPlayers)
       setStats(nextStats)
+      setPunchlines(nextPunchlines)
       setError(null)
       try {
-        localStorage.setItem(SNAPSHOT_KEY, JSON.stringify({ players: nextPlayers, stats: nextStats }))
+        localStorage.setItem(
+          SNAPSHOT_KEY,
+          JSON.stringify({ players: nextPlayers, stats: nextStats, punchlines: nextPunchlines }),
+        )
       } catch {
         // stockage plein : tant pis pour le cache, l'app fonctionne sans
       }
@@ -164,11 +190,20 @@ export function useLeague(): LeagueData {
     try {
       const raw = localStorage.getItem(SNAPSHOT_KEY)
       if (raw) {
-        const cached = JSON.parse(raw) as { players: PlayerRow[]; stats: PlayerMonthStats[] }
-        if (Array.isArray(cached.players) && Array.isArray(cached.stats)) {
+        const cached = JSON.parse(raw) as {
+          players: PlayerRow[]
+          stats: PlayerMonthStats[]
+          punchlines: PunchlineRow[]
+        }
+        if (
+          Array.isArray(cached.players) &&
+          Array.isArray(cached.stats) &&
+          Array.isArray(cached.punchlines)
+        ) {
           hasDataRef.current = true
           setPlayers(cached.players)
           setStats(cached.stats)
+          setPunchlines(cached.punchlines)
           setLoading(false)
         }
       }
@@ -203,6 +238,7 @@ export function useLeague(): LeagueData {
       .channel('league-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'players' }, () => void refetch())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'sessions' }, () => void refetch())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'punchlines' }, () => void refetch())
       .subscribe((status) => {
         if (!alive) return
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
@@ -276,6 +312,30 @@ export function useLeague(): LeagueData {
     return null
   }
 
+  async function addPunchline({ kind, text, threshold }: Punchline): Promise<string | null> {
+    if (!supabase) return 'Supabase n’est pas configuré.'
+    const trimmed = text.trim()
+    if (!trimmed) return 'La punchline est vide.'
+    if (trimmed.length > 200) return 'Punchline trop longue (200 caractères max).'
+    if (!Number.isInteger(threshold) || threshold < 0 || threshold > 180) {
+      return 'Le seuil doit être un nombre entier entre 0 et 180.'
+    }
+    const { error: err } = await supabase
+      .from('punchlines')
+      .insert({ kind, text: trimmed, threshold })
+    if (err) return err.message
+    await refetch()
+    return null
+  }
+
+  async function removePunchline(id: string): Promise<string | null> {
+    if (!supabase) return 'Supabase n’est pas configuré.'
+    const { error: err } = await supabase.from('punchlines').delete().eq('id', id)
+    if (err) return err.message
+    await refetch()
+    return null
+  }
+
   async function saveSessions(
     entries: {
       playerId: string
@@ -314,6 +374,7 @@ export function useLeague(): LeagueData {
   return {
     players,
     stats,
+    punchlines,
     loading,
     error,
     configured: supabase !== null,
@@ -321,6 +382,8 @@ export function useLeague(): LeagueData {
     removePlayer,
     setNickname,
     setSignature,
+    addPunchline,
+    removePunchline,
     saveSessions,
     removeMatch,
   }
