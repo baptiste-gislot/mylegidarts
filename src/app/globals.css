@@ -1996,34 +1996,9 @@ a {
   text-align: center;
 }
 
-/* Le répertoire d'origine se lit comme une feuille de répliques : une carte
-   par famille, avec sa condition de déclenchement en tête. */
-.punchline-card {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 12px 14px;
-  margin-top: 8px;
-}
-
-.punchline-card__title {
-  font-weight: 600;
-}
-
-.punchline-card__trigger {
-  font-weight: 400;
-  font-size: 13px;
-  color: var(--craie-dim);
-}
-
-.punchline-card__lines {
-  list-style: none;
-  margin-top: 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: 14px;
-  color: var(--craie-dim);
+/* Le formulaire d'édition en place remplit la rangée qu'il remplace. */
+.board__row--manage .add-form {
+  flex: 1;
 }
 
 @media print {

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import type { SessionPowers } from './powers'
 import { channelHealthy, onReconnectHints, useWatchdog } from './realtimeHealth'
-import { VOLLEYS_PER_SESSION, type Dart } from './scoring'
+import type { Dart } from './scoring'
 import { removeSignatureFile, uploadSignature } from './signatures'
 import { supabase } from './supabaseClient'
 import type { Punchline } from './trashTalk'
@@ -12,7 +12,7 @@ import type { Punchline } from './trashTalk'
 const SNAPSHOT_KEY = 'mylegidarts-cache-v5'
 
 /** Version de schéma attendue en base (table schema_version). */
-export const EXPECTED_SCHEMA_VERSION = 8
+export const EXPECTED_SCHEMA_VERSION = 9
 
 const OUTDATED_MESSAGE =
   'La base de données n’est pas à jour : exécutez les fichiers de supabase/migrations/ dans le SQL Editor de Supabase.'
@@ -87,13 +87,6 @@ export function monthKey(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
 }
 
-/** Moyenne de volée maison, toutes sessions classées confondues (null sans historique). */
-export function averageVolleyOf(stats: PlayerMonthStats[]): number | null {
-  const sessionsCount = stats.reduce((sum, s) => sum + s.sessions_count, 0)
-  if (sessionsCount === 0) return null
-  return stats.reduce((sum, s) => sum + s.sum_total, 0) / sessionsCount / VOLLEYS_PER_SESSION
-}
-
 export interface LeagueData {
   players: PlayerRow[]
   stats: PlayerMonthStats[]
@@ -106,6 +99,7 @@ export interface LeagueData {
   setNickname: (playerId: string, nickname: string) => Promise<string | null>
   setSignature: (playerId: string, file: File | null) => Promise<string | null>
   addPunchline: (punchline: Punchline) => Promise<string | null>
+  updatePunchline: (id: string, text: string, threshold: number) => Promise<string | null>
   removePunchline: (id: string) => Promise<string | null>
   saveSessions: (
     entries: {
@@ -312,17 +306,41 @@ export function useLeague(): LeagueData {
     return null
   }
 
-  async function addPunchline({ kind, text, threshold }: Punchline): Promise<string | null> {
-    if (!supabase) return 'Supabase n’est pas configuré.'
-    const trimmed = text.trim()
-    if (!trimmed) return 'La punchline est vide.'
-    if (trimmed.length > 200) return 'Punchline trop longue (200 caractères max).'
+  function punchlineIssue(text: string, threshold: number): string | null {
+    if (!text) return 'La punchline est vide.'
+    if (text.length > 200) return 'Punchline trop longue (200 caractères max).'
     if (!Number.isInteger(threshold) || threshold < 0 || threshold > 180) {
       return 'Le seuil doit être un nombre entier entre 0 et 180.'
     }
+    return null
+  }
+
+  async function addPunchline({ kind, text, threshold }: Punchline): Promise<string | null> {
+    if (!supabase) return 'Supabase n’est pas configuré.'
+    const trimmed = text.trim()
+    const issue = punchlineIssue(trimmed, threshold)
+    if (issue) return issue
     const { error: err } = await supabase
       .from('punchlines')
       .insert({ kind, text: trimmed, threshold })
+    if (err) return err.message
+    await refetch()
+    return null
+  }
+
+  async function updatePunchline(
+    id: string,
+    text: string,
+    threshold: number,
+  ): Promise<string | null> {
+    if (!supabase) return 'Supabase n’est pas configuré.'
+    const trimmed = text.trim()
+    const issue = punchlineIssue(trimmed, threshold)
+    if (issue) return issue
+    const { error: err } = await supabase
+      .from('punchlines')
+      .update({ text: trimmed, threshold })
+      .eq('id', id)
     if (err) return err.message
     await refetch()
     return null
@@ -383,6 +401,7 @@ export function useLeague(): LeagueData {
     setNickname,
     setSignature,
     addPunchline,
+    updatePunchline,
     removePunchline,
     saveSessions,
     removeMatch,

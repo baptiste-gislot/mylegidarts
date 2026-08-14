@@ -32,7 +32,7 @@ function monthLabel(key: string): string {
 }
 
 export default function ClassementPage() {
-  const { players, stats, loading, error, configured } = useLeagueContext()
+  const { players, stats, punchlines, loading, error, configured } = useLeagueContext()
   const liveMatches = useLiveMatches()
   const [period, setPeriod] = useState<Period>('mois')
   const [ranking, setRanking] = useState<Ranking>('record')
@@ -176,58 +176,62 @@ export default function ClassementPage() {
         </div>
       ) : (
         <ol className="board">
-          {lines.map((line, index) => (
-            <li key={line.playerId}>
-              <Link
-                href={`/profil/${line.playerId}`}
-                className={`board__row${
-                  ranking === 'flop'
-                    ? index === 0
-                      ? ' board__row--flop'
-                      : ''
-                    : index === 0
-                      ? ' board__row--leader'
-                      : index === 1
-                        ? ' board__row--second'
-                        : index === 2
-                          ? ' board__row--third'
-                          : ''
-                }`}
-              >
-                <span className="board__rank">
-                  {index < 3
-                    ? (ranking === 'flop' ? ['🤡', '🫣', '😬'] : ['🥇', '🥈', '🥉'])[index]
-                    : index + 1}
-                </span>
-                <PlayerAvatar name={line.name} leader={index === 0 && ranking !== 'flop'} />
-                <span className="board__who">
-                  <span className="board__name">{line.name}</span>
-                  {ranking === 'flop' ? (
-                    <span className="board__record board__record--pique">
-                      {flopLine(line.playerId + line.worst)}
-                    </span>
-                  ) : (
-                    <span className="board__record">
-                      {line.sessionsCount} session{line.sessionsCount > 1 ? 's' : ''} ·{' '}
-                      {ranking === 'record' ? `moy. ${line.average}` : `record ${line.best}`} ·
-                      volée max {line.bestVolley}
-                      {line.count180 > 0 && (
-                        <em className="board__180"> · {line.count180}× 180</em>
-                      )}
-                    </span>
-                  )}
-                </span>
-                <span className="board__score">
-                  <span className="board__points">
-                    {ranking === 'record' ? line.best : ranking === 'moyenne' ? line.average : line.worst}
+          {lines.map((line, index) => {
+            // Sans pique de tableau dans le répertoire, la rangée flop retombe
+            // sur les détails standard plutôt qu'une ligne vide.
+            const pique =
+              ranking === 'flop' ? flopLine(line.playerId + line.worst, punchlines) : null
+            return (
+              <li key={line.playerId}>
+                <Link
+                  href={`/profil/${line.playerId}`}
+                  className={`board__row${
+                    ranking === 'flop'
+                      ? index === 0
+                        ? ' board__row--flop'
+                        : ''
+                      : index === 0
+                        ? ' board__row--leader'
+                        : index === 1
+                          ? ' board__row--second'
+                          : index === 2
+                            ? ' board__row--third'
+                            : ''
+                  }`}
+                >
+                  <span className="board__rank">
+                    {index < 3
+                      ? (ranking === 'flop' ? ['🤡', '🫣', '😬'] : ['🥇', '🥈', '🥉'])[index]
+                      : index + 1}
                   </span>
-                  <span className="board__sub">
-                    {ranking === 'record' ? 'record' : ranking === 'moyenne' ? 'moyenne' : 'pire score'}
+                  <PlayerAvatar name={line.name} leader={index === 0 && ranking !== 'flop'} />
+                  <span className="board__who">
+                    <span className="board__name">{line.name}</span>
+                    {pique !== null ? (
+                      <span className="board__record board__record--pique">{pique}</span>
+                    ) : (
+                      <span className="board__record">
+                        {line.sessionsCount} session{line.sessionsCount > 1 ? 's' : ''} ·{' '}
+                        {ranking === 'record' ? `moy. ${line.average}` : `record ${line.best}`} ·
+                        volée max {line.bestVolley}
+                        {line.count180 > 0 && (
+                          <em className="board__180"> · {line.count180}× 180</em>
+                        )}
+                      </span>
+                    )}
                   </span>
-                </span>
-              </Link>
-            </li>
-          ))}
+                  <span className="board__score">
+                    <span className="board__points">
+                      {ranking === 'record' ? line.best : ranking === 'moyenne' ? line.average : line.worst}
+                    </span>
+                    <span className="board__sub">
+                      {ranking === 'record' ? 'record' : ranking === 'moyenne' ? 'moyenne' : 'pire score'}
+                    </span>
+                  </span>
+                </Link>
+              </li>
+            )
+          })}
         </ol>
       )}
 
