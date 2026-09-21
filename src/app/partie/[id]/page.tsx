@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
 import { SetupNotice } from '@/components/SetupNotice'
+import { SIDE_LABEL, type Side } from '@/lib/fletanque'
 import { dartLabel, sessionTotal, volleys } from '@/lib/scoring'
 import { POWER_BY_ID, groupBySizes } from '@/lib/powers'
 import { useLeagueContext } from '@/lib/LeagueProvider'
@@ -41,6 +42,76 @@ export default function PartiePage() {
   }
 
   const nameById = new Map(players.map((p) => [p.id, p.name]))
+  const flet = matchSessions[0]?.fletanque ?? null
+  if (flet) {
+    // La flétanque se lit par équipe : quatre lignes, deux camps, un déroulé
+    // de mènes partagé.
+    const teams = ([0, 1] as Side[]).map((side) => {
+      const rows = matchSessions.filter((s) => s.fletanque?.team === side)
+      return {
+        side,
+        roster: rows.map((s) => nameById.get(s.player_id) ?? 'Joueur supprimé'),
+        score: rows[0]?.total ?? 0,
+        won: rows[0]?.won === true,
+      }
+    })
+    const champions = teams.find((t) => t.won)
+
+    return (
+      <div className="stack">
+        <div className="profil-head">
+          <Link href="/historique" className="button-ghost">
+            ← Historique
+          </Link>
+          <div>
+            <h2 className="profil-head__name">
+              {champions
+                ? `Flétanque — Victoire de ${champions.roster.join(' & ')}`
+                : 'Flétanque — partie abandonnée'}
+            </h2>
+            <p className="board__record">
+              {dateFormat.format(new Date(matchSessions[0].created_at))}
+            </p>
+          </div>
+        </div>
+
+        {[...teams]
+          .sort((a, b) => Number(b.won) - Number(a.won))
+          .map((team) => (
+            <section
+              key={team.side}
+              className={team.won ? 'match-detail match-detail--winner' : 'match-detail'}
+            >
+              <div className="match-detail__head">
+                <PlayerAvatar name={team.roster[0] ?? '?'} leader={team.won} />
+                <span className="match-detail__name">
+                  {team.won && '🏆 '}
+                  {SIDE_LABEL[team.side]} — {team.roster.join(' & ')}
+                </span>
+                <span className="match-detail__total">{team.score}</span>
+              </div>
+            </section>
+          ))}
+
+        <section className="match-detail">
+          <div className="match-detail__volleys">
+            {flet.menes.map((mene, i) => (
+              <div key={i} className="volley-line">
+                <span className="volley-line__label">Mène {i + 1}</span>
+                <span className="volley-line__darts">
+                  {mene.holder === null
+                    ? 'nulle — rejouée'
+                    : `${SIDE_LABEL[mene.holder]} · ${teams[mene.holder].roster.join(' & ')}`}
+                </span>
+                <span className="volley-line__total">{mene.points}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+    )
+  }
+
   const is301 = matchSessions[0]?.mode === '301'
   const winner = is301
     ? (matchSessions.find((s) => s.won) ?? matchSessions[0])

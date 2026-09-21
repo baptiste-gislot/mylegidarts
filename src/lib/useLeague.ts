@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { RealtimeChannel } from '@supabase/supabase-js'
+import type { SessionFletanque } from './fletanque'
 import type { SessionPowers } from './powers'
 import { channelHealthy, onReconnectHints, useWatchdog } from './realtimeHealth'
 import type { Dart } from './scoring'
@@ -12,12 +13,12 @@ import type { Punchline } from './trashTalk'
 const SNAPSHOT_KEY = 'mylegidarts-cache-v5'
 
 /** Version de schéma attendue en base (table schema_version). */
-export const EXPECTED_SCHEMA_VERSION = 9
+export const EXPECTED_SCHEMA_VERSION = 10
 
 const OUTDATED_MESSAGE =
   'La base de données n’est pas à jour : exécutez les fichiers de supabase/migrations/ dans le SQL Editor de Supabase.'
 
-export type GameMode = 'volees' | '301'
+export type GameMode = 'volees' | '301' | 'fletanque'
 
 export interface PlayerRow {
   id: string
@@ -38,6 +39,8 @@ export interface SessionRow {
   mode: GameMode
   won: boolean | null
   powers: SessionPowers | null
+  /** Null hors flétanque. En flétanque, `total` porte le score de l'équipe. */
+  fletanque: SessionFletanque | null
   created_at: string
 }
 
@@ -53,6 +56,7 @@ export interface SessionStatRow {
   mode: GameMode
   won: boolean | null
   powers: SessionPowers | null
+  fletanque: SessionFletanque | null
 }
 
 /** Ligne de la vue duel_stats : bilan face-à-face entre deux joueurs. */
@@ -108,6 +112,7 @@ export interface LeagueData {
       total: number
       won?: boolean | null
       powers?: SessionPowers | null
+      fletanque?: SessionFletanque | null
     }[],
     matchId?: string | null,
     mode?: GameMode,
@@ -361,6 +366,7 @@ export function useLeague(): LeagueData {
       total: number
       won?: boolean | null
       powers?: SessionPowers | null
+      fletanque?: SessionFletanque | null
     }[],
     matchId: string | null = null,
     mode: GameMode = 'volees',
@@ -374,6 +380,7 @@ export function useLeague(): LeagueData {
       mode,
       won: e.won ?? null,
       powers: e.powers ?? null,
+      fletanque: e.fletanque ?? null,
     }))
     const { error: err } = await supabase.from('sessions').insert(rows)
     if (err) return err.message

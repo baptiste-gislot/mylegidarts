@@ -1,4 +1,4 @@
--- Schéma complet MyLegiDarts (version 9).
+-- Schéma complet MyLegiDarts (version 10).
 -- Pour une installation neuve : exécuter ce fichier dans le SQL Editor.
 -- Pour une base existante : exécuter les fichiers de migrations/ dans l'ordre.
 
@@ -21,10 +21,13 @@ create table if not exists public.sessions (
   darts jsonb not null,
   -- Les bonus des pouvoirs peuvent dépasser 720 (borne réservée aux parties classiques).
   total int not null check (total >= 0 and (total <= 720 or powers is not null)),
-  mode text not null default 'volees' check (mode in ('volees', '301')),
+  mode text not null default 'volees' check (mode in ('volees', '301', 'fletanque')),
   won boolean,
   -- Null = partie sans pouvoirs. Sinon : { power, used, copied?, bonus, volleySizes }.
   powers jsonb,
+  -- Null hors flétanque. Sinon : { team, thrown, menes } ; total porte alors
+  -- le score final de l'équipe du joueur.
+  fletanque jsonb,
   created_at timestamptz not null default now()
 );
 
@@ -170,8 +173,8 @@ create table if not exists public.schema_version (
 );
 alter table public.schema_version enable row level security;
 create policy "version open read" on public.schema_version for select using (true);
-insert into public.schema_version (id, version) values (1, 9)
-on conflict (id) do update set version = 9;
+insert into public.schema_version (id, version) values (1, 10)
+on conflict (id) do update set version = 10;
 
 -- ---------- Signatures sonores (storage) ----------
 -- Bucket public : le MP3 de chaque joueur se lit par URL directe.
@@ -262,12 +265,14 @@ select s.id,
        coalesce(count(*) filter (where v.volley_total = 180), 0)::int as count_180,
        s.mode,
        s.won,
-       s.powers
+       s.powers,
+       s.fletanque
 from public.sessions s
 left join volleys v on v.id = s.id
 group by s.id;
 
--- Le classement ne compte que le défi 4 volées joué sans pouvoirs.
+-- Le classement ne compte que le défi 4 volées joué sans pouvoirs (301 et
+-- flétanque en sont donc exclus d'office).
 create view public.player_month_stats
 with (security_invoker = true) as
 select player_id,

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { SetupNotice } from '@/components/SetupNotice'
 import { useToast } from '@/components/Toaster'
 import { askDeleteCode, forgetDeleteCode, rememberDeleteCode } from '@/lib/deleteCode'
+import { SIDE_LABEL, type Side } from '@/lib/fletanque'
 import { groupByMatch } from '@/lib/matches'
 import { useLeagueContext } from '@/lib/LeagueProvider'
 import { useSessionHistory } from '@/lib/useSessions'
@@ -47,40 +48,66 @@ export default function HistoriquePage() {
           const total180 = group.sessions.reduce((sum, s) => sum + s.count_180, 0)
           const is301 = group.sessions[0]?.mode === '301'
           const withPowers = group.sessions[0]?.powers != null
+          const isFletanque = group.sessions[0]?.fletanque != null
+          // La flétanque se lit par équipe : les deux coéquipiers partagent
+          // le même score et le même sort.
+          const lines = isFletanque
+            ? ([0, 1] as Side[])
+                .map((side) => {
+                  const rows = group.sessions.filter((s) => s.fletanque?.team === side)
+                  return {
+                    key: `equipe-${side}`,
+                    label: `${SIDE_LABEL[side]} — ${rows
+                      .map((s) => nameById.get(s.player_id) ?? 'Joueur supprimé')
+                      .join(' & ')}`,
+                    total: `${rows[0]?.total ?? 0}`,
+                    winner: rows[0]?.won === true,
+                  }
+                })
+                .sort((a, b) => Number(b.winner) - Number(a.winner))
+            : group.sessions.map((session, index) => ({
+                key: session.id,
+                label: nameById.get(session.player_id) ?? 'Joueur supprimé',
+                total: is301 && !session.won ? `reste ${301 - session.total}` : `${session.total}`,
+                winner: is301 ? session.won === true : index === 0 && group.sessions.length > 1,
+              }))
           return (
             <li key={group.id}>
               <Link href={`/partie/${group.id}`} className="match-card">
                 <div className="match-card__head">
                   <span className="match-card__type">
-                    {is301 ? '301' : withPowers ? 'Défi 4 volées · 🃏 Pouvoirs' : 'Défi 4 volées'}
-                    {group.sessions.length > 1 ? ` · à ${group.sessions.length}` : ' · solo'}
+                    {isFletanque
+                      ? '🍹 Flétanque'
+                      : is301
+                        ? '301'
+                        : withPowers
+                          ? 'Défi 4 volées · 🃏 Pouvoirs'
+                          : 'Défi 4 volées'}
+                    {isFletanque
+                      ? ' · 2 contre 2'
+                      : group.sessions.length > 1
+                        ? ` · à ${group.sessions.length}`
+                        : ' · solo'}
                     {total180 > 0 && <em className="board__180"> · {total180}× 180</em>}
                   </span>
                   <time className="history__date">{dateFormat.format(new Date(group.date))}</time>
                 </div>
                 <ul className="match-card__lines">
-                  {group.sessions.map((session, index) => {
-                    const winner = is301
-                      ? session.won === true
-                      : index === 0 && group.sessions.length > 1
-                    return (
-                      <li key={session.id} className="match-card__line">
-                        <span
-                          className={
-                            winner
-                              ? 'match-card__player match-card__player--winner'
-                              : 'match-card__player'
-                          }
-                        >
-                          {winner && '🏆 '}
-                          {nameById.get(session.player_id) ?? 'Joueur supprimé'}
-                        </span>
-                        <span className="match-card__total">
-                          {is301 && !session.won ? `reste ${301 - session.total}` : session.total}
-                        </span>
-                      </li>
-                    )
-                  })}
+                  {lines.map((line) => (
+                    <li key={line.key} className="match-card__line">
+                      <span
+                        className={
+                          line.winner
+                            ? 'match-card__player match-card__player--winner'
+                            : 'match-card__player'
+                        }
+                      >
+                        {line.winner && '🏆 '}
+                        {line.label}
+                      </span>
+                      <span className="match-card__total">{line.total}</span>
+                    </li>
+                  ))}
                 </ul>
                 <div className="history__actions">
                   <button

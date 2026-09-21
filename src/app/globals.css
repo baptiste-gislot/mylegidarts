@@ -660,6 +660,184 @@ a {
   opacity: 0.4;
 }
 
+/* ---------- Flétanque ---------- */
+
+.flet-lineup {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.flet-lineup__row {
+  font-size: 13px;
+  color: var(--craie-dim);
+}
+
+.flet-lineup__row strong {
+  font-family: var(--font-display-stack);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--craie);
+}
+
+.flet-teams {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.flet-team {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: border-color 120ms ease;
+}
+
+/* L'équipe qui tient le point : liséré laiton, comme le leader du tableau. */
+.flet-team--point {
+  border-color: color-mix(in srgb, var(--laiton) 65%, var(--line));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--laiton) 9%, var(--surface)), var(--surface));
+}
+
+.flet-team__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.flet-team__label {
+  font-family: var(--font-display-stack);
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--craie-dim);
+}
+
+.flet-team--point .flet-team__label {
+  color: var(--craie);
+}
+
+.flet-team__point {
+  font-style: normal;
+  color: var(--laiton);
+}
+
+.flet-team__score {
+  font-family: var(--font-display-stack);
+  font-weight: 700;
+  font-size: 34px;
+  line-height: 1;
+}
+
+.flet-team__players {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.flet-player {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  background: var(--ink);
+  border: 1px solid var(--line);
+  text-align: left;
+  color: var(--craie-dim);
+}
+
+.flet-player:not(:disabled) {
+  cursor: pointer;
+}
+
+/* Le joueur à la cible : c'est lui qui lance la prochaine fléchette. */
+.flet-player--active {
+  border-color: var(--craie-dim);
+  background: var(--raised);
+  color: var(--craie);
+}
+
+.flet-player__name {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.flet-player__darts {
+  font-size: 13px;
+  letter-spacing: 0.18em;
+  color: var(--laiton);
+}
+
+.flet-call {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--raised);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.flet-call__title {
+  font-family: var(--font-display-stack);
+  font-weight: 700;
+  font-size: 20px;
+}
+
+.flet-call__hint {
+  font-size: 13px;
+  color: var(--craie-dim);
+}
+
+.flet-points {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+}
+
+.flet-outcomes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.flet-outcome {
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  font-family: var(--font-display-stack);
+  font-weight: 600;
+  font-size: 18px;
+  padding: 16px 12px;
+  cursor: pointer;
+  transition: background 100ms ease, border-color 100ms ease;
+}
+
+.flet-outcome:active {
+  background: var(--raised);
+}
+
+.flet-outcome--a {
+  border-color: color-mix(in srgb, var(--rouge) 60%, var(--line));
+}
+
+.flet-outcome--b {
+  border-color: color-mix(in srgb, var(--vert) 60%, var(--line));
+}
+
+.flet-outcome--tie {
+  color: var(--craie-dim);
+}
+
 /* ---------- Récap de session ---------- */
 
 .recap {
@@ -2139,6 +2317,16 @@ a {
   }
 
   .keypad {
+    grid-area: keypad;
+  }
+
+  /* En flétanque, les équipes prennent la place du tableau de volée et le
+     panneau de décision celle du clavier. */
+  .flet-teams {
+    grid-area: slots;
+  }
+
+  .flet-call {
     grid-area: keypad;
   }
 

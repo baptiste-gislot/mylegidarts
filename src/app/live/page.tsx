@@ -10,8 +10,9 @@ import {
   dartLabel,
   sessionTotal,
 } from '@/lib/scoring'
+import { DARTS_PER_PLAYER, SIDE_LABEL, teamPlayers, type Side } from '@/lib/fletanque'
 import { replay301 } from '@/lib/play301'
-import { useLiveMatches, type LiveMatch } from '@/lib/liveMatch'
+import { useLiveMatches, type LiveMatch, type LiveMatchFletanque } from '@/lib/liveMatch'
 import { supabase } from '@/lib/supabaseClient'
 
 export default function LivePage() {
@@ -41,6 +42,56 @@ export default function LivePage() {
 }
 
 function LiveMatchCard({ match }: { match: LiveMatch }) {
+  // En flétanque, aucune fléchette n'est notée : le tireur diffuse son résumé.
+  if (match.fletanque) return <LiveFletanqueCard match={match} flet={match.fletanque} />
+  return <LiveScoreCard match={match} />
+}
+
+/** Le direct d'une flétanque : deux équipes, le point, et les fléchettes en main. */
+function LiveFletanqueCard({ match, flet }: { match: LiveMatch; flet: LiveMatchFletanque }) {
+  const thrower = flet.thrower !== null ? match.players[flet.thrower] : null
+
+  return (
+    <section className="live-card" aria-live="polite">
+      <div className="live-card__head">
+        <span className="live-card__status">
+          <span className="live-dot" aria-hidden="true" />
+          {match.finished
+            ? 'Terminée — en attente d’enregistrement'
+            : `En direct · 🍹 Flétanque · mène ${flet.mene}${thrower ? ` · ${thrower.name} à la cible` : ' · décompte'}`}
+        </span>
+      </div>
+
+      <ul className="live-card__players">
+        {([0, 1] as Side[]).map((side) => (
+          <li
+            key={side}
+            className={flet.holder === side ? 'live-row live-row--active' : 'live-row'}
+          >
+            <span className="live-row__who">
+              <span className="board__name">
+                {SIDE_LABEL[side]}
+                {flet.holder === side && <em className="live-row__turn"> · au point</em>}
+              </span>
+              <span className="board__record">
+                {teamPlayers(side)
+                  .map((index) => {
+                    const left = flet.left[index] ?? 0
+                    const name = match.players[index]?.name ?? '?'
+                    return `${name} ${'●'.repeat(left)}${'○'.repeat(DARTS_PER_PLAYER - left)}`
+                  })
+                  .join('  ·  ')}
+              </span>
+            </span>
+            <span className="board__points">{flet.scores[side]}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+function LiveScoreCard({ match }: { match: LiveMatch }) {
   const is301 = match.mode === '301'
   const powers = match.powers ?? null
   const thrownCount = match.darts.reduce((sum, d) => sum + d.length, 0)

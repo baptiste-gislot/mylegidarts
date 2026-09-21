@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { RealtimeChannel } from '@supabase/supabase-js'
+import type { Side } from './fletanque'
 import { channelHealthy, onReconnectHints, useWatchdog } from './realtimeHealth'
 import type { Dart } from './scoring'
 import { supabase } from './supabaseClient'
@@ -13,6 +14,19 @@ export interface LiveMatchPowers {
   totals: number[]
   current: number | null
   round: number
+}
+
+/** Résumé flétanque calculé côté tireur : le spectateur l'affiche tel quel. */
+export interface LiveMatchFletanque {
+  scores: [number, number]
+  /** Numéro de la mène en cours (1-based). */
+  mene: number
+  /** Équipe qui tient le point, null à égalité ou sur une mène vierge. */
+  holder: Side | null
+  /** Fléchettes restantes de chaque joueur dans la mène. */
+  left: number[]
+  /** Joueur à la cible, null quand la mène attend son décompte. */
+  thrower: number | null
 }
 
 /** État d'une partie en cours, diffusé via Supabase Realtime Presence. */
@@ -27,6 +41,8 @@ export interface LiveMatch {
   darts: Dart[][]
   /** Présent quand la partie se joue avec pouvoirs (rétrocompatible). */
   powers?: LiveMatchPowers
+  /** Présent en flétanque : les fléchettes n'y sont pas notées. */
+  fletanque?: LiveMatchFletanque
 }
 
 export type LiveMatchInput = Omit<LiveMatch, 'updatedAt'>
@@ -210,6 +226,7 @@ export function useLiveMatches(): LiveMatch[] {
             players: meta.players,
             darts: meta.darts,
             powers: meta.powers,
+            fletanque: meta.fletanque,
           }
           const known = freshest.get(match.id)
           if (!known || match.updatedAt >= known.updatedAt) freshest.set(match.id, match)
