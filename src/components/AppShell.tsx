@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { LeagueProvider } from '@/lib/LeagueProvider'
 import { announcerVoice, setSoundsEnabled, soundsEnabled, warmUpVoices } from '@/lib/sound'
+import { IdleWatcher } from './IdleScreen'
 import { InstallBanner } from './InstallBanner'
 import { ToastProvider } from './Toaster'
 
@@ -86,6 +87,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           })}
           </nav>
         </div>
+        <IdleWatcher />
       </LeagueProvider>
     </ToastProvider>
   )

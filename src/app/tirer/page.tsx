@@ -32,6 +32,7 @@ import {
   type Side,
 } from '@/lib/fletanque'
 import { useLiveMatchPublisher } from '@/lib/liveMatch'
+import { IN_PROGRESS_KEY, IN_PROGRESS_MAX_AGE_MS } from '@/lib/matchInProgress'
 import { padVolley, replay301, START_301 } from '@/lib/play301'
 import {
   POWER_BY_ID,
@@ -82,8 +83,6 @@ const SECTORS = Array.from({ length: 20 }, (_, i) => i + 1)
 /** Places de flétanque, dans l'ordre de sélection : deux par équipe. */
 const FLETANQUE_SLOTS = ['A1.', 'A2.', 'B1.', 'B2.']
 
-const IN_PROGRESS_KEY = 'mylegidarts-session-en-cours'
-const IN_PROGRESS_MAX_AGE_MS = 6 * 60 * 60 * 1000
 
 interface StoredMatch {
   matchId: string

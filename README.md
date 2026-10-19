@@ -11,6 +11,7 @@ PWA de leaderboard de fléchettes. Le défi : **4 volées de 3 fléchettes**, sa
 - **301** : deuxième jeu (premier à zéro exactement, bust si dépassement, sortie sèche) — hors classement, mais compté dans les face-à-face.
 - **Pouvoirs** 🃏 : option du défi 4 volées — chaque joueur reçoit au hasard un pouvoir de l'équipe (relance, fléchette de rab, annulation adverse, bonus, vote de règle…), utilisable une seule fois. Parties hors classement, visibles en live et dans l'historique.
 - **Flétanque** 🍹 : la pétanque aux fléchettes, deux contre deux, trois fléchettes chacun — le cochonnet, c'est le centre de la cible. Aucune fléchette n'est notée : les quatre joueurs tirent toute leur main, puis on saisit l'équipe qui prend la mène et ses points (fléchettes devant la meilleure adverse) ; une mène nulle est rejouée, le vainqueur de la mène ouvre la suivante. Premier à 5. Hors classement.
+- **Écran d'attente** : sur un poste à souris (le kiosque), après 2 min sans activité et hors partie en cours, l'app passe à l'antenne : défi du mois, records et derniers 180, fiche d'un joueur, appel à jouer. Un mouvement de souris rend la main.
 - **Face-à-face** : bilan des duels (parties à 2) sur la page profil, tous modes confondus.
 - **Suppression verrouillée** : joueurs et parties ne se suppriment qu'avec le code d'équipe (fonctions SQL `security definer` ; code par défaut `180`, à changer dans `league_settings`).
 - **QR d'installation** : page `/inviter` imprimable, liée depuis Joueurs.

@@ -2247,6 +2247,347 @@ a {
 
 /* ---------- Écrans larges (PC) ---------- */
 
+/* ---------- Écran d'attente ---------- */
+
+/* La page derrière ne défile plus tant que l'écran d'attente est à l'antenne. */
+html:has(.attente) {
+  overflow: hidden;
+}
+
+/* Le kiosque passe à l'antenne : plein écran, logo en incrustation, une
+   rotation d'écrans façon habillage de retransmission. */
+.attente {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  padding: clamp(20px, 3vw, 40px) clamp(20px, 5vw, 72px);
+  background:
+    radial-gradient(120% 80% at 85% 0%, color-mix(in srgb, var(--raised) 70%, transparent), transparent 60%),
+    var(--bg);
+  cursor: none;
+}
+
+.attente__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.attente__bug {
+  display: flex;
+  font-family: var(--font-display-stack);
+  font-weight: 800;
+  font-size: 26px;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.attente__bug span {
+  padding: 4px 10px 2px;
+  color: var(--bg);
+}
+
+.attente__bug span:first-child {
+  background: var(--text);
+  padding-right: calc(var(--bevel) + 4px);
+  clip-path: polygon(0 0, 100% 0, calc(100% - var(--bevel)) 100%, 0 100%);
+}
+
+.attente__bug span:last-child {
+  margin-left: calc(var(--bevel) * -1 + 2px);
+  padding: 4px calc(var(--bevel) + 8px) 2px calc(var(--bevel) + 6px);
+  background: var(--gold);
+  clip-path: polygon(var(--bevel) 0, 100% 0, calc(100% - var(--bevel)) 100%, 0 100%);
+}
+
+.attente__clock {
+  font-family: var(--font-display-stack);
+  font-weight: 700;
+  font-size: 30px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-dim);
+}
+
+.attente__stage {
+  align-self: center;
+  width: 100%;
+  max-width: 980px;
+  margin: 0 auto;
+  animation: attente-wipe 520ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+/* Le volet d'incrustation : chaque écran entre par un balayage biseauté. */
+/* Débord vertical généreux : les accents des capitales dépassent la boîte. */
+@keyframes attente-wipe {
+  from {
+    clip-path: polygon(-5% -30%, -5% -30%, -15% 130%, -5% 130%);
+  }
+  to {
+    clip-path: polygon(-5% -30%, 115% -30%, 105% 130%, -5% 130%);
+  }
+}
+
+.attente__title {
+  display: inline-block;
+  margin-bottom: 28px;
+  padding: 6px calc(var(--bevel) * 2 + 10px) 4px calc(var(--bevel) + 14px);
+  background: var(--gold);
+  color: var(--bg);
+  font-family: var(--font-display-stack);
+  font-weight: 800;
+  font-size: clamp(34px, 4vw, 52px);
+  line-height: 1.05;
+  text-transform: uppercase;
+  clip-path: polygon(0 0, 100% 0, calc(100% - var(--bevel) * 1.5) 100%, 0 100%);
+}
+
+.attente__board {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.attente__row {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 12px 22px;
+  background: var(--surface);
+  border-left: 4px solid transparent;
+}
+
+.attente__row--leader {
+  padding-block: 18px;
+  background: var(--raised);
+  border-left-color: var(--gold);
+}
+
+.attente__rank {
+  width: 36px;
+  text-align: center;
+  font-family: var(--font-display-stack);
+  font-weight: 800;
+  font-size: 30px;
+  color: var(--text-dim);
+}
+
+.attente__row .avatar {
+  width: 48px;
+  height: 48px;
+  font-size: 20px;
+}
+
+.attente__what {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.attente__label {
+  font-size: 15px;
+  color: var(--text-dim);
+}
+
+.attente__name {
+  flex: 1;
+  font-family: var(--font-display-stack);
+  font-weight: 700;
+  font-size: 32px;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.attente__row--leader .attente__name {
+  font-size: 42px;
+}
+
+.attente__value {
+  margin-left: auto;
+  font-family: var(--font-display-stack);
+  font-weight: 800;
+  font-size: 44px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.attente__row--leader .attente__value {
+  font-size: 64px;
+  color: var(--gold);
+}
+
+.attente__ticker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+  margin-top: 22px;
+  font-size: 17px;
+  color: var(--text-dim);
+}
+
+.attente__ticker strong {
+  color: var(--red);
+  font-family: var(--font-display-stack);
+  font-weight: 800;
+  font-size: 20px;
+  text-transform: uppercase;
+}
+
+.attente__card {
+  max-width: 820px;
+}
+
+.attente__card-head {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 30px;
+}
+
+.attente__card-head .avatar {
+  width: 96px;
+  height: 96px;
+  font-size: 40px;
+  border: 3px solid var(--gold);
+}
+
+.attente__card-name {
+  font-family: var(--font-display-stack);
+  font-weight: 800;
+  font-size: clamp(56px, 7vw, 96px);
+  line-height: 0.95;
+  text-transform: uppercase;
+}
+
+.attente__card-nick {
+  font-size: 22px;
+  color: var(--gold);
+}
+
+.attente__figures {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.attente__figure {
+  padding: 16px 20px;
+  background: var(--surface);
+}
+
+.attente__figure dt {
+  font-size: 15px;
+  color: var(--text-dim);
+}
+
+.attente__figure dd {
+  font-family: var(--font-display-stack);
+  font-weight: 800;
+  font-size: 56px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.attente__card-foot {
+  margin-top: 18px;
+  font-size: 18px;
+  color: var(--text-dim);
+}
+
+.attente__call {
+  max-width: 900px;
+}
+
+.attente__headline {
+  font-family: var(--font-display-stack);
+  font-weight: 800;
+  font-size: clamp(60px, 8vw, 120px);
+  line-height: 0.92;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+
+.attente__lede {
+  margin-top: 22px;
+  font-size: 26px;
+}
+
+.attente__games {
+  margin-top: 30px;
+  padding-left: 16px;
+  border-left: 4px solid var(--red);
+  font-size: 19px;
+  color: var(--text-dim);
+}
+
+.attente__foot {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.attente__progress {
+  list-style: none;
+  flex: 1;
+  display: flex;
+  gap: 6px;
+}
+
+.attente__segment {
+  position: relative;
+  flex: 1;
+  height: 5px;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.attente__segment::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--gold);
+  transform: scaleX(0);
+  transform-origin: left;
+}
+
+.attente__segment--done::after {
+  transform: scaleX(1);
+  opacity: 0.45;
+}
+
+.attente__segment--on::after {
+  animation: attente-progress linear both;
+  animation-duration: inherit;
+}
+
+@keyframes attente-progress {
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.attente__wake {
+  font-family: var(--font-display-stack);
+  font-weight: 700;
+  font-size: 22px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+@media (max-width: 699px) {
+  .attente__figures {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .attente__segment--on::after {
+    transform: scaleX(1);
+  }
+}
+
 @media (min-width: 900px) {
   .app {
     max-width: 1060px;
