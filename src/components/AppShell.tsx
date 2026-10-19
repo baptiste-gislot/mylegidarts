@@ -14,6 +14,7 @@ import { ToastProvider } from './Toaster'
 const TABS = [
   { href: '/tirer', label: 'Jouer', also: [] },
   { href: '/', label: 'Classements', also: ['/profil', '/records', '/comparer'] },
+  { href: '/tournois', label: 'Tournois', also: ['/tournois/'] },
   { href: '/historique', label: 'Historique', also: ['/partie', '/live'] },
   { href: '/joueurs', label: 'Joueurs', also: ['/punchlines', '/inviter'] },
 ]

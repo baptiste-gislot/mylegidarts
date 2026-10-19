@@ -1,4 +1,4 @@
--- Schéma complet MyLegiDarts (version 11).
+-- Schéma complet MyLegiDarts (version 12).
 -- Pour une installation neuve : exécuter ce fichier dans le SQL Editor.
 -- Pour une base existante : exécuter les fichiers de migrations/ dans l'ordre.
 
@@ -10,6 +10,22 @@ create table if not exists public.players (
   signature_path text,
   created_at timestamptz not null default now(),
   constraint players_name_unique unique (name)
+);
+
+-- Un tournoi ne stocke que ce qui ne se déduit pas des parties : sa
+-- composition, les forfaits et les morts subites. Les résultats se lisent
+-- dans les parties rattachées (sessions.tournament_id / tournament_slot).
+create table if not exists public.tournaments (
+  id uuid primary key default gen_random_uuid(),
+  name text not null check (char_length(btrim(name)) between 1 and 60),
+  mode text not null check (mode in ('volees', '301', 'cricket', 'clock', 'killer', 'shanghai')),
+  -- Poules tirées à la création : [[id joueur, …], …], têtes de série en premier.
+  pools jsonb not null,
+  -- Joueurs déclarés forfait : [id joueur, …].
+  forfeits jsonb not null default '[]'::jsonb,
+  -- Morts subites du tableau : { "<rencontre>": { "winner": id, "volleys": [[a, b], …] } }.
+  tiebreaks jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
 );
 
 create table if not exists public.sessions (
@@ -29,6 +45,10 @@ create table if not exists public.sessions (
   -- Null hors flétanque. Sinon : { team, thrown, menes } ; total porte alors
   -- le score final de l'équipe du joueur.
   fletanque jsonb,
+  -- Partie jouée pour un tournoi : lequel, et quelle rencontre. Supprimer le
+  -- tournoi en fait une partie ordinaire.
+  tournament_id uuid references public.tournaments (id) on delete set null,
+  tournament_slot text,
   created_at timestamptz not null default now(),
   constraint sessions_mode_check
     check (mode in ('volees', '301', 'fletanque', 'cricket', 'clock', 'killer', 'shanghai')),
@@ -55,6 +75,7 @@ create table if not exists public.punchlines (
 create index if not exists sessions_player_id_idx on public.sessions (player_id);
 create index if not exists sessions_match_id_idx on public.sessions (match_id);
 create index if not exists sessions_created_at_idx on public.sessions (created_at desc);
+create index if not exists sessions_tournament_id_idx on public.sessions (tournament_id);
 
 -- App ouverte sans authentification : lecture/écriture pour le rôle anon,
 -- mais PAS de delete direct (voir les fonctions à code plus bas) ni
@@ -76,6 +97,14 @@ create policy "punchlines open read" on public.punchlines for select using (true
 create policy "punchlines open insert" on public.punchlines for insert with check (true);
 create policy "punchlines open update" on public.punchlines for update using (true) with check (true);
 create policy "punchlines open delete" on public.punchlines for delete using (true);
+
+alter table public.tournaments enable row level security;
+create policy "tournaments open read" on public.tournaments for select using (true);
+create policy "tournaments open insert" on public.tournaments for insert with check (true);
+create policy "tournaments open update" on public.tournaments for update using (true) with check (true);
+-- Seuls forfaits et morts subites évoluent après la création.
+revoke update on public.tournaments from anon, authenticated;
+grant update (forfeits, tiebreaks) on public.tournaments to anon, authenticated;
 
 -- Diffusion temps réel des changements vers les clients connectés.
 alter publication supabase_realtime add table public.players;
@@ -181,8 +210,8 @@ create table if not exists public.schema_version (
 );
 alter table public.schema_version enable row level security;
 create policy "version open read" on public.schema_version for select using (true);
-insert into public.schema_version (id, version) values (1, 11)
-on conflict (id) do update set version = 11;
+insert into public.schema_version (id, version) values (1, 12)
+on conflict (id) do update set version = 12;
 
 -- ---------- Signatures sonores (storage) ----------
 -- Bucket public : le MP3 de chaque joueur se lit par URL directe.
@@ -251,7 +280,22 @@ end;
 $$;
 
 grant execute on function public.delete_sessions(uuid[], text) to anon, authenticated;
+create or replace function public.delete_tournament(tid uuid, code text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if code is distinct from (select delete_code from league_settings where id = 1) then
+    raise exception 'code invalide';
+  end if;
+  delete from tournaments where id = tid;
+end;
+$$;
+
 grant execute on function public.delete_player(uuid, text) to anon, authenticated;
+grant execute on function public.delete_tournament(uuid, text) to anon, authenticated;
 
 -- ---------- Vues d'agrégats ----------
 create view public.session_stats

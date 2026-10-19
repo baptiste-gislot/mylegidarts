@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { DartInput } from '@/components/DartInput'
 import { LastVolley } from '@/components/LastVolley'
@@ -34,7 +35,7 @@ import {
   type FletanqueEvent,
   type Side,
 } from '@/lib/fletanque'
-import { TURN_GAMES, TURN_GAME_IDS, isTurnGame } from '@/lib/gameCatalog'
+import { TURN_GAMES, TURN_GAME_IDS, gameLabel, isTurnGame } from '@/lib/gameCatalog'
 import { drawKillerNumbers } from '@/lib/games/killer'
 import { useLiveMatchPublisher } from '@/lib/liveMatch'
 import { IN_PROGRESS_KEY, IN_PROGRESS_MAX_AGE_MS } from '@/lib/matchInProgress'
@@ -55,7 +56,7 @@ import { signatureUrl } from '@/lib/signatures'
 import { fanfare, playSignature, say, soundsEnabled, thock } from '@/lib/sound'
 import { volleyComment } from '@/lib/trashTalk'
 import { useLeagueContext } from '@/lib/LeagueProvider'
-import type { GameMode, PlayerRow } from '@/lib/useLeague'
+import type { GameMode, PlayerRow, TournamentLink } from '@/lib/useLeague'
 
 /** Nom d'annonce : le surnom s'il existe, sinon le prénom. */
 function stageName(player: PlayerRow | undefined): string {
@@ -102,6 +103,27 @@ interface StoredMatch {
   fletanque?: { opener: Side; journal: FletanqueEvent[] }
   /** Présent dans les jeux au tour par tour : le tirage, puis les fléchettes dans l'ordre. */
   turn?: { setup: TurnSetup; journal: Dart[] }
+  /** Présent quand la partie est une rencontre de tournoi. */
+  tournament?: TournamentMatch
+}
+
+/** Une rencontre de tournoi jouée ici : le résultat s'y inscrit à l'enregistrement. */
+interface TournamentMatch extends TournamentLink {
+  /** « Poule A », « Demi-finales »… pour le bandeau. */
+  label: string
+}
+
+/** Lit la rencontre de tournoi passée dans l'URL par la page des tournois. */
+function tournamentFromUrl(): { link: TournamentMatch; mode: GameMode; order: string[] } | null {
+  const params = new URLSearchParams(window.location.search)
+  const id = params.get('tournoi')
+  const slot = params.get('rencontre')
+  const mode = params.get('jeu')
+  const a = params.get('a')
+  const b = params.get('b')
+  if (!id || !slot || !mode || !a || !b) return null
+  if (mode !== 'volees' && mode !== '301' && !isTurnGame(mode)) return null
+  return { link: { id, slot, label: params.get('titre') ?? 'Rencontre' }, mode, order: [a, b] }
 }
 
 /** Une ligne du récapitulatif de fin : un joueur, ou une équipe en flétanque. */
@@ -197,6 +219,7 @@ export default function TirerPage() {
   // l'ordre où elles ont été lancées — le moteur en déduit tout le reste.
   const [turnSetup, setTurnSetup] = useState<TurnSetup | null>(null)
   const [turnJournal, setTurnJournal] = useState<Dart[]>([])
+  const [tournamentMatch, setTournamentMatch] = useState<TournamentMatch | null>(null)
 
   useEffect(() => {
     if (flash === null) return
@@ -243,7 +266,17 @@ export default function TirerPage() {
         setTurnSetup(stored.turn.setup)
         setTurnJournal(stored.turn.journal)
       }
+      if (stored.tournament) setTournamentMatch(stored.tournament)
       setStarted(true)
+      return
+    }
+    // Sinon, une rencontre de tournoi peut arriver toute réglée par l'URL.
+    const fromUrl = tournamentFromUrl()
+    if (fromUrl) {
+      setGameMode(fromUrl.mode)
+      setOrder(fromUrl.order)
+      setPowersEnabled(false)
+      setTournamentMatch(fromUrl.link)
     }
   }, [])
 
@@ -298,6 +331,7 @@ export default function TirerPage() {
         ...(withPowers ? { powers: { assignments, journal } } : {}),
         ...(withFletanque ? { fletanque: { opener: fletOpener, journal: fletJournal } } : {}),
         ...(withTurn ? { turn: { setup: turnSetup, journal: turnJournal } } : {}),
+        ...(tournamentMatch ? { tournament: tournamentMatch } : {}),
       } satisfies StoredMatch),
     )
     const thrown = dartsByPlayer.reduce((sum, d) => sum + d.length, 0)
@@ -382,6 +416,7 @@ export default function TirerPage() {
     turnSetup,
     turnJournal,
     turnGame,
+    tournamentMatch,
   ])
 
   // Si un joueur de la session restaurée a été supprimé entre-temps, on repart à zéro.
@@ -913,6 +948,7 @@ export default function TirerPage() {
     setMenePick(null)
     setTurnSetup(null)
     setTurnJournal([])
+    setTournamentMatch(null)
   }
 
   /**
@@ -993,7 +1029,12 @@ export default function TirerPage() {
                 total: sessionTotal(dartsByPlayer[i]),
               },
     )
-    const err = await saveSessions(entries, matchId, gameMode)
+    const err = await saveSessions(
+      entries,
+      matchId,
+      gameMode,
+      tournamentMatch ? { id: tournamentMatch.id, slot: tournamentMatch.slot } : null,
+    )
     if (err) {
       setSaving(false)
       setSaveError(err)
@@ -1008,9 +1049,17 @@ export default function TirerPage() {
       setMatchId(null)
       setStartedAt(null)
       setSaving(false)
-      // Hors classement (301, flétanque, pouvoirs) : direction l'historique
-      // plutôt que le tableau.
-      router.push(gameMode !== 'volees' || powersRows !== null ? '/historique' : '/')
+      // Une rencontre de tournoi ramène au tournoi ; hors classement (301,
+      // flétanque, pouvoirs…), direction l'historique plutôt que le tableau.
+      const backToTournament = tournamentMatch !== null
+      setTournamentMatch(null)
+      router.push(
+        backToTournament
+          ? '/tournois'
+          : gameMode !== 'volees' || powersRows !== null
+            ? '/historique'
+            : '/',
+      )
     }
   }
 
@@ -1020,6 +1069,41 @@ export default function TirerPage() {
       <span className="flash180__name">{flash.name}</span>
     </div>
   )
+
+  // Rencontre de tournoi : joueurs et jeu sont imposés, on ne fait que lancer.
+  if (!started && tournamentMatch !== null) {
+    const [first, second] = order.map((id) => players.find((p) => p.id === id))
+    return (
+      <div className="stack">
+        <section className="fixture">
+          <p className="fixture__stage">
+            Tournoi · {tournamentMatch.label} · {gameLabel(gameMode)}
+          </p>
+          <p className="fixture__players">
+            <span>{first?.name ?? '?'}</span>
+            <span className="fixture__vs">contre</span>
+            <span>{second?.name ?? '?'}</span>
+          </p>
+          <p className="fixture__hint">
+            Le résultat s’inscrira au tournoi dès l’enregistrement de la partie.
+          </p>
+        </section>
+        <button type="button" className="button-primary" onClick={start} disabled={!first || !second}>
+          Lancer la rencontre
+        </button>
+        <Link
+          href="/tournois"
+          className="button-ghost fixture__back"
+          onClick={() => {
+            setTournamentMatch(null)
+            setOrder([])
+          }}
+        >
+          Retour au tournoi
+        </Link>
+      </div>
+    )
+  }
 
   if (!started) {
     return (

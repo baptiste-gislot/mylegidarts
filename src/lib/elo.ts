@@ -53,6 +53,12 @@ function quarterIndex(season: string): number {
   return year * 4 + quarter - 1
 }
 
+/** La saison qui précède (le trimestre d'avant). */
+export function previousSeason(season: string): string {
+  const index = quarterIndex(season) - 1
+  return `${Math.floor(index / 4)}-T${(index % 4) + 1}`
+}
+
 /** Numéro de saison (1 = T4 2026) ; 0 pour un trimestre d'avant la ligue classée. */
 export function seasonNumber(season: string): number {
   return Math.max(0, quarterIndex(season) - quarterIndex(FIRST_SEASON) + 1)

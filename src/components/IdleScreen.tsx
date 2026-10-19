@@ -7,7 +7,9 @@ import { computeStandings, seasonLabel, seasonOf } from '@/lib/elo'
 import { hasMatchInProgress } from '@/lib/matchInProgress'
 import { computeRecords } from '@/lib/records'
 import { monthKey, type PlayerRow } from '@/lib/useLeague'
+import { playableRencontres, replayTournament } from '@/lib/tournament'
 import { useAllSessionStats } from '@/lib/useSessions'
+import { useTournamentSessions, useTournaments } from '@/lib/useTournaments'
 
 /** Délai sans souris ni clavier avant que l'écran d'attente prenne l'antenne. */
 const IDLE_DELAY_MS = 2 * 60 * 1000
@@ -59,11 +61,14 @@ export function IdleWatcher() {
   return idle ? <IdleScreen /> : null
 }
 
-type Slide = 'niveau' | 'defi' | 'records' | 'joueur' | 'appel'
+type Slide = 'tournoi' | 'niveau' | 'defi' | 'records' | 'joueur' | 'appel'
 
 function IdleScreen() {
   const { players, stats } = useLeagueContext()
   const { rows } = useAllSessionStats()
+  const { tournaments } = useTournaments()
+  const tournamentIds = (tournaments ?? []).slice(0, 1).map((t) => t.id)
+  const tournamentSessions = useTournamentSessions(tournamentIds)
   const [step, setStep] = useState(0)
   const [now, setNow] = useState(() => new Date())
   // Point de départ de la rotation des fiches joueur, tiré une fois par réveil.
@@ -106,7 +111,14 @@ function IdleScreen() {
   const featured: PlayerRow | undefined =
     contenders[(seed + Math.floor(step / 4)) % Math.max(1, contenders.length)]
 
+  // Le tournoi le plus récent, tant qu'il n'a pas de vainqueur : ses prochaines rencontres.
+  const latest = tournaments?.[0]
+  const tournamentView =
+    latest && tournamentSessions ? replayTournament(latest, tournamentSessions) : null
+  const upcoming = tournamentView && !tournamentView.finished ? playableRencontres(tournamentView).slice(0, 4) : []
+
   const slides: Slide[] = [
+    ...(upcoming.length > 0 ? (['tournoi'] as const) : []),
     ...(levels.length > 0 ? (['niveau'] as const) : []),
     ...(month.length > 0 ? (['defi'] as const) : []),
     ...(records.length > 0 ? (['records'] as const) : []),
@@ -129,6 +141,25 @@ function IdleScreen() {
       </header>
 
       <div key={step} className="attente__stage">
+        {slide === 'tournoi' && latest && (
+          <>
+            <h2 className="attente__title">{latest.name}</h2>
+            <ul className="attente__board">
+              {upcoming.map((r) => (
+                <li key={r.slot} className="attente__row">
+                  <span className="attente__name">
+                    {name(r.a!)} <em className="attente__vs">contre</em> {name(r.b!)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <p className="attente__ticker">
+              <strong>À jouer</strong>
+              <span>les rencontres se lancent depuis l’onglet Tournois</span>
+            </p>
+          </>
+        )}
+
         {slide === 'niveau' && (
           <>
             <h2 className="attente__title">Niveau · {seasonLabel(season).split(' · ')[0]}</h2>

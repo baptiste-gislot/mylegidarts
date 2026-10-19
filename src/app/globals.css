@@ -185,6 +185,23 @@ a {
   background: var(--surface);
 }
 
+/* Cinq onglets sur un téléphone : on resserre lettrage, marges et biseau. */
+@media (max-width: 519px) {
+  .tabbar {
+    gap: 0;
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+
+  .tabbar__tab {
+    --bevel: 7px;
+    flex: 1 1 auto;
+    max-width: none;
+    padding: 10px 9px 8px;
+    font-size: 14px;
+  }
+}
+
 /* L'onglet courant prend le bandeau jaune, comme le joueur à la cible. */
 .tabbar__tab--on,
 .tabbar__tab--on:hover {
@@ -2694,6 +2711,354 @@ a.board__row:hover {
 
 /* ---------- Écrans larges (PC) ---------- */
 
+/* ---------- Tournois ---------- */
+
+.back-link {
+  align-self: flex-start;
+}
+
+.tournament-head__name {
+  font-family: var(--font-display-stack);
+  font-weight: 800;
+  font-size: clamp(34px, 6vw, 48px);
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.tournament-head__meta {
+  margin-top: 6px;
+  color: var(--text-dim);
+}
+
+/* Le sacre : la seule incrustation pleine largeur de la page. */
+.champion {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 16px;
+  align-items: center;
+  padding: 16px 20px;
+  background: var(--raised);
+  border-left: 6px solid var(--gold);
+}
+
+.champion .avatar {
+  grid-row: span 2;
+  width: 56px;
+  height: 56px;
+  font-size: 24px;
+}
+
+.champion__label {
+  color: var(--text-dim);
+}
+
+.champion__name {
+  font-family: var(--font-display-stack);
+  font-weight: 800;
+  font-size: 40px;
+  line-height: 1;
+  color: var(--gold);
+  text-transform: uppercase;
+}
+
+.pool {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 3px;
+  font-variant-numeric: tabular-nums;
+}
+
+.pool th {
+  padding: 0 10px 4px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+.pool td {
+  padding: 9px 10px;
+  background: var(--surface);
+  text-align: center;
+}
+
+.pool td:first-child {
+  border-left: 4px solid transparent;
+}
+
+.pool__row--qualified td:first-child {
+  border-left-color: var(--gold);
+}
+
+.pool__row--out td {
+  opacity: 0.5;
+}
+
+.pool th.pool__name,
+.pool td.pool__name {
+  text-align: left;
+  width: 100%;
+}
+
+.pool td.pool__name {
+  font-family: var(--font-display-stack);
+  font-weight: 700;
+  font-size: 19px;
+  text-transform: uppercase;
+}
+
+.pool__name em {
+  font-family: var(--font-body-stack);
+  font-style: normal;
+  font-size: 13px;
+  text-transform: none;
+  color: var(--red);
+}
+
+.pool__rank {
+  font-family: var(--font-display-stack);
+  font-weight: 800;
+  color: var(--text-dim);
+}
+
+.pool__points {
+  font-family: var(--font-display-stack);
+  font-weight: 800;
+  font-size: 20px;
+}
+
+/* Le bouton forfait reste discret : on ne le voit qu'au survol de la ligne. */
+.pool__forfeit {
+  margin-left: 10px;
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font-family: var(--font-body-stack);
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: none;
+  color: var(--text-dim);
+  opacity: 0;
+  transition: opacity 120ms ease-out;
+}
+
+.pool tr:hover .pool__forfeit,
+.pool__forfeit:focus-visible {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .pool__forfeit {
+    opacity: 1;
+  }
+}
+
+.fixtures {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 3px;
+  margin-top: 10px;
+}
+
+.fixture-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 10px;
+  padding: 10px 12px;
+  background: var(--surface);
+  border-left: 4px solid transparent;
+}
+
+.fixture-card--a_jouer {
+  border-left-color: var(--gold);
+}
+
+.fixture-card--mort_subite {
+  border-left-color: var(--red);
+}
+
+.fixture-card__side {
+  grid-column: 1;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--text-dim);
+}
+
+.fixture-card__side--won {
+  color: var(--text);
+}
+
+.fixture-card__name {
+  font-family: var(--font-display-stack);
+  font-weight: 700;
+  font-size: 18px;
+  text-transform: uppercase;
+}
+
+.fixture-card__side--won .fixture-card__name::after {
+  content: ' ✓';
+  color: var(--gold);
+}
+
+.fixture-card__score {
+  font-family: var(--font-display-stack);
+  font-weight: 800;
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+}
+
+.fixture-card__status {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.fixture-card__play {
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: var(--radius);
+  background: var(--gold);
+  color: var(--bg);
+  font-family: var(--font-display-stack);
+  font-weight: 800;
+  font-size: 18px;
+  text-transform: uppercase;
+}
+
+.fixture-card__play:hover {
+  filter: brightness(1.08);
+}
+
+/* Le tableau : un tour par colonne, défilement horizontal sur petit écran. */
+.bracket {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(230px, 1fr);
+  gap: 14px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+}
+
+.bracket__round {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  gap: 8px;
+}
+
+.bracket__title {
+  font-family: var(--font-display-stack);
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--text-dim);
+}
+
+.sudden-death {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.sudden-death__title {
+  grid-column: 1 / -1;
+  font-family: var(--font-display-stack);
+  font-weight: 800;
+  font-size: 18px;
+  color: var(--red);
+  text-transform: uppercase;
+}
+
+.sudden-death__hint {
+  grid-column: 1 / -1;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.sudden-death__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.sudden-death__field input {
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 18px;
+}
+
+.sudden-death .button-primary {
+  grid-column: 1 / -1;
+  font-size: 18px;
+  padding: 10px;
+}
+
+.tournament-delete {
+  align-self: flex-start;
+}
+
+.hall__row--link {
+  transition: background-color 120ms ease-out;
+}
+
+.hall__row--link .hall__month {
+  text-transform: none;
+}
+
+.hall__row--link:hover {
+  background: var(--raised);
+}
+
+/* La rencontre prête à lancer, sur /tirer. */
+.fixture {
+  padding: 22px 24px;
+  background: var(--surface);
+  border-left: 6px solid var(--gold);
+}
+
+.fixture__stage {
+  color: var(--text-dim);
+}
+
+.fixture__players {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 16px;
+  margin: 8px 0;
+  font-family: var(--font-display-stack);
+  font-weight: 800;
+  font-size: clamp(34px, 6vw, 52px);
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.fixture__vs {
+  font-size: 0.45em;
+  color: var(--gold);
+}
+
+.fixture__hint {
+  font-size: 14px;
+  color: var(--text-dim);
+}
+
+.fixture__back {
+  align-self: center;
+}
+
 /* ---------- Dialogues ---------- */
 
 /* Une incrustation au centre de l'écran : titre en bandeau, actions à droite. */
@@ -2949,6 +3314,12 @@ html:has(.attente) {
   font-size: 32px;
   line-height: 1.1;
   text-transform: uppercase;
+}
+
+.attente__vs {
+  font-style: normal;
+  font-size: 0.6em;
+  color: var(--gold);
 }
 
 .attente__row--leader .attente__name {

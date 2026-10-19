@@ -64,7 +64,7 @@ Le bilan cumulé de tous les duels entre deux joueurs.
 Une compétition d'un jour sur un jeu choisi à sa création : des poules, puis un tableau.
 
 **Poule**:
-Un groupe de trois ou quatre joueurs qui s'affrontent tous ; les deux premiers se qualifient pour le tableau.
+Un groupe de trois à cinq joueurs qui s'affrontent tous ; les deux premiers se qualifient pour le tableau.
 
 **Tableau**:
 La phase à élimination directe d'un tournoi, alimentée par les qualifiés des poules.
@@ -75,6 +75,15 @@ Un joueur réparti dans les poules selon son niveau, pour éviter que les meille
 **Rencontre**:
 Une confrontation programmée entre deux joueurs d'un tournoi, jouée en une partie.
 _Avoid_: Match
+
+**Exempt**:
+Un qualifié qui passe directement au tour suivant du tableau, faute d'adversaire.
+
+**Mort subite**:
+Une volée de trois fléchettes chacun pour départager une égalité au tableau ; le plus gros total passe.
+
+**Forfait**:
+Un joueur qui quitte un tournoi en cours ; ses rencontres restantes sont perdues.
 
 ## Kiosque
 

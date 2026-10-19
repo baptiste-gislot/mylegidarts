@@ -5,6 +5,7 @@ import {
   PROVISIONAL_GAMES,
   START_RATING,
   computeStandings,
+  previousSeason,
   seasonLabel,
   seasonNumber,
   seasonOf,
@@ -44,6 +45,11 @@ describe('saisons', () => {
     expect(seasonNumber('2027-T1')).toBe(2)
     expect(seasonNumber('2028-T1')).toBe(6)
     expect(seasonNumber('2026-T3')).toBe(0)
+  })
+
+  it('remonte au trimestre précédent, année comprise', () => {
+    expect(previousSeason('2027-T1')).toBe('2026-T4')
+    expect(previousSeason('2026-T4')).toBe('2026-T3')
   })
 
   it('nomme une saison avec ses mois', () => {

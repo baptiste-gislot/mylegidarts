@@ -14,12 +14,18 @@ import type { Punchline } from './trashTalk'
 const SNAPSHOT_KEY = 'mylegidarts-cache-v5'
 
 /** Version de schéma attendue en base (table schema_version). */
-export const EXPECTED_SCHEMA_VERSION = 11
+export const EXPECTED_SCHEMA_VERSION = 12
 
 const OUTDATED_MESSAGE =
   'La base de données n’est pas à jour : exécutez les fichiers de supabase/migrations/ dans le SQL Editor de Supabase.'
 
 export type GameMode = 'volees' | '301' | 'fletanque' | TurnGameId
+
+/** La rencontre de tournoi à laquelle une partie est rattachée. */
+export interface TournamentLink {
+  id: string
+  slot: string
+}
 
 export interface PlayerRow {
   id: string
@@ -117,6 +123,7 @@ export interface LeagueData {
     }[],
     matchId?: string | null,
     mode?: GameMode,
+    tournament?: TournamentLink | null,
   ) => Promise<string | null>
   removeMatch: (sessionIds: string[], code: string) => Promise<string | null>
 }
@@ -371,6 +378,7 @@ export function useLeague(): LeagueData {
     }[],
     matchId: string | null = null,
     mode: GameMode = 'volees',
+    tournament: TournamentLink | null = null,
   ): Promise<string | null> {
     if (!supabase) return 'Supabase n’est pas configuré.'
     const rows = entries.map((e) => ({
@@ -382,6 +390,8 @@ export function useLeague(): LeagueData {
       won: e.won ?? null,
       powers: e.powers ?? null,
       fletanque: e.fletanque ?? null,
+      tournament_id: tournament?.id ?? null,
+      tournament_slot: tournament?.slot ?? null,
     }))
     const { error: err } = await supabase.from('sessions').insert(rows)
     if (err) return err.message
