@@ -1,5 +1,6 @@
 import { dartLabel } from '@/lib/scoring'
 import type { Dart, Mult } from '@/lib/scoring'
+import { SECTOR_STEP as STEP, circlePath, px, py, ringSector } from '@/lib/boardGeometry'
 import { BOARD_SECTORS, HEAT_LEVELS, heatKey, heatLevel, heatmapCounts } from '@/lib/heatmap'
 
 interface DartHeatmapProps {
@@ -19,31 +20,6 @@ const RINGS: { r0: number; r1: number; mult: Mult }[] = [
 const BULL_R = 10
 const BULLSEYE_R = 4.5
 const NUM_R = 111
-/** 18° par secteur. */
-const STEP = Math.PI / 10
-
-/** Point sur le cercle de rayon r, angle a depuis le haut, sens horaire. */
-function px(r: number, a: number): number {
-  return C + r * Math.sin(a)
-}
-function py(r: number, a: number): number {
-  return C - r * Math.cos(a)
-}
-
-/** Portion d'anneau entre les rayons r0 < r1, de l'angle a0 à a1. */
-function ringSector(r0: number, r1: number, a0: number, a1: number): string {
-  return [
-    `M ${px(r1, a0)} ${py(r1, a0)}`,
-    `A ${r1} ${r1} 0 0 1 ${px(r1, a1)} ${py(r1, a1)}`,
-    `L ${px(r0, a1)} ${py(r0, a1)}`,
-    `A ${r0} ${r0} 0 0 0 ${px(r0, a0)} ${py(r0, a0)}`,
-    'Z',
-  ].join(' ')
-}
-
-function circlePath(r: number): string {
-  return `M ${C - r} ${C} A ${r} ${r} 0 1 1 ${C + r} ${C} A ${r} ${r} 0 1 1 ${C - r} ${C} Z`
-}
 
 export function DartHeatmap({ darts }: DartHeatmapProps) {
   if (darts.length === 0) return null
@@ -77,12 +53,12 @@ export function DartHeatmap({ darts }: DartHeatmapProps) {
               {RINGS.map(({ r0, r1, mult }, j) => {
                 const count = hits.get(heatKey(sector, mult)) ?? 0
                 return (
-                  <path key={j} d={ringSector(r0, r1, a0, a1)} className={segClass(count)}>
+                  <path key={j} d={ringSector(C, r0, r1, a0, a1)} className={segClass(count)}>
                     <title>{segTitle(sector, mult, count)}</title>
                   </path>
                 )
               })}
-              <text x={px(NUM_R, i * STEP)} y={py(NUM_R, i * STEP)} className="heatmap__num">
+              <text x={px(C, NUM_R, i * STEP)} y={py(C, NUM_R, i * STEP)} className="heatmap__num">
                 {sector}
               </text>
             </g>
@@ -90,7 +66,7 @@ export function DartHeatmap({ darts }: DartHeatmapProps) {
         })}
 
         <path
-          d={`${circlePath(BULL_R)} ${circlePath(BULLSEYE_R)}`}
+          d={`${circlePath(C, BULL_R)} ${circlePath(C, BULLSEYE_R)}`}
           fillRule="evenodd"
           className={segClass(hits.get(heatKey(25, 1)) ?? 0)}
         >

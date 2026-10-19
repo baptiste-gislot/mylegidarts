@@ -467,148 +467,166 @@ a {
 
 .scorer__status {
   display: flex;
-  align-items: baseline;
+  align-items: flex-end;
   justify-content: space-between;
   gap: 12px;
 }
 
 .scorer__volley {
-  font-family: var(--font-display-stack);
-  font-weight: 600;
-  font-size: 15px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font-size: 14px;
   color: var(--text-dim);
+  margin-bottom: 6px;
 }
 
+/* Le joueur à la cible, dans le bandeau jaune de l'incrustation. */
 .scorer__thrower {
+  display: inline-block;
+  padding: 4px calc(var(--bevel) * 2 + 8px) 2px 14px;
+  background: var(--gold);
+  color: var(--bg);
   font-family: var(--font-display-stack);
-  font-weight: 700;
-  font-size: 30px;
-  text-transform: uppercase;
+  font-weight: 800;
+  font-size: 34px;
   line-height: 1.05;
+  text-transform: uppercase;
+  clip-path: polygon(0 0, 100% 0, calc(100% - var(--bevel)) 100%, 0 100%);
 }
 
+.scorer__thrower em {
+  font-style: normal;
+  color: var(--red-deep);
+}
+
+/* Trois cases, ou quatre avec la fléchette de rab des pouvoirs. */
 .scorer__slots {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+  gap: 4px;
 }
 
 .slot {
+  position: relative;
   height: 62px;
-  border-radius: var(--radius);
-  border: 1px dashed var(--line);
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  flex-direction: column;
-  gap: 0;
+  background: var(--surface);
+  border-bottom: 3px solid transparent;
 }
 
 .slot--filled {
-  border-style: solid;
-  background: var(--surface);
+  background: var(--raised);
+  border-bottom-color: var(--gold);
 }
 
-.slot__label {
-  font-family: var(--font-display-stack);
-  font-weight: 700;
-  font-size: 22px;
-}
-
-.slot__value {
+.slot__index {
+  position: absolute;
+  top: 6px;
+  left: 9px;
   font-size: 12px;
   color: var(--text-dim);
 }
 
-.scorer__totals {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+.slot__label {
+  font-family: var(--font-display-stack);
+  font-weight: 800;
+  font-size: 28px;
+  line-height: 1;
 }
 
-.total-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 5px 12px;
-  border-radius: 999px;
-  background: var(--surface);
-  border: 1px solid var(--line);
+.slot__value {
   font-size: 13px;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.slot__empty {
+  font-family: var(--font-display-stack);
+  font-weight: 700;
+  font-size: 18px;
+  text-transform: uppercase;
+  color: var(--red);
+}
+
+/* Le tableau des scores, une ligne par joueur, celui à la cible surligné. */
+.scoreboard {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.scoreboard__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 14px;
+  background: var(--surface);
+  border-left: 4px solid transparent;
+}
+
+.scoreboard__row--active {
+  background: var(--raised);
+  border-left-color: var(--gold);
+}
+
+.scoreboard__name {
+  font-family: var(--font-display-stack);
+  font-weight: 700;
+  font-size: 20px;
+  text-transform: uppercase;
   color: var(--text-dim);
 }
 
-.total-chip--active {
-  border-color: var(--gold);
+.scoreboard__row--active .scoreboard__name {
   color: var(--text);
 }
 
-.total-chip strong {
+.scoreboard__score {
   font-family: var(--font-display-stack);
-  font-size: 17px;
-  font-weight: 700;
-  color: var(--text);
+  font-weight: 800;
+  font-size: 28px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
 
-.keypad {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+.scoreboard__row--active .scoreboard__score {
+  color: var(--gold);
 }
 
-.keypad__mults {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-}
+/* ---------- Touches ---------- */
 
 .key {
   border-radius: var(--radius);
   background: var(--surface);
   border: 1px solid var(--line);
   font-family: var(--font-display-stack);
-  font-weight: 600;
+  font-weight: 700;
   font-size: 20px;
   padding: 12px 0;
-  transition: background 100ms ease, border-color 100ms ease;
+  transition:
+    background-color 100ms ease-out,
+    border-color 100ms ease-out;
 }
 
-.key:active {
+.key:hover:not(:disabled) {
   background: var(--raised);
 }
 
-.key--mult[aria-pressed='true'] {
-  border-color: var(--text);
-  background: var(--raised);
+.key:active:not(:disabled) {
+  background: color-mix(in srgb, var(--raised) 70%, var(--text));
 }
 
-.key--double[aria-pressed='true'] {
-  border-color: var(--green);
-  background: var(--green-deep);
+.key:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 
-.key--triple[aria-pressed='true'] {
-  border-color: var(--red);
-  background: var(--red-deep);
-}
-
-.keypad__sectors {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 8px;
-}
-
-/* Alternance noir/crème des secteurs, comme sur la cible. */
 .key--sector:nth-child(even) {
   background: var(--raised);
-}
-
-.keypad__special {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
 }
 
 .key--bull25 {
@@ -624,7 +642,203 @@ a {
 .key--miss,
 .key--undo {
   color: var(--text-dim);
+  font-size: 17px;
+}
+
+/* ---------- Saisie : cible ou pavé selon le pointeur ---------- */
+
+.dart-input__board {
+  display: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .dart-input__board {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .dart-input .dart-input__pad {
+    display: none;
+  }
+}
+
+.dart-extras {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.board {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.board svg {
+  display: block;
+  width: min(100%, calc(100dvh - 260px));
+  min-width: 320px;
+  height: auto;
+  user-select: none;
+}
+
+/* Ce qu'on vise, annoncé comme une incrustation au-dessus de la cible. */
+.board__aim {
+  min-height: 34px;
+  font-size: 15px;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.board__aim strong {
+  margin-right: 6px;
+  font-family: var(--font-display-stack);
+  font-weight: 800;
+  font-size: 28px;
+  color: var(--gold);
+}
+
+.board__rim {
+  fill: #070b1f;
+}
+
+.board__num {
+  fill: var(--text);
+  font-family: var(--font-display-stack);
+  font-weight: 700;
+  font-size: 24px;
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
+}
+
+.board-seg {
+  cursor: pointer;
+  stroke: #070b1f;
+  stroke-width: 1.5;
+  transition: filter 80ms ease-out;
+}
+
+.board-seg--dark {
+  fill: #161a24;
+}
+
+.board-seg--light {
+  fill: #e9e1c8;
+}
+
+.board-seg--t-dark,
+.board-seg--d-dark,
+.board-seg--bull50 {
+  fill: var(--red);
+}
+
+.board-seg--t-light,
+.board-seg--d-light,
+.board-seg--bull25 {
+  fill: var(--green);
+}
+
+/* Survol : le segment s'éclaire et se cerne de jaune — on sait ce qu'on clique. */
+.board-seg:hover {
+  filter: brightness(1.35);
+  stroke: var(--gold);
+  stroke-width: 4;
+  paint-order: stroke;
+}
+
+.board-seg:active {
+  filter: brightness(1.7);
+}
+
+.board-seg--hit {
+  stroke: var(--gold);
+  stroke-width: 3;
+}
+
+.board__mark {
+  pointer-events: none;
+}
+
+.board__mark circle {
+  fill: var(--gold);
+  stroke: #070b1f;
+  stroke-width: 2;
+}
+
+.board__mark text {
+  fill: var(--bg);
+  font-family: var(--font-display-stack);
+  font-weight: 800;
+  font-size: 18px;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
+.dart-input__pad {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dart-pad {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Une case par numéro, dans l'ordre de la cible : le numéro en grand pour
+   le simple, double et triple juste dessous — un seul tap par fléchette. */
+.dart-pad__sectors {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 5px;
+}
+
+.dart-pad__cell {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 42px 34px;
+  gap: 2px;
+}
+
+.dart-pad__cell > button {
+  font-family: var(--font-display-stack);
+  font-weight: 800;
+  background: var(--surface);
+}
+
+.dart-pad__cell > button:active {
+  background: color-mix(in srgb, var(--raised) 70%, var(--text));
+}
+
+.dart-pad__single {
+  grid-column: 1 / -1;
+  font-size: 24px;
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+
+.dart-pad__double,
+.dart-pad__triple {
   font-size: 16px;
+}
+
+.dart-pad__double {
+  color: var(--green);
+  border-radius: 0 0 0 var(--radius);
+}
+
+.dart-pad__triple {
+  color: var(--red);
+  border-radius: 0 0 var(--radius) 0;
+}
+
+.dart-pad__bulls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
 }
 
 /* ---------- Pouvoirs ---------- */
@@ -2633,44 +2847,31 @@ html:has(.attente) {
     max-width: none;
   }
 
+  /* Tout le tableau à gauche, la saisie seule à droite sur toute la hauteur.
+     La dernière rangée, flexible, absorbe la hauteur de la cible sans
+     étirer les blocs de gauche. */
   .scorer {
     display: grid;
-    grid-template-columns: minmax(320px, 5fr) 6fr;
-    grid-template-areas:
-      'status keypad'
-      'slots keypad'
-      'totals keypad'
-      '. keypad';
-    gap: 14px 28px;
+    grid-template-columns: minmax(300px, 4fr) 6fr;
+    grid-template-rows: repeat(8, min-content) 1fr;
+    gap: 0 36px;
     align-items: start;
   }
 
-  .scorer__status {
-    grid-area: status;
+  .scorer > * {
+    grid-column: 1;
+    margin-bottom: 14px;
   }
 
-  .scorer__slots {
-    grid-area: slots;
-  }
-
-  .scorer__totals {
-    grid-area: totals;
-  }
-
-  .keypad {
-    grid-area: keypad;
+  .scorer > .dart-input,
+  .scorer > .flet-call {
+    grid-column: 2;
+    grid-row: 1 / -1;
+    margin-bottom: 0;
   }
 
   /* En flétanque, les équipes prennent la place du tableau de volée et le
      panneau de décision celle du clavier. */
-  .flet-teams {
-    grid-area: slots;
-  }
-
-  .flet-call {
-    grid-area: keypad;
-  }
-
   .slot {
     height: 84px;
   }

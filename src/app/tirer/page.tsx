@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { DartInput } from '@/components/DartInput'
 import { SetupNotice } from '@/components/SetupNotice'
 import {
   DARTS_PER_SESSION,
@@ -12,7 +13,6 @@ import {
   dartValue,
   sessionTotal,
   type Dart,
-  type Mult,
 } from '@/lib/scoring'
 import { useToast } from '@/components/Toaster'
 import { fireConfetti, vibrate } from '@/lib/effects'
@@ -167,7 +167,6 @@ export default function TirerPage() {
   const [dartsByPlayer, setDartsByPlayer] = useState<Dart[][]>([])
   const [matchId, setMatchId] = useState<string | null>(null)
   const [startedAt, setStartedAt] = useState<string | null>(null)
-  const [mult, setMult] = useState<Mult>(1)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [flash, setFlash] = useState<Flash | null>(null)
@@ -593,7 +592,6 @@ export default function TirerPage() {
   function throwPowersDart(dart: Dart) {
     if (powersReplay === null || assignments === null || powersReplay.finished) return
     thock(dart.sector === 0 ? 'miss' : dart.sector === 25 && dart.mult === 2 ? 'bull' : 'normal')
-    setMult(1)
     vibrate(12)
     const nextJournal: MatchEvent[] = [...journal, { kind: 'dart', dart }]
     const after = replayPowers(order.length, assignments, nextJournal)
@@ -666,7 +664,6 @@ export default function TirerPage() {
     }
     if (finished) return
     thock(dart.sector === 0 ? 'miss' : dart.sector === 25 && dart.mult === 2 ? 'bull' : 'normal')
-    setMult(1)
     vibrate(12)
 
     if (gameMode === '301') {
@@ -761,7 +758,6 @@ export default function TirerPage() {
     setDartsByPlayer([])
     setMatchId(null)
     setStartedAt(null)
-    setMult(1)
     setSaveError(null)
     setAssignments(null)
     setJournal([])
@@ -1189,14 +1185,14 @@ export default function TirerPage() {
         <div>
           <p className="scorer__volley">
             {gameMode === '301'
-              ? `301 · Volée ${currentRound + 1}`
+              ? `301 · volée ${currentRound + 1}`
               : powersActive
-                ? `🃏 Volée ${currentRound + 1}/${VOLLEYS_PER_SESSION}`
-                : `Volée ${currentRound + 1}/${VOLLEYS_PER_SESSION}`}
+                ? `🃏 Volée ${currentRound + 1} sur ${VOLLEYS_PER_SESSION}`
+                : `Volée ${currentRound + 1} sur ${VOLLEYS_PER_SESSION}`}
           </p>
           <p className="scorer__thrower">
             {currentPlayer?.name}
-            {pendingSlot !== null && ' — relance !'}
+            {pendingSlot !== null && <em> relance !</em>}
           </p>
         </div>
         <button type="button" className="button-ghost" onClick={reset}>
@@ -1209,41 +1205,41 @@ export default function TirerPage() {
           const dart = activeTurn ? activeTurn.darts[i] : currentVolley[i]
           return (
             <div key={i} className={dart ? 'slot slot--filled' : 'slot'}>
+              <span className="slot__index">{i + 1}</span>
               {dart ? (
                 <>
                   <span className="slot__label">{dartLabel(dart)}</span>
-                  <span className="slot__value">{dartValue(dart)} pts</span>
+                  <span className="slot__value">{dartValue(dart)}</span>
                 </>
               ) : (
-                <span className="slot__value">
-                  {i === pendingSlot ? 'Relance !' : `Fléchette ${i + 1}`}
-                </span>
+                <span className="slot__empty">{i === pendingSlot ? 'Relance' : ''}</span>
               )}
             </div>
           )
         })}
       </div>
 
-      <div className="scorer__totals">
+      <ol className="scoreboard" aria-label={gameMode === '301' ? 'Points restants' : 'Scores'}>
         {order.map((playerId, i) => {
           const player = players.find((p) => p.id === playerId)
           return (
-            <span
+            <li
               key={playerId}
-              className={i === currentPlayerIndex ? 'total-chip total-chip--active' : 'total-chip'}
+              className={i === currentPlayerIndex ? 'scoreboard__row scoreboard__row--active' : 'scoreboard__row'}
+              aria-current={i === currentPlayerIndex ? 'step' : undefined}
             >
-              {player?.name}{' '}
-              <strong>
+              <span className="scoreboard__name">{player?.name}</span>
+              <span className="scoreboard__score">
                 {powersActive && powersReplay !== null
                   ? powersReplay.totals[i]
                   : gameMode === '301'
                     ? (replays[i]?.remaining ?? START_301)
                     : sessionTotal(dartsByPlayer[i])}
-              </strong>
-            </span>
+              </span>
+            </li>
           )
         })}
-      </div>
+      </ol>
 
       {powersActive && powersReplay !== null && assignments !== null && (
         <div className="powers-bar">
@@ -1399,58 +1395,18 @@ export default function TirerPage() {
           )
         })()}
 
-      <div className="keypad">
-        <div className="keypad__mults">
-          {([1, 2, 3] as Mult[]).map((m) => (
-            <button
-              key={m}
-              type="button"
-              aria-pressed={mult === m}
-              className={`key key--mult ${m === 2 ? 'key--double' : ''} ${m === 3 ? 'key--triple' : ''}`}
-              onClick={() => setMult(m)}
-            >
-              {['Simple', 'Double', 'Triple'][m - 1]}
-            </button>
-          ))}
-        </div>
-        <div className="keypad__sectors">
-          {SECTORS.map((sector) => (
-            <button
-              key={sector}
-              type="button"
-              className="key key--sector"
-              onClick={() => throwDart({ sector, mult })}
-            >
-              {sector}
-            </button>
-          ))}
-        </div>
-        <div className="keypad__special">
-          <button type="button" className="key key--bull25" onClick={() => throwDart({ sector: 25, mult: 1 })}>
-            25
-          </button>
-          <button type="button" className="key key--bull50" onClick={() => throwDart({ sector: 25, mult: 2 })}>
-            Bull
-          </button>
-          <button type="button" className="key key--miss" onClick={() => throwDart({ sector: 0, mult: 1 })}>
-            Raté
-          </button>
-          <button
-            type="button"
-            className="key key--undo"
-            onClick={undo}
-            disabled={
-              powersActive
-                ? journal.length === 0
-                : gameMode === '301'
-                  ? currentVolley.length === 0
-                  : thrownCount === 0
-            }
-          >
-            Annuler
-          </button>
-        </div>
-      </div>
+      <DartInput
+        volley={activeTurn ? activeTurn.darts : Array.from({ length: slotCount }, (_, i) => currentVolley[i] ?? null)}
+        onThrow={throwDart}
+        onUndo={undo}
+        undoDisabled={
+          powersActive
+            ? journal.length === 0
+            : gameMode === '301'
+              ? currentVolley.length === 0
+              : thrownCount === 0
+        }
+      />
       {flashOverlay}
     </div>
   )
