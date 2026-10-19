@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import type { SessionFletanque } from './fletanque'
+import type { TurnGameId } from './gameCatalog'
 import type { SessionPowers } from './powers'
 import { channelHealthy, onReconnectHints, useWatchdog } from './realtimeHealth'
 import type { Dart } from './scoring'
@@ -13,12 +14,12 @@ import type { Punchline } from './trashTalk'
 const SNAPSHOT_KEY = 'mylegidarts-cache-v5'
 
 /** Version de schéma attendue en base (table schema_version). */
-export const EXPECTED_SCHEMA_VERSION = 10
+export const EXPECTED_SCHEMA_VERSION = 11
 
 const OUTDATED_MESSAGE =
   'La base de données n’est pas à jour : exécutez les fichiers de supabase/migrations/ dans le SQL Editor de Supabase.'
 
-export type GameMode = 'volees' | '301' | 'fletanque'
+export type GameMode = 'volees' | '301' | 'fletanque' | TurnGameId
 
 export interface PlayerRow {
   id: string

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { DartInput } from '@/components/DartInput'
+import { TurnGameScorer } from '@/components/TurnGameScorer'
 import { SetupNotice } from '@/components/SetupNotice'
 import {
   DARTS_PER_SESSION,
@@ -31,9 +32,12 @@ import {
   type FletanqueEvent,
   type Side,
 } from '@/lib/fletanque'
+import { TURN_GAMES, TURN_GAME_IDS, isTurnGame } from '@/lib/gameCatalog'
+import { drawKillerNumbers } from '@/lib/games/killer'
 import { useLiveMatchPublisher } from '@/lib/liveMatch'
 import { IN_PROGRESS_KEY, IN_PROGRESS_MAX_AGE_MS } from '@/lib/matchInProgress'
 import { padVolley, replay301, START_301 } from '@/lib/play301'
+import type { TurnSetup } from '@/lib/turnGames'
 import {
   POWER_BY_ID,
   canActivate,
@@ -94,6 +98,8 @@ interface StoredMatch {
   powers?: { assignments: PowerId[]; journal: MatchEvent[] }
   /** Présent en flétanque : l'équipe qui a ouvert, puis le journal des mènes. */
   fletanque?: { opener: Side; journal: FletanqueEvent[] }
+  /** Présent dans les jeux au tour par tour : le tirage, puis les fléchettes dans l'ordre. */
+  turn?: { setup: TurnSetup; journal: Dart[] }
 }
 
 /** Une ligne du récapitulatif de fin : un joueur, ou une équipe en flétanque. */
@@ -122,7 +128,9 @@ function loadStoredMatch(): StoredMatch | null {
     const fresh = Date.now() - new Date(stored.startedAt).getTime() < IN_PROGRESS_MAX_AGE_MS
     if (fresh && Array.isArray(stored.order) && Array.isArray(stored.dartsByPlayer)) {
       const mode: GameMode =
-        stored.gameMode === '301' || stored.gameMode === 'fletanque' ? stored.gameMode : 'volees'
+        stored.gameMode === '301' || stored.gameMode === 'fletanque' || isTurnGame(stored.gameMode)
+          ? stored.gameMode
+          : 'volees'
       return { ...stored, gameMode: mode }
     }
   } catch {
@@ -182,6 +190,10 @@ export default function TirerPage() {
   const [fletJournal, setFletJournal] = useState<FletanqueEvent[]>([])
   /** Équipe désignée comme gagnante de la mène, en attente de ses points. */
   const [menePick, setMenePick] = useState<Side | null>(null)
+  // Jeux au tour par tour : le tirage du lancement, puis les fléchettes dans
+  // l'ordre où elles ont été lancées — le moteur en déduit tout le reste.
+  const [turnSetup, setTurnSetup] = useState<TurnSetup | null>(null)
+  const [turnJournal, setTurnJournal] = useState<Dart[]>([])
 
   useEffect(() => {
     if (flash === null) return
@@ -224,6 +236,10 @@ export default function TirerPage() {
         setFletOpener(stored.fletanque.opener)
         setFletJournal(migrateFletanqueJournal(stored.fletanque.journal))
       }
+      if (stored.turn) {
+        setTurnSetup(stored.turn.setup)
+        setTurnJournal(stored.turn.journal)
+      }
       setStarted(true)
     }
   }, [])
@@ -241,6 +257,16 @@ export default function TirerPage() {
     [fletOpener, fletJournal],
   )
 
+  const turnGame = isTurnGame(gameMode) ? gameMode : null
+  const turnActive = started && turnGame !== null && turnSetup !== null
+  const turnReplay = useMemo(
+    () =>
+      turnGame !== null && turnSetup !== null
+        ? TURN_GAMES[turnGame].replay(order.length, turnSetup, turnJournal)
+        : null,
+    [turnGame, turnSetup, order.length, turnJournal],
+  )
+
   // Rejeu du journal des pouvoirs : toute la partie en découle.
   const powersActive = started && gameMode === 'volees' && assignments !== null
   const powersReplay = useMemo(
@@ -253,20 +279,28 @@ export default function TirerPage() {
     if (!started || matchId === null || startedAt === null) return
     const withPowers = powersActive && powersReplay !== null && assignments !== null
     const withFletanque = fletanqueActive && fletReplay !== null && fletOpener !== null
+    const withTurn = turnActive && turnReplay !== null && turnSetup !== null && turnGame !== null
     localStorage.setItem(
       IN_PROGRESS_KEY,
       JSON.stringify({
         matchId,
         startedAt,
         order,
-        dartsByPlayer: withPowers ? powersReplay.dartsByPlayer : dartsByPlayer,
+        dartsByPlayer: withPowers
+          ? powersReplay.dartsByPlayer
+          : withTurn
+            ? turnReplay.dartsByPlayer
+            : dartsByPlayer,
         gameMode,
         ...(withPowers ? { powers: { assignments, journal } } : {}),
         ...(withFletanque ? { fletanque: { opener: fletOpener, journal: fletJournal } } : {}),
+        ...(withTurn ? { turn: { setup: turnSetup, journal: turnJournal } } : {}),
       } satisfies StoredMatch),
     )
     const thrown = dartsByPlayer.reduce((sum, d) => sum + d.length, 0)
-    const done = withFletanque
+    const done = withTurn
+      ? turnReplay.finished
+      : withFletanque
       ? fletReplay.finished
       : withPowers
         ? powersReplay.finished
@@ -282,7 +316,20 @@ export default function TirerPage() {
         const player = players.find((p) => p.id === id)
         return { id, name: player?.name ?? '?', nickname: player?.nickname ?? null }
       }),
-      darts: withPowers ? powersReplay.dartsByPlayer : dartsByPlayer,
+      darts: withPowers
+        ? powersReplay.dartsByPlayer
+        : withTurn
+          ? turnReplay.dartsByPlayer
+          : dartsByPlayer,
+      ...(withTurn
+        ? {
+            turn: {
+              current: turnReplay.current,
+              round: turnReplay.round,
+              lines: order.map((_, i) => TURN_GAMES[turnGame].view(turnReplay.state, i)),
+            },
+          }
+        : {}),
       ...(withPowers
         ? {
             powers: {
@@ -327,6 +374,11 @@ export default function TirerPage() {
     fletReplay,
     fletOpener,
     fletJournal,
+    turnActive,
+    turnReplay,
+    turnSetup,
+    turnJournal,
+    turnGame,
   ])
 
   // Si un joueur de la session restaurée a été supprimé entre-temps, on repart à zéro.
@@ -342,6 +394,8 @@ export default function TirerPage() {
       setStartedAt(null)
       setFletOpener(null)
       setFletJournal([])
+      setTurnSetup(null)
+      setTurnJournal([])
     }
   }, [started, loading, order, players, stopLive])
 
@@ -434,6 +488,35 @@ export default function TirerPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameMode, started, fletReplay, players, order])
 
+  // Fin d'un jeu au tour par tour : le vainqueur sort sur son thème.
+  const turnCelebratedRef = useRef(false)
+  useEffect(() => {
+    if (!turnActive || turnReplay === null || !turnReplay.finished || turnGame === null) {
+      turnCelebratedRef.current = false
+      return
+    }
+    if (turnCelebratedRef.current) return
+    turnCelebratedRef.current = true
+    void fireConfetti('record')
+    fanfare('record')
+    vibrate([80, 60, 80])
+    const winners = turnReplay.winners.map((i) => players.find((p) => p.id === order[i]))
+    const label = TURN_GAMES[turnGame].label
+    announce({
+      lead: turnReplay.lastNote?.text.startsWith('Shanghai')
+        ? 'Shanghai !'
+        : '',
+      signature: winners.length === 1 ? signatureOf(winners[0]) : null,
+      relay:
+        winners.length === 1
+          ? `${stageName(winners[0])} remporte le ${label} !`
+          : winners.length > 1
+            ? `Égalité au ${label} entre ${winners.map((w) => stageName(w)).join(' et ')} !`
+            : `Fin du ${label}.`,
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [turnActive, turnReplay, turnGame, players, order])
+
   if (!configured) return <SetupNotice />
   if (loading) return <p className="empty">Chargement…</p>
   if (error) return <p className="notice notice--error">Erreur : {error}</p>
@@ -451,7 +534,9 @@ export default function TirerPage() {
   const totalDarts = order.length * DARTS_PER_SESSION
   const finished =
     started &&
-    (fletanqueActive && fletReplay !== null
+    (turnActive && turnReplay !== null
+      ? turnReplay.finished
+      : fletanqueActive && fletReplay !== null
       ? fletReplay.finished
       : powersActive && powersReplay !== null
         ? powersReplay.finished
@@ -503,6 +588,29 @@ export default function TirerPage() {
     setStarted(true)
     setSaveError(null)
     setMenePick(null)
+
+    if (turnGame !== null) {
+      // Killer : chacun reçoit son numéro au lancement, révélé joueur par joueur.
+      const setup: TurnSetup = turnGame === 'killer' ? { numbers: drawKillerNumbers(order.length) } : {}
+      setTurnSetup(setup)
+      setTurnJournal([])
+      setFletOpener(null)
+      setFletJournal([])
+      setAssignments(null)
+      setJournal([])
+      setup.numbers?.forEach((number, i) => {
+        toast(`🎯 ${players.find((p) => p.id === order[i])?.name ?? '?'} a le ${number}`)
+      })
+      const first = players.find((p) => p.id === order[0])
+      announce({
+        lead: `${TURN_GAMES[turnGame].label}, c'est parti !`,
+        signature: signatureOf(first),
+        relay: relayText(first, true),
+      })
+      return
+    }
+    setTurnSetup(null)
+    setTurnJournal([])
 
     if (gameMode === 'fletanque') {
       // Tirage au sort de l'équipe qui ouvre, comme au but en pétanque.
@@ -657,7 +765,37 @@ export default function TirerPage() {
     })
   }
 
+  /** Une fléchette dans un jeu au tour par tour : le moteur dit ce qu'elle a changé. */
+  function throwTurnDart(dart: Dart) {
+    if (turnGame === null || turnSetup === null || turnReplay === null || turnReplay.finished) return
+    thock(dart.sector === 0 ? 'miss' : dart.sector === 25 && dart.mult === 2 ? 'bull' : 'normal')
+    vibrate(12)
+    const next = [...turnJournal, dart]
+    const after = TURN_GAMES[turnGame].replay(order.length, turnSetup, next)
+    setTurnJournal(next)
+    if (after.finished) return // le sacre est annoncé par la célébration
+    const thrower = turnReplay.current ?? 0
+    const nameAt = (i: number) => stageName(players.find((p) => p.id === order[i]))
+    const lead = after.lastNote
+      ? after.lastNote.text
+          .replace('{lanceur}', nameAt(thrower))
+          .replace('{cible}', after.lastNote.target !== undefined ? nameAt(after.lastNote.target) : '')
+      : ''
+    if (!after.volleyClosed || after.current === null || order.length < 2) {
+      if (lead) announce({ lead })
+      return
+    }
+    const nextPlayer = players.find((p) => p.id === order[after.current!])
+    const firstTurn = after.dartsByPlayer[after.current].length === 0
+    const relay = relayText(nextPlayer, firstTurn)
+    announce({ lead, signature: firstTurn ? signatureOf(nextPlayer) : null, relay })
+  }
+
   function throwDart(dart: Dart) {
+    if (turnActive) {
+      throwTurnDart(dart)
+      return
+    }
     if (powersActive) {
       throwPowersDart(dart)
       return
@@ -717,6 +855,11 @@ export default function TirerPage() {
   }
 
   function undo() {
+    if (turnActive) {
+      if (turnJournal.length === 0) return
+      setTurnJournal(turnJournal.slice(0, -1))
+      return
+    }
     // En flétanque comme avec les pouvoirs, le journal fait foi : retirer le
     // dernier décompte rend le score et l'équipe qui ouvre d'avant.
     if (fletanqueActive) {
@@ -765,6 +908,8 @@ export default function TirerPage() {
     setFletOpener(null)
     setFletJournal([])
     setMenePick(null)
+    setTurnSetup(null)
+    setTurnJournal([])
   }
 
   async function save() {
@@ -778,8 +923,16 @@ export default function TirerPage() {
     // En flétanque, aucune fléchette n'est notée : la ligne porte le score de
     // l'équipe du joueur et le déroulé des mènes.
     const fletRows = fletanqueActive && fletReplay !== null ? sessionFletanque(fletReplay) : null
+    const turnEntry = turnActive && turnReplay !== null && turnGame !== null ? TURN_GAMES[turnGame] : null
     const entries = order.map((playerId, i) =>
-      fletRows !== null && fletReplay !== null
+      turnEntry !== null && turnReplay !== null
+        ? {
+            playerId,
+            darts: padVolley(turnReplay.dartsByPlayer[i]),
+            total: turnEntry.total(turnReplay.state, i),
+            won: turnReplay.winners.includes(i),
+          }
+        : fletRows !== null && fletReplay !== null
         ? {
             playerId,
             darts: [],
@@ -875,7 +1028,27 @@ export default function TirerPage() {
             >
               🍹 Flétanque
             </button>
+            {TURN_GAME_IDS.map((id) => (
+              <button
+                key={id}
+                type="button"
+                role="radio"
+                aria-checked={gameMode === id}
+                className={gameMode === id ? 'chip chip--on' : 'chip'}
+                onClick={() => setGameMode(id)}
+              >
+                {TURN_GAMES[id].label}
+              </button>
+            ))}
           </div>
+          {turnGame !== null && (
+            <p className="mode-hint">
+              {TURN_GAMES[turnGame].pitch}
+              {TURN_GAMES[turnGame].minPlayers > 1 &&
+                ` À ${TURN_GAMES[turnGame].minPlayers} joueurs minimum.`}{' '}
+              Hors classement, mais compte dans les face-à-face.
+            </p>
+          )}
           {gameMode === '301' && (
             <p className="mode-hint">
               Premier à zéro exactement — dépasser annule la volée. Sortie sèche, sans double
@@ -958,11 +1131,17 @@ export default function TirerPage() {
           type="button"
           className="button-primary"
           disabled={
-            gameMode === 'fletanque' ? order.length !== PLAYERS_PER_MATCH : order.length === 0
+            gameMode === 'fletanque'
+              ? order.length !== PLAYERS_PER_MATCH
+              : order.length < (turnGame !== null ? TURN_GAMES[turnGame].minPlayers : 1)
           }
           onClick={start}
         >
-          {gameMode === 'fletanque' ? 'Lancer la flétanque' : 'Commencer la session'}
+          {gameMode === 'fletanque'
+            ? 'Lancer la flétanque'
+            : turnGame !== null
+              ? `Lancer le ${TURN_GAMES[turnGame].label}`
+              : 'Commencer la partie'}
         </button>
       </div>
     )
@@ -981,7 +1160,22 @@ export default function TirerPage() {
             sub: null,
           }))
         : null
+    const turnRecap: RecapLine[] | null =
+      turnActive && turnReplay !== null && turnGame !== null
+        ? order.map((playerId, i) => {
+            const total = TURN_GAMES[turnGame].total(turnReplay.state, i)
+            return {
+              playerId,
+              name: players.find((p) => p.id === playerId)?.name ?? '?',
+              total,
+              won: turnReplay.winners.includes(i),
+              record: false,
+              sub: TURN_GAMES[turnGame].totalLabel(total),
+            }
+          })
+        : null
     const recap: RecapLine[] = (
+      turnRecap ??
       fletRecap ??
       order.map((playerId, i) => {
         const player = players.find((p) => p.id === playerId)
@@ -1019,7 +1213,9 @@ export default function TirerPage() {
       <div className="stack">
         <section>
           <h2 className="section-title">
-            {gameMode === 'fletanque'
+            {turnGame !== null
+              ? `Fin de partie — ${TURN_GAMES[turnGame].label}`
+              : gameMode === 'fletanque'
               ? 'Fin de partie — Flétanque'
               : gameMode === '301'
                 ? 'Fin de partie — 301'
@@ -1080,6 +1276,23 @@ export default function TirerPage() {
 
   // Flétanque : pas de clavier de saisie — les quatre joueurs tirent toute
   // leur main, puis désignent l'équipe qui prend la mène et ses points.
+  if (turnActive && turnReplay !== null && turnGame !== null) {
+    return (
+      <>
+        <TurnGameScorer
+          game={turnGame}
+          replay={turnReplay}
+          names={order.map((id) => players.find((p) => p.id === id)?.name ?? '?')}
+          onThrow={throwDart}
+          onUndo={undo}
+          undoDisabled={turnJournal.length === 0}
+          onAbandon={reset}
+        />
+        {flashOverlay}
+      </>
+    )
+  }
+
   if (fletanqueActive && fletReplay !== null) {
     const replay = fletReplay
 

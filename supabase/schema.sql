@@ -1,4 +1,4 @@
--- Schéma complet MyLegiDarts (version 10).
+-- Schéma complet MyLegiDarts (version 11).
 -- Pour une installation neuve : exécuter ce fichier dans le SQL Editor.
 -- Pour une base existante : exécuter les fichiers de migrations/ dans l'ordre.
 
@@ -19,16 +19,24 @@ create table if not exists public.sessions (
   match_id uuid,
   -- 12 fléchettes : [{ "sector": 20, "mult": 3 }, ...] (sector 0 = raté, 25 = bull)
   darts jsonb not null,
-  -- Les bonus des pouvoirs peuvent dépasser 720 (borne réservée aux parties classiques).
-  total int not null check (total >= 0 and (total <= 720 or powers is not null)),
-  mode text not null default 'volees' check (mode in ('volees', '301', 'fletanque')),
+  -- Les bonus des pouvoirs peuvent dépasser 720 (borne réservée au défi) ; les
+  -- jeux au tour par tour y portent leur propre score (points, cases, vies).
+  total int not null,
+  mode text not null default 'volees',
   won boolean,
   -- Null = partie sans pouvoirs. Sinon : { power, used, copied?, bonus, volleySizes }.
   powers jsonb,
   -- Null hors flétanque. Sinon : { team, thrown, menes } ; total porte alors
   -- le score final de l'équipe du joueur.
   fletanque jsonb,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  constraint sessions_mode_check
+    check (mode in ('volees', '301', 'fletanque', 'cricket', 'clock', 'killer', 'shanghai')),
+  constraint sessions_total_check
+    check (
+      total >= 0
+      and (total <= 720 or powers is not null or mode in ('cricket', 'clock', 'killer', 'shanghai'))
+    )
 );
 
 -- Le répertoire complet de l'annonceur : les lignes d'origine (semées plus
@@ -173,8 +181,8 @@ create table if not exists public.schema_version (
 );
 alter table public.schema_version enable row level security;
 create policy "version open read" on public.schema_version for select using (true);
-insert into public.schema_version (id, version) values (1, 10)
-on conflict (id) do update set version = 10;
+insert into public.schema_version (id, version) values (1, 11)
+on conflict (id) do update set version = 11;
 
 -- ---------- Signatures sonores (storage) ----------
 -- Bucket public : le MP3 de chaque joueur se lit par URL directe.
@@ -287,7 +295,8 @@ from public.session_stats
 where mode = 'volees' and powers is null
 group by player_id, to_char(created_at at time zone 'Europe/Paris', 'YYYY-MM');
 
--- ---------- Face-à-face (parties à exactement 2 joueurs) ----------
+-- ---------- Face-à-face (parties à exactement 2 joueurs, tous jeux) ----------
+-- Au défi, le plus gros total gagne ; ailleurs, c'est le drapeau won.
 create view public.duel_stats
 with (security_invoker = true) as
 with two_player_matches as (
@@ -301,10 +310,12 @@ select a.player_id,
        b.player_id as opponent_id,
        count(*)::int as played,
        count(*) filter (
-         where (a.mode = 'volees' and a.total > b.total) or (a.mode = '301' and a.won)
+         where (a.mode = 'volees' and a.total > b.total)
+            or (a.mode <> 'volees' and a.won and not coalesce(b.won, false))
        )::int as wins,
        count(*) filter (
-         where (a.mode = 'volees' and a.total < b.total) or (a.mode = '301' and b.won)
+         where (a.mode = 'volees' and a.total < b.total)
+            or (a.mode <> 'volees' and b.won and not coalesce(a.won, false))
        )::int as losses
 from public.sessions a
 join public.sessions b on b.match_id = a.match_id and b.id <> a.id

@@ -5,6 +5,7 @@ import { SetupNotice } from '@/components/SetupNotice'
 import { useToast } from '@/components/Toaster'
 import { askDeleteCode, forgetDeleteCode, rememberDeleteCode } from '@/lib/deleteCode'
 import { SIDE_LABEL, type Side } from '@/lib/fletanque'
+import { TURN_GAMES, isTurnGame } from '@/lib/gameCatalog'
 import { groupByMatch } from '@/lib/matches'
 import { useLeagueContext } from '@/lib/LeagueProvider'
 import { useSessionHistory } from '@/lib/useSessions'
@@ -47,6 +48,8 @@ export default function HistoriquePage() {
         {groups.map((group) => {
           const total180 = group.sessions.reduce((sum, s) => sum + s.count_180, 0)
           const is301 = group.sessions[0]?.mode === '301'
+          const mode = group.sessions[0]?.mode ?? 'volees'
+          const turnGame = isTurnGame(mode) ? TURN_GAMES[mode] : null
           const withPowers = group.sessions[0]?.powers != null
           const isFletanque = group.sessions[0]?.fletanque != null
           // La flétanque se lit par équipe : les deux coéquipiers partagent
@@ -65,12 +68,21 @@ export default function HistoriquePage() {
                   }
                 })
                 .sort((a, b) => Number(b.winner) - Number(a.winner))
-            : group.sessions.map((session, index) => ({
-                key: session.id,
-                label: nameById.get(session.player_id) ?? 'Joueur supprimé',
-                total: is301 && !session.won ? `reste ${301 - session.total}` : `${session.total}`,
-                winner: is301 ? session.won === true : index === 0 && group.sessions.length > 1,
-              }))
+            : group.sessions
+                .map((session, index) => ({
+                  key: session.id,
+                  label: nameById.get(session.player_id) ?? 'Joueur supprimé',
+                  total: turnGame
+                    ? turnGame.totalLabel(session.total)
+                    : is301 && !session.won
+                      ? `reste ${301 - session.total}`
+                      : `${session.total}`,
+                  winner:
+                    is301 || turnGame
+                      ? session.won === true
+                      : index === 0 && group.sessions.length > 1,
+                }))
+                .sort((a, b) => (turnGame ? Number(b.winner) - Number(a.winner) : 0))
           return (
             <li key={group.id}>
               <Link href={`/partie/${group.id}`} className="match-card">
@@ -78,7 +90,9 @@ export default function HistoriquePage() {
                   <span className="match-card__type">
                     {isFletanque
                       ? '🍹 Flétanque'
-                      : is301
+                      : turnGame
+                        ? turnGame.label
+                        : is301
                         ? '301'
                         : withPowers
                           ? 'Défi 4 volées · 🃏 Pouvoirs'

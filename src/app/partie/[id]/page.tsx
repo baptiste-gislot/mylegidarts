@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
 import { SetupNotice } from '@/components/SetupNotice'
 import { SIDE_LABEL, type Side } from '@/lib/fletanque'
+import { TURN_GAMES, isTurnGame } from '@/lib/gameCatalog'
 import { dartLabel, sessionTotal, volleys } from '@/lib/scoring'
 import { POWER_BY_ID, groupBySizes } from '@/lib/powers'
 import { useLeagueContext } from '@/lib/LeagueProvider'
@@ -113,12 +114,22 @@ export default function PartiePage() {
   }
 
   const is301 = matchSessions[0]?.mode === '301'
-  const winner = is301
-    ? (matchSessions.find((s) => s.won) ?? matchSessions[0])
-    : matchSessions[0]
+  const mode = matchSessions[0]?.mode ?? 'volees'
+  const turnGame = isTurnGame(mode) ? TURN_GAMES[mode] : null
+  const winner =
+    is301 || turnGame
+      ? (matchSessions.find((s) => s.won) ?? matchSessions[0])
+      : matchSessions[0]
   const isDuel = matchSessions.length > 1
 
-  const title = is301
+  const title = turnGame
+    ? matchSessions.some((s) => s.won)
+      ? `${turnGame.label} — Victoire de ${matchSessions
+          .filter((s) => s.won)
+          .map((s) => nameById.get(s.player_id) ?? '?')
+          .join(' et ')}`
+      : `${turnGame.label} — Partie abandonnée`
+    : is301
     ? matchSessions.some((s) => s.won)
       ? `301 — Victoire de ${nameById.get(winner.player_id) ?? '?'}`
       : '301 — Partie abandonnée'
@@ -140,7 +151,7 @@ export default function PartiePage() {
 
       {matchSessions.map((session, index) => {
         const name = nameById.get(session.player_id) ?? 'Joueur supprimé'
-        const winnerRow = is301 ? session.won === true : index === 0 && isDuel
+        const winnerRow = is301 || turnGame ? session.won === true : index === 0 && isDuel
         const power = session.powers ? POWER_BY_ID[session.powers.power] : null
         const copied = session.powers?.copied ? POWER_BY_ID[session.powers.copied] : null
         return (
@@ -155,7 +166,11 @@ export default function PartiePage() {
                 {name}
               </span>
               <span className="match-detail__total">
-                {is301 && !session.won ? `reste ${301 - session.total}` : session.total}
+                {turnGame
+                  ? turnGame.totalLabel(session.total)
+                  : is301 && !session.won
+                    ? `reste ${301 - session.total}`
+                    : session.total}
               </span>
             </div>
             {power && session.powers && (
@@ -176,9 +191,12 @@ export default function PartiePage() {
                   <div key={i} className="volley-line">
                     <span className="volley-line__label">Volée {i + 1}</span>
                     <span className="volley-line__darts">{volley.map(dartLabel).join('  ')}</span>
-                    <span className={volleyTotal === 180 ? 'volley-line__total b--180' : 'volley-line__total'}>
-                      {volleyTotal}
-                    </span>
+                    {/* Hors défi et 301, la somme d'une volée ne veut rien dire. */}
+                    {!turnGame && (
+                      <span className={volleyTotal === 180 ? 'volley-line__total b--180' : 'volley-line__total'}>
+                        {volleyTotal}
+                      </span>
+                    )}
                   </div>
                 )
               })}

@@ -652,6 +652,105 @@ a {
   color: var(--gold);
 }
 
+.scoreboard__who {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.scoreboard__detail {
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.scoreboard__row--out {
+  opacity: 0.45;
+}
+
+.scoreboard__row--out .scoreboard__score {
+  color: var(--red);
+}
+
+.scorer__goal {
+  margin-top: 6px;
+  font-size: 15px;
+  color: var(--text-dim);
+}
+
+/* ---------- Cricket ---------- */
+
+/* La grille des marques : une ligne par numéro, une colonne par joueur. */
+.cricket {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 2px;
+  font-variant-numeric: tabular-nums;
+}
+
+.cricket th,
+.cricket td {
+  padding: 6px 8px;
+  text-align: center;
+  background: var(--surface);
+}
+
+.cricket__player {
+  font-family: var(--font-display-stack);
+  font-weight: 700;
+  font-size: 17px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+
+.cricket .cricket__player--active {
+  background: var(--gold);
+  color: var(--bg);
+}
+
+.cricket__target {
+  width: 64px;
+  font-family: var(--font-display-stack);
+  font-weight: 800;
+  font-size: 22px;
+}
+
+.cricket__marks {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-dim);
+}
+
+.cricket__marks--closed {
+  color: var(--green);
+}
+
+/* Fermé par tout le monde : plus rien à y gagner. */
+.cricket__row--dead th,
+.cricket__row--dead td {
+  opacity: 0.35;
+}
+
+.cricket__points th,
+.cricket__points td {
+  background: var(--raised);
+  font-family: var(--font-display-stack);
+  font-weight: 800;
+  font-size: 24px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 /* ---------- Touches ---------- */
 
 .key {

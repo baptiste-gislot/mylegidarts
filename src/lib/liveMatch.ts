@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import type { Side } from './fletanque'
+import type { PlayerView } from './turnGames'
 import { channelHealthy, onReconnectHints, useWatchdog } from './realtimeHealth'
 import type { Dart } from './scoring'
 import { supabase } from './supabaseClient'
@@ -25,6 +26,13 @@ export interface LiveMatchFletanque {
   opener: Side
 }
 
+/** Résumé d'un jeu au tour par tour, calculé côté tireur. */
+export interface LiveMatchTurn {
+  current: number | null
+  round: number
+  lines: PlayerView[]
+}
+
 /** État d'une partie en cours, diffusé via Supabase Realtime Presence. */
 export interface LiveMatch {
   id: string
@@ -39,6 +47,8 @@ export interface LiveMatch {
   powers?: LiveMatchPowers
   /** Présent en flétanque : les fléchettes n'y sont pas notées. */
   fletanque?: LiveMatchFletanque
+  /** Présent dans les jeux au tour par tour (Cricket, Killer…). */
+  turn?: LiveMatchTurn
 }
 
 export type LiveMatchInput = Omit<LiveMatch, 'updatedAt'>
@@ -223,6 +233,7 @@ export function useLiveMatches(): LiveMatch[] {
             darts: meta.darts,
             powers: meta.powers,
             fletanque: meta.fletanque,
+            turn: meta.turn,
           }
           const known = freshest.get(match.id)
           if (!known || match.updatedAt >= known.updatedAt) freshest.set(match.id, match)

@@ -12,7 +12,13 @@ import {
 } from '@/lib/scoring'
 import { SIDE_LABEL, teamPlayers, type Side } from '@/lib/fletanque'
 import { replay301 } from '@/lib/play301'
-import { useLiveMatches, type LiveMatch, type LiveMatchFletanque } from '@/lib/liveMatch'
+import { TURN_GAMES, isTurnGame } from '@/lib/gameCatalog'
+import {
+  useLiveMatches,
+  type LiveMatch,
+  type LiveMatchFletanque,
+  type LiveMatchTurn,
+} from '@/lib/liveMatch'
 import { supabase } from '@/lib/supabaseClient'
 
 export default function LivePage() {
@@ -44,6 +50,9 @@ export default function LivePage() {
 function LiveMatchCard({ match }: { match: LiveMatch }) {
   // En flétanque, aucune fléchette n'est notée : le tireur diffuse son résumé.
   if (match.fletanque) return <LiveFletanqueCard match={match} flet={match.fletanque} />
+  if (match.turn && match.mode && isTurnGame(match.mode)) {
+    return <LiveTurnCard match={match} turn={match.turn} label={TURN_GAMES[match.mode].label} />
+  }
   return <LiveScoreCard match={match} />
 }
 
@@ -80,6 +89,41 @@ function LiveFletanqueCard({ match, flet }: { match: LiveMatch; flet: LiveMatchF
             <span className="board__points">{flet.scores[side]}</span>
           </li>
         ))}
+      </ul>
+    </section>
+  )
+}
+
+/** Le direct d'un jeu au tour par tour : le résumé calculé par le tireur. */
+function LiveTurnCard({ match, turn, label }: { match: LiveMatch; turn: LiveMatchTurn; label: string }) {
+  return (
+    <section className="live-card" aria-live="polite">
+      <div className="live-card__head">
+        <span className="live-card__status">
+          <span className="live-dot" aria-hidden="true" />
+          {match.finished
+            ? 'Terminée — en attente d’enregistrement'
+            : `En direct · ${label} · tour ${turn.round + 1}`}
+        </span>
+      </div>
+      <ul className="live-card__players">
+        {match.players.map((player, i) => {
+          const active = !match.finished && turn.current === i
+          const line = turn.lines[i]
+          return (
+            <li key={player.id} className={active ? 'live-row live-row--active' : 'live-row'}>
+              <PlayerAvatar name={player.name} />
+              <span className="live-row__who">
+                <span className="board__name">
+                  {player.name}
+                  {active && <em className="live-row__turn"> · à la cible</em>}
+                </span>
+                <span className="board__record">{line?.secondary}</span>
+              </span>
+              <span className="board__points">{line?.primary}</span>
+            </li>
+          )
+        })}
       </ul>
     </section>
   )
