@@ -5,13 +5,21 @@
 
 const CODE_KEY = 'mylegidarts-code-suppression'
 
-/** Demande le code (ou réutilise celui mémorisé). null si l'utilisateur annule. */
-export function askDeleteCode(): string | null {
-  const stored = localStorage.getItem(CODE_KEY)
-  if (stored) return stored
-  const code = window.prompt('Code de suppression de la ligue :')
-  return code === null || code.trim() === '' ? null : code.trim()
+/** Le code mémorisé sur cet appareil, s'il y en a un. */
+export function storedDeleteCode(): string | null {
+  try {
+    return localStorage.getItem(CODE_KEY)
+  } catch {
+    return null
+  }
 }
+
+/** Le champ à ajouter au dialogue de suppression quand le code n'est pas connu. */
+export const DELETE_CODE_INPUT = {
+  label: 'Code de suppression de la ligue',
+  secret: true,
+  required: true,
+} as const
 
 export function rememberDeleteCode(code: string): void {
   localStorage.setItem(CODE_KEY, code)

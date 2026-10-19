@@ -103,7 +103,7 @@ export default function ComparerPage() {
       better: 'low',
       format: (v) => `± ${v}`,
     },
-    { label: 'sessions', a: sideA?.count ?? null, b: sideB?.count ?? null, better: 'none' },
+    { label: 'parties', a: sideA?.count ?? null, b: sideB?.count ?? null, better: 'none' },
   ]
 
   const cell = (row: VersusRow, side: 'a' | 'b') => {

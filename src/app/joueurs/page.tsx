@@ -4,8 +4,14 @@ import { useRef, useState } from 'react'
 import Link from 'next/link'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
 import { SetupNotice } from '@/components/SetupNotice'
+import { useDialog } from '@/components/Dialog'
 import { useToast } from '@/components/Toaster'
-import { askDeleteCode, forgetDeleteCode, rememberDeleteCode } from '@/lib/deleteCode'
+import {
+  DELETE_CODE_INPUT,
+  forgetDeleteCode,
+  rememberDeleteCode,
+  storedDeleteCode,
+} from '@/lib/deleteCode'
 import { useLeagueContext } from '@/lib/LeagueProvider'
 import { checkSignatureFile, signatureUrl } from '@/lib/signatures'
 import { playSignature } from '@/lib/sound'
@@ -13,6 +19,7 @@ import type { PlayerRow } from '@/lib/useLeague'
 
 export default function JoueursPage() {
   const toast = useToast()
+  const ask = useDialog()
   const {
     players,
     stats,
@@ -52,11 +59,14 @@ export default function JoueursPage() {
   }
 
   async function editNickname(playerId: string, playerName: string, current: string | null) {
-    const nickname = window.prompt(
-      `Surnom de ${playerName} (laissez vide pour le retirer) :`,
-      current ?? '',
-    )
-    if (nickname === null) return
+    const answer = await ask({
+      title: `Surnom de ${playerName}`,
+      body: 'L’annonceur et le direct l’utilisent. Laissez vide pour le retirer.',
+      confirmLabel: 'Enregistrer le surnom',
+      input: { label: 'Surnom', initial: current ?? '', maxLength: 40 },
+    })
+    if (!answer) return
+    const nickname = answer.value
     const err = await setNickname(playerId, nickname)
     if (err) setFormError(err)
     else toast(nickname.trim() ? `${playerName} devient « ${nickname.trim()} »` : 'Surnom retiré')
@@ -94,7 +104,13 @@ export default function JoueursPage() {
   }
 
   async function removeSignature(player: PlayerRow) {
-    if (!window.confirm(`Retirer la signature sonore de ${player.name} ?`)) return
+    const answer = await ask({
+      title: `Retirer la signature de ${player.name} ?`,
+      body: 'Son entrée en piste se fera sans musique.',
+      confirmLabel: 'Retirer la signature',
+      danger: true,
+    })
+    if (!answer) return
     const err = await setSignature(player.id, null)
     if (err) setFormError(err)
     else toast(`${player.name} entrera désormais en silence`)
@@ -102,13 +118,19 @@ export default function JoueursPage() {
 
   async function remove(playerId: string, playerName: string) {
     const count = sessionCount(playerId)
-    const warning =
-      count > 0
-        ? `Supprimer ${playerName} ? Ses ${count} session${count > 1 ? 's seront supprimées' : ' sera supprimée'} et le classement recalculé.`
-        : `Supprimer ${playerName} ?`
-    if (!window.confirm(warning)) return
-    const code = askDeleteCode()
-    if (code === null) return
+    const stored = storedDeleteCode()
+    const answer = await ask({
+      title: `Supprimer ${playerName} ?`,
+      body:
+        count > 0
+          ? `${count > 1 ? `Ses ${count} scores de partie sont supprimés` : 'Son score de partie est supprimé'} aussi, et les classements sont recalculés.`
+          : 'Aucune partie jouée pour l’instant.',
+      confirmLabel: 'Supprimer le joueur',
+      danger: true,
+      input: stored ? undefined : DELETE_CODE_INPUT,
+    })
+    if (!answer) return
+    const code = stored ?? answer.value.trim()
     const err = await removePlayer(playerId, code)
     if (err) {
       forgetDeleteCode()
@@ -172,7 +194,7 @@ export default function JoueursPage() {
                     {player.nickname && <em className="board__nickname"> « {player.nickname} »</em>}
                   </span>
                   <span className="board__record">
-                    {count} session{count > 1 ? 's' : ''}
+                    {count} partie{count > 1 ? 's' : ''}
                   </span>
                 </span>
                 <span className="board__actions">
@@ -237,11 +259,11 @@ export default function JoueursPage() {
       )}
 
       <Link href="/punchlines" className="button-ghost invite-link">
-        Punchlines de l’annonceur →
+        Punchlines de l’annonceur
       </Link>
 
       <Link href="/inviter" className="button-ghost invite-link">
-        Afficher le QR code d’installation →
+        Afficher le QR code d’installation
       </Link>
     </div>
   )

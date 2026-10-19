@@ -135,7 +135,7 @@ export default function PartiePage() {
       : '301 — Partie abandonnée'
     : isDuel
       ? `Victoire de ${nameById.get(winner.player_id) ?? '?'}`
-      : `Session de ${nameById.get(winner.player_id) ?? '?'}`
+      : `Partie solo de ${nameById.get(winner.player_id) ?? '?'}`
 
   return (
     <div className="stack">

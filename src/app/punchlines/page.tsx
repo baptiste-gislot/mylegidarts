@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { SetupNotice } from '@/components/SetupNotice'
+import { useDialog } from '@/components/Dialog'
 import { useToast } from '@/components/Toaster'
 import { useLeagueContext } from '@/lib/LeagueProvider'
 import type { Punchline } from '@/lib/trashTalk'
@@ -31,6 +32,7 @@ function triggerLabel(punchline: Punchline): string {
 
 export default function PunchlinesPage() {
   const toast = useToast()
+  const ask = useDialog()
   const {
     punchlines,
     loading,
@@ -112,7 +114,13 @@ export default function PunchlinesPage() {
   }
 
   async function remove(punchline: PunchlineRow) {
-    if (!window.confirm(`Retirer « ${punchline.text} » du répertoire ?`)) return
+    const answer = await ask({
+      title: 'Retirer cette punchline ?',
+      body: `« ${punchline.text} » ne sera plus dite par l’annonceur.`,
+      confirmLabel: 'Retirer la punchline',
+      danger: true,
+    })
+    if (!answer) return
     const err = await removePunchline(punchline.id)
     if (err) setFormError(err)
     else toast('Punchline retirée')
@@ -271,7 +279,7 @@ export default function PunchlinesPage() {
                     ) : (
                       <>
                         <span className="board__who">
-                          <span className="board__name">{p.text}</span>
+                          <span className="board__name board__name--quote">{p.text}</span>
                           <span className="board__record">{triggerLabel(p)}</span>
                         </span>
                         <span className="board__actions">

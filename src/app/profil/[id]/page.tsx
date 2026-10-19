@@ -61,7 +61,7 @@ export default function ProfilPage() {
       <div className="stack">
         <ProfilHeader player={player} />
         <div className="empty">
-          <p className="empty__title">Aucune session</p>
+          <p className="empty__title">Aucune partie</p>
           <p>{player.name} n’a pas encore tiré. Le profil se remplira dès la première session.</p>
         </div>
       </div>
@@ -114,7 +114,7 @@ export default function ProfilPage() {
           <span className="tile__label">moyenne</span>
         </div>
         {form && (
-          <div className="tile" title={`Moyenne des ${FORM_WINDOW} dernières sessions, contre ${average} en général`}>
+          <div className="tile" title={`Moyenne des ${FORM_WINDOW} dernières parties, contre ${average} en général`}>
             <span className="tile__value">{form.recent}</span>
             <span className="tile__label">forme</span>
             <span
@@ -141,15 +141,15 @@ export default function ProfilPage() {
         </div>
         <div className="tile">
           <span className="tile__value">{own.length}</span>
-          <span className="tile__label">session{own.length > 1 ? 's' : ''}</span>
+          <span className="tile__label">partie{own.length > 1 ? 's' : ''}</span>
         </div>
         {own.length >= 2 && (
-          <div className="tile" title="Écart-type des totaux de session : plus c’est bas, plus le jeu est régulier">
+          <div className="tile" title="Écart-type des scores de partie : plus c’est bas, plus le jeu est régulier">
             <span className="tile__value">± {sigma}</span>
             <span className="tile__label">constance</span>
           </div>
         )}
-        <div className="tile" title="Sessions consécutives au moins au niveau de la moyenne">
+        <div className="tile" title="Parties consécutives au moins au niveau de la moyenne">
           <span className="tile__value">{streak}</span>
           <span className="tile__label">série ≥ moy.</span>
         </div>
@@ -164,7 +164,7 @@ export default function ProfilPage() {
 
       {own.length >= 2 && (
         <section>
-          <h2 className="section-title">Évolution des sessions</h2>
+          <h2 className="section-title">Évolution des scores</h2>
           <ScoreChart sessions={own} />
         </section>
       )}
@@ -250,7 +250,7 @@ export default function ProfilPage() {
       </section>
 
       <section>
-        <h2 className="section-title">Sessions</h2>
+        <h2 className="section-title">Parties</h2>
         <ul className="history">
           {[...own].reverse().map((session) => (
             <li key={session.id} className="history__item">

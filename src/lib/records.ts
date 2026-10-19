@@ -55,7 +55,7 @@ export function computeRecords(rows: RecordSession[], months: RecordMonth[]): Re
   records.push({
     id: 'session',
     icon: '🏆',
-    label: 'Record de session',
+    label: 'Record de partie',
     playerIds: bestSession.ids,
     value: bestSession.value,
     date: ordered.find((r) => r.total === bestSession.value)!.created_at,
@@ -101,7 +101,7 @@ export function computeRecords(rows: RecordSession[], months: RecordMonth[]): Re
       label: 'Plus longue série au-dessus de sa moyenne',
       playerIds: streaks.ids,
       value: streaks.value,
-      note: 'sessions consécutives',
+      note: 'parties consécutives',
     })
   }
 
@@ -116,7 +116,7 @@ export function computeRecords(rows: RecordSession[], months: RecordMonth[]): Re
       playerIds: bestMonth.ids,
       value: bestMonth.value,
       month: withAverage.find((m) => m.average === bestMonth.value)!.month,
-      note: `min. ${MIN_MONTH_SESSIONS} sessions dans le mois`,
+      note: `min. ${MIN_MONTH_SESSIONS} parties dans le mois`,
     })
   }
 
@@ -124,7 +124,7 @@ export function computeRecords(rows: RecordSession[], months: RecordMonth[]): Re
   records.push({
     id: 'sessions',
     icon: '🎪',
-    label: 'Plus de sessions jouées',
+    label: 'Plus de parties jouées',
     playerIds: mostSessions.ids,
     value: mostSessions.value,
   })
@@ -133,7 +133,7 @@ export function computeRecords(rows: RecordSession[], months: RecordMonth[]): Re
   records.push({
     id: 'worst',
     icon: '🤡',
-    label: 'Pire session',
+    label: 'Pire partie',
     playerIds: worst.ids,
     value: -worst.value,
     date: ordered.find((r) => r.total === -worst.value)!.created_at,

@@ -31,8 +31,8 @@ export default function LivePage() {
       <div className="empty">
         <p className="empty__title">Aucune partie en cours</p>
         <p>
-          Dès que quelqu’un lance une session dans l’onglet{' '}
-          <Link href="/tirer">Tirer</Link>, elle apparaîtra ici en direct.
+          Dès que quelqu’un lance une partie dans l’onglet{' '}
+          <Link href="/tirer">Jouer</Link>, elle apparaîtra ici en direct.
         </p>
       </div>
     )

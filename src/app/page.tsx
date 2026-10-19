@@ -195,12 +195,12 @@ export default function ClassementPage() {
           {lines.length === 0 ? (
             <div className="empty">
               <p className="empty__title">
-                {period === 'mois' ? 'Aucune session ce mois-ci' : 'Aucune session jouée'}
+                {period === 'mois' ? 'Aucune partie ce mois-ci' : 'Aucune partie jouée'}
               </p>
               <p>
                 {period === 'mois'
                   ? 'Le mois repart de zéro : premier arrivé à la ligne de tir, premier au tableau.'
-                  : 'Le classement apparaîtra après la première session dans l’onglet Tirer.'}
+                  : 'Le classement apparaîtra après la première partie dans l’onglet Jouer.'}
               </p>
             </div>
           ) : (
@@ -240,7 +240,7 @@ export default function ClassementPage() {
                           <span className="board__record board__record--pique">{pique}</span>
                         ) : (
                           <span className="board__record">
-                            {line.sessionsCount} session{line.sessionsCount > 1 ? 's' : ''} ·{' '}
+                            {line.sessionsCount} partie{line.sessionsCount > 1 ? 's' : ''} ·{' '}
                             {ranking === 'record' ? `moy. ${line.average}` : `record ${line.best}`} ·
                             volée max {line.bestVolley}
                             {line.count180 > 0 && (
@@ -267,7 +267,7 @@ export default function ClassementPage() {
           {idle.length > 0 && lines.length > 0 && (
             <section>
               <h2 className="section-title">
-                {period === 'mois' ? 'Pas encore tiré ce mois-ci' : 'En attente d’une première session'}
+                {period === 'mois' ? 'Pas encore tiré ce mois-ci' : 'En attente d’une première partie'}
               </h2>
               <ul className="board">
                 {idle.map((player) => (

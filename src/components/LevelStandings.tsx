@@ -101,17 +101,23 @@ function StandingRow({ standing: s, rank, name }: { standing: Standing; rank: nu
         <PlayerAvatar name={name} leader={leader} />
         <span className="board__who">
           <span className="board__name">{name}</span>
-          <span className="board__record">
+          <span
+            className="board__record"
+            title={`Duels : ${s.wins} gagnés, ${s.draws} nuls, ${s.losses} perdus`}
+          >
             {rank === null
               ? `${s.games} partie${s.games > 1 ? 's' : ''} sur ${PROVISIONAL_GAMES} pour être classé`
-              : `${s.games} parties · duels ${s.wins} gagnés, ${s.draws} nuls, ${s.losses} perdus`}
+              : `${s.games} parties · ${s.wins} V · ${s.draws} N · ${s.losses} D`}
           </span>
         </span>
         <span className="board__score">
           <span className="board__points">{Math.round(s.rating)}</span>
           {delta && (
-            <span className={s.lastDelta > 0 ? 'board__sub level-delta level-delta--up' : 'board__sub level-delta level-delta--down'}>
-              {delta} à la dernière partie
+            <span
+              className={s.lastDelta > 0 ? 'board__sub level-delta level-delta--up' : 'board__sub level-delta level-delta--down'}
+              title="Variation à la dernière partie"
+            >
+              {delta}
             </span>
           )}
         </span>

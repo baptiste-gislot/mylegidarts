@@ -26,7 +26,7 @@ export function ScoreChart({ sessions }: ScoreChartProps) {
 
   return (
     <figure className="chart">
-      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Évolution des scores de session">
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Évolution des scores de partie">
         {/* repères discrets : ligne de base et niveau du record */}
         <line x1={PAD.left} y1={y(0)} x2={W - PAD.right} y2={y(0)} className="chart__grid" />
         <line x1={PAD.left} y1={y(max)} x2={W - PAD.right} y2={y(max)} className="chart__grid chart__grid--dashed" />

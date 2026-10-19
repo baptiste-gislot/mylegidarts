@@ -38,7 +38,7 @@ export default function RecordsPage() {
       {records.length === 0 ? (
         <div className="empty">
           <p className="empty__title">Aucun record pour l’instant</p>
-          <p>Les records tomberont dès la première session dans l’onglet Tirer.</p>
+          <p>Les records tomberont dès la première partie dans l’onglet Jouer.</p>
         </div>
       ) : (
         <ul className="records">

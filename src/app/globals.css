@@ -202,36 +202,32 @@ a {
 
 .section-title {
   font-family: var(--font-display-stack);
-  font-weight: 600;
-  font-size: 15px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--text-dim);
+  font-weight: 800;
+  font-size: 24px;
+  line-height: 1.1;
   margin-bottom: 10px;
 }
 
 .empty {
-  border: 1px dashed var(--line);
-  border-radius: var(--radius);
-  padding: 28px 20px;
-  text-align: center;
+  padding: 26px 22px;
+  background: var(--surface);
+  border-left: 4px solid var(--line);
   color: var(--text-dim);
 }
 
 .empty__title {
   font-family: var(--font-display-stack);
-  font-weight: 600;
-  font-size: 20px;
+  font-weight: 800;
+  font-size: 26px;
+  line-height: 1.1;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
   color: var(--text);
   margin-bottom: 6px;
 }
 
 .notice {
-  border-left: 3px solid var(--green);
+  border-left: 4px solid var(--green);
   background: var(--surface);
-  border-radius: 0 var(--radius) var(--radius) 0;
   padding: 10px 14px;
   color: var(--text);
 }
@@ -240,23 +236,27 @@ a {
   border-left-color: var(--red);
 }
 
+/* L'action principale prend le jaune « en jeu » ; le rouge reste au danger. */
 .button-primary {
   display: block;
   width: 100%;
   padding: 14px;
   border-radius: var(--radius);
-  background: var(--red);
-  color: #fff;
+  background: var(--gold);
+  color: var(--bg);
   font-family: var(--font-display-stack);
-  font-weight: 700;
-  font-size: 19px;
-  letter-spacing: 0.08em;
+  font-weight: 800;
+  font-size: 22px;
   text-transform: uppercase;
-  transition: background 120ms ease;
+  transition: filter 120ms ease-out;
+}
+
+.button-primary:not(:disabled):hover {
+  filter: brightness(1.08);
 }
 
 .button-primary:not(:disabled):active {
-  background: var(--red-deep);
+  filter: brightness(0.92);
 }
 
 .button-primary:disabled {
@@ -266,16 +266,24 @@ a {
 }
 
 .button-ghost {
-  padding: 6px 10px;
-  border-radius: 8px;
+  padding: 7px 12px;
+  border-radius: var(--radius);
   border: 1px solid var(--line);
   color: var(--text-dim);
-  font-size: 13px;
+  font-size: 14px;
+  transition:
+    color 120ms ease-out,
+    background-color 120ms ease-out;
 }
 
-.button-ghost:hover {
-  color: var(--red);
-  border-color: var(--red);
+.button-ghost:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--raised);
+}
+
+.button-ghost:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
 
 /* ---------- Avatars ---------- */
@@ -291,9 +299,8 @@ a {
   background: var(--raised);
   border: 1px solid var(--line);
   font-family: var(--font-display-stack);
-  font-weight: 600;
-  font-size: 16px;
-  letter-spacing: 0.02em;
+  font-weight: 800;
+  font-size: 18px;
 }
 
 /* Le badge du leader : un œil de cible. */
@@ -310,60 +317,50 @@ a {
 
 /* ---------- Classement ---------- */
 
+/* Des lignes de scoreboard : à plat, serrées, un liseré pour le rang. */
 .board {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 3px;
 }
 
 .board__row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 12px 14px;
+  border-left: 4px solid transparent;
+  padding: 12px 16px;
+  transition: background-color 120ms ease-out;
 }
 
-/* Le champion : bordure or, halo pulsant, tout est plus grand. */
+a.board__row:hover {
+  background: var(--raised);
+}
+
 .board__row--leader {
-  border: 2px solid var(--gold);
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--gold) 14%, var(--raised)), var(--surface));
-  padding-top: 20px;
-  padding-bottom: 20px;
-  margin: 4px 0 6px;
+  background: var(--raised);
+  border-left-color: var(--gold);
+  padding-top: 18px;
+  padding-bottom: 18px;
+  margin-bottom: 4px;
 }
 
-/* Les dauphins : liséré argent et bronze, sans halo. */
 .board__row--second {
-  border-color: color-mix(in srgb, #c9cdd4 55%, var(--line));
-  background: linear-gradient(180deg, color-mix(in srgb, #c9cdd4 6%, var(--surface)), var(--surface));
+  border-left-color: #c9cdd4;
 }
 
 .board__row--third {
-  border-color: color-mix(in srgb, #b87b4d 55%, var(--line));
-  background: linear-gradient(180deg, color-mix(in srgb, #b87b4d 6%, var(--surface)), var(--surface));
+  border-left-color: #c98d5e;
 }
 
-.board__row--second .board__points {
-  color: color-mix(in srgb, #d8dce2 80%, var(--text));
-}
-
-.board__row--third .board__points {
-  color: color-mix(in srgb, #c98d5e 80%, var(--text));
-}
-
-/* Le bonnet d'âne : liséré rouge, « champion » du plus petit score. */
 .board__row--flop {
-  border-color: color-mix(in srgb, var(--red) 55%, var(--line));
-  background: linear-gradient(180deg, color-mix(in srgb, var(--red) 9%, var(--surface)), var(--surface));
+  border-left-color: var(--red);
 }
 
 .board__row--flop .board__points {
-  color: color-mix(in srgb, var(--red) 75%, var(--text));
+  color: var(--red);
 }
 
 .board__record--pique {
@@ -375,13 +372,13 @@ a {
   width: 30px;
   text-align: center;
   font-family: var(--font-display-stack);
-  font-weight: 700;
-  font-size: 20px;
+  font-weight: 800;
+  font-size: 24px;
   color: var(--text-dim);
 }
 
 .board__row--leader .board__rank {
-  font-size: 26px;
+  font-size: 28px;
 }
 
 .board__who {
@@ -392,10 +389,23 @@ a {
 }
 
 .board__name {
-  font-weight: 600;
+  font-family: var(--font-display-stack);
+  font-weight: 700;
+  font-size: 21px;
+  line-height: 1.15;
+  text-transform: uppercase;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Une phrase (punchline) se lit mieux en casse normale qu'en capitales. */
+.board__name--quote {
+  font-family: var(--font-body-stack);
+  font-weight: 600;
+  font-size: 17px;
+  text-transform: none;
+  white-space: normal;
 }
 
 .board__record {
@@ -409,23 +419,19 @@ a {
 
 .board__points {
   font-family: var(--font-display-stack);
-  font-weight: 700;
-  font-size: 30px;
+  font-weight: 800;
+  font-size: 34px;
   line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
 
 .board__row--leader .board__points {
-  font-size: 44px;
+  font-size: 48px;
   color: var(--gold);
-  text-shadow: 0 0 18px color-mix(in srgb, var(--gold) 45%, transparent);
 }
 
 .board__row--leader .board__name {
-  font-family: var(--font-display-stack);
-  font-weight: 700;
-  font-size: 22px;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
+  font-size: 26px;
 }
 
 .board__sub {
@@ -494,22 +500,27 @@ a {
 .chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
 }
 
 .chip {
   padding: 9px 16px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
+  border-radius: var(--radius);
   background: var(--surface);
   color: var(--text);
   font-weight: 500;
-  transition: border-color 120ms ease, background 120ms ease;
+  transition: background-color 120ms ease-out;
 }
 
-.chip--on {
-  border-color: var(--green);
-  background: var(--green-deep);
+.chip:hover {
+  background: var(--raised);
+}
+
+.chip--on,
+.chip--on:hover {
+  background: var(--gold);
+  color: var(--bg);
+  font-weight: 600;
 }
 
 /* ---------- Scorer ---------- */
@@ -1226,41 +1237,50 @@ a {
 .recap {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 3px;
 }
 
 .recap__row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 14px;
+  border-left: 4px solid transparent;
+  padding: 14px 16px;
 }
 
+/* Le vainqueur et les records passent en tête, liseré jaune. */
 .recap__row--record {
-  border-color: var(--gold);
+  background: var(--raised);
+  border-left-color: var(--gold);
 }
 
 .recap__name {
   flex: 1;
-  font-weight: 600;
+  font-family: var(--font-display-stack);
+  font-weight: 700;
+  font-size: 24px;
+  text-transform: uppercase;
 }
 
 .recap__badge {
-  font-family: var(--font-display-stack);
+  padding: 3px 8px;
+  background: var(--gold);
+  color: var(--bg);
+  font-size: 12px;
   font-weight: 600;
-  font-size: 13px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--gold);
 }
 
 .recap__total {
   font-family: var(--font-display-stack);
-  font-weight: 700;
-  font-size: 32px;
+  font-weight: 800;
+  font-size: 40px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.recap__row--record .recap__total {
+  color: var(--gold);
 }
 
 /* ---------- Historique ---------- */
@@ -1269,14 +1289,12 @@ a {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .history__item {
   background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 12px 14px;
+  padding: 12px 16px;
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 4px 12px;
@@ -1308,9 +1326,8 @@ a {
 
 .history__darts {
   font-family: var(--font-display-stack);
-  font-weight: 500;
-  font-size: 14px;
-  letter-spacing: 0.04em;
+  font-weight: 600;
+  font-size: 16px;
   color: var(--text-dim);
 }
 
@@ -1352,8 +1369,7 @@ a {
 }
 
 .setup-notice {
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-left: 4px solid var(--gold);
   background: var(--surface);
   padding: 20px;
   display: flex;
@@ -1403,39 +1419,37 @@ a {
 
 .profil-head__name {
   font-family: var(--font-display-stack);
-  font-weight: 700;
-  font-size: 34px;
+  font-weight: 800;
+  font-size: clamp(38px, 7vw, 56px);
   text-transform: uppercase;
-  line-height: 1;
+  line-height: 0.95;
 }
 
 .history__player--gold {
   color: var(--gold);
-  font-family: var(--font-display-stack);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  font-size: 13px;
+  font-size: 15px;
 }
 
+/* Les chiffres du joueur, façon incrustation de statistiques. */
 .tiles {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  gap: 3px;
 }
 
 .tile {
   background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 12px 8px 10px;
+  border-top: 3px solid transparent;
+  padding: 12px 12px 10px;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   gap: 2px;
 }
 
 .tile--hero {
-  border-color: var(--gold);
+  background: var(--raised);
+  border-top-color: var(--gold);
 }
 
 .tile--hero .tile__value {
@@ -1448,16 +1462,20 @@ a {
 
 .tile__value {
   font-family: var(--font-display-stack);
-  font-weight: 700;
-  font-size: 28px;
+  font-weight: 800;
+  font-size: 36px;
   line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
 
 .tile__label {
-  font-size: 12px;
+  order: -1;
+  font-size: 13px;
   color: var(--text-dim);
+}
+
+.tile__label::first-letter {
   text-transform: uppercase;
-  letter-spacing: 0.08em;
 }
 
 .tile__sub {
@@ -1479,13 +1497,12 @@ a {
 .badges {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  gap: 3px;
 }
 
 .badge {
   background: var(--surface);
-  border: 1px solid var(--gold);
-  border-radius: var(--radius);
+  border-top: 3px solid var(--gold);
   padding: 12px 8px 10px;
   display: flex;
   flex-direction: column;
@@ -1495,7 +1512,7 @@ a {
 }
 
 .badge--locked {
-  border-color: var(--line);
+  border-top-color: transparent;
   opacity: 0.45;
   filter: grayscale(1);
 }
@@ -1507,8 +1524,8 @@ a {
 
 .badge__name {
   font-family: var(--font-display-stack);
-  font-weight: 600;
-  font-size: 13px;
+  font-weight: 700;
+  font-size: 16px;
 }
 
 .badge__desc {
@@ -1520,8 +1537,6 @@ a {
 
 .chart {
   background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
   padding: 12px 12px 8px;
 }
 
@@ -1707,28 +1722,6 @@ a {
   color: var(--text-dim);
 }
 
-/* ---------- Néon du leader ---------- */
-
-.board__row--leader {
-  animation: neon 2.4s ease-in-out infinite;
-}
-
-@keyframes neon {
-  0%,
-  100% {
-    box-shadow:
-      0 0 10px color-mix(in srgb, var(--gold) 35%, transparent),
-      0 0 30px color-mix(in srgb, var(--gold) 12%, transparent),
-      inset 0 0 14px color-mix(in srgb, var(--gold) 8%, transparent);
-  }
-  50% {
-    box-shadow:
-      0 0 22px color-mix(in srgb, var(--gold) 70%, transparent),
-      0 0 52px color-mix(in srgb, var(--gold) 30%, transparent),
-      inset 0 0 20px color-mix(in srgb, var(--gold) 16%, transparent);
-  }
-}
-
 /* ---------- Surnoms ---------- */
 
 .board__nickname {
@@ -1780,9 +1773,14 @@ a {
 .match-card {
   display: block;
   background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 12px 14px;
+  border-left: 4px solid transparent;
+  padding: 12px 16px;
+  transition: background-color 120ms ease-out;
+}
+
+.match-card:hover {
+  background: var(--raised);
+  border-left-color: var(--gold);
 }
 
 .match-card__head {
@@ -1795,10 +1793,8 @@ a {
 
 .match-card__type {
   font-family: var(--font-display-stack);
-  font-weight: 600;
-  font-size: 14px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  font-weight: 700;
+  font-size: 18px;
   color: var(--text-dim);
 }
 
@@ -1816,15 +1812,22 @@ a {
   gap: 10px;
 }
 
+.match-card__player {
+  font-family: var(--font-display-stack);
+  font-weight: 700;
+  font-size: 19px;
+  text-transform: uppercase;
+}
+
 .match-card__player--winner {
   color: var(--gold);
-  font-weight: 600;
 }
 
 .match-card__total {
   font-family: var(--font-display-stack);
-  font-weight: 700;
-  font-size: 22px;
+  font-weight: 800;
+  font-size: 24px;
+  font-variant-numeric: tabular-nums;
 }
 
 .match-card .history__actions {
@@ -1840,13 +1843,12 @@ a {
 
 .match-detail {
   background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-left: 4px solid transparent;
   overflow: hidden;
 }
 
 .match-detail--winner {
-  border-color: var(--gold);
+  border-left-color: var(--gold);
 }
 
 .match-detail__head {
@@ -1859,13 +1861,21 @@ a {
 
 .match-detail__name {
   flex: 1;
-  font-weight: 600;
+  font-family: var(--font-display-stack);
+  font-weight: 700;
+  font-size: 24px;
+  text-transform: uppercase;
 }
 
 .match-detail__total {
   font-family: var(--font-display-stack);
-  font-weight: 700;
-  font-size: 30px;
+  font-weight: 800;
+  font-size: 34px;
+  font-variant-numeric: tabular-nums;
+}
+
+.match-detail--winner .match-detail__total {
+  color: var(--gold);
 }
 
 .match-detail__volleys {
@@ -1883,22 +1893,22 @@ a {
 }
 
 .volley-line__label {
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  font-size: 13px;
   color: var(--text-dim);
 }
 
 .volley-line__darts {
   font-family: var(--font-display-stack);
-  font-weight: 500;
-  letter-spacing: 0.05em;
+  font-weight: 700;
+  font-size: 18px;
+  word-spacing: 0.3em;
 }
 
 .volley-line__total {
   font-family: var(--font-display-stack);
-  font-weight: 700;
-  font-size: 18px;
+  font-weight: 800;
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ---------- Palmarès ---------- */
@@ -1916,9 +1926,7 @@ a {
   gap: 12px;
   align-items: baseline;
   background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 10px 14px;
+  padding: 10px 16px;
 }
 
 .hall__month {
@@ -1928,13 +1936,16 @@ a {
 }
 
 .hall__name {
-  font-weight: 600;
+  font-family: var(--font-display-stack);
+  font-weight: 700;
+  font-size: 19px;
+  text-transform: uppercase;
 }
 
 .hall__score {
   font-family: var(--font-display-stack);
-  font-weight: 700;
-  font-size: 20px;
+  font-weight: 800;
+  font-size: 24px;
   color: var(--gold);
 }
 
@@ -1955,21 +1966,20 @@ a {
 }
 
 .podium__eyebrow {
-  font-family: var(--font-display-stack);
-  font-weight: 500;
-  font-size: 14px;
-  letter-spacing: 0.28em;
-  text-transform: uppercase;
+  font-size: 16px;
   color: var(--text-dim);
 }
 
 .podium__title {
+  padding: 6px calc(var(--bevel) * 2 + 10px) 4px 16px;
+  background: var(--gold);
+  color: var(--bg);
   font-family: var(--font-display-stack);
-  font-weight: 700;
-  font-size: 34px;
+  font-weight: 800;
+  font-size: 40px;
   text-transform: uppercase;
-  line-height: 1;
-  color: var(--gold);
+  line-height: 1.05;
+  clip-path: polygon(0 0, 100% 0, calc(100% - var(--bevel)) 100%, 0 100%);
 }
 
 .podium__steps {
@@ -1993,7 +2003,10 @@ a {
 }
 
 .podium__name {
-  font-weight: 600;
+  font-family: var(--font-display-stack);
+  font-weight: 700;
+  font-size: 20px;
+  text-transform: uppercase;
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2002,22 +2015,21 @@ a {
 
 .podium__score {
   font-family: var(--font-display-stack);
-  font-weight: 700;
-  font-size: 24px;
+  font-weight: 800;
+  font-size: 28px;
   color: var(--gold);
 }
 
 .podium__block {
   width: 100%;
-  border-radius: 8px 8px 0 0;
-  background: linear-gradient(180deg, var(--raised), var(--surface));
-  border: 1px solid var(--line);
-  border-bottom: none;
+  background: var(--surface);
+  border-top: 4px solid var(--line);
 }
 
 .podium__step--1 .podium__block {
   height: 110px;
-  border-color: var(--gold);
+  background: var(--raised);
+  border-top-color: var(--gold);
 }
 
 .podium__step--2 .podium__block {
@@ -2050,10 +2062,8 @@ a {
 .toast {
   max-width: 480px;
   padding: 11px 18px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--raised) 92%, black);
-  border: 1px solid var(--line);
-  border-left: 3px solid var(--text-dim);
+  background: var(--raised);
+  border-left: 4px solid var(--gold);
   color: var(--text);
   font-size: 14px;
   font-weight: 500;
@@ -2105,10 +2115,14 @@ a {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 14px;
-  border: 1px solid var(--red);
-  border-radius: var(--radius);
-  background: color-mix(in srgb, var(--red) 12%, var(--surface));
+  padding: 12px 16px;
+  border-left: 4px solid var(--red);
+  background: var(--surface);
+  transition: background-color 120ms ease-out;
+}
+
+.live-banner:hover {
+  background: var(--raised);
 }
 
 .live-banner__text {
@@ -2121,17 +2135,16 @@ a {
 }
 
 .live-banner__cta {
+  padding: 3px 10px 1px;
+  background: var(--red);
+  color: #fff;
   font-family: var(--font-display-stack);
-  font-weight: 700;
-  font-size: 15px;
-  letter-spacing: 0.1em;
+  font-weight: 800;
+  font-size: 17px;
   text-transform: uppercase;
-  color: var(--red);
 }
 
 .live-card {
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
   background: var(--surface);
   overflow: hidden;
 }
@@ -2146,10 +2159,8 @@ a {
   align-items: center;
   gap: 8px;
   font-family: var(--font-display-stack);
-  font-weight: 600;
-  font-size: 14px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  font-weight: 700;
+  font-size: 18px;
   color: var(--text-dim);
 }
 
@@ -2168,8 +2179,13 @@ a {
   border-top: 1px solid var(--line);
 }
 
+.live-row {
+  border-left: 4px solid transparent;
+}
+
 .live-row--active {
-  background: color-mix(in srgb, var(--gold) 9%, transparent);
+  background: var(--raised);
+  border-left-color: var(--gold);
 }
 
 .live-row__who {
@@ -2241,7 +2257,7 @@ a {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 3px;
 }
 
 .duels__row {
@@ -2249,8 +2265,6 @@ a {
   align-items: center;
   gap: 12px;
   background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
   padding: 10px 14px;
 }
 
@@ -2288,7 +2302,7 @@ a {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 3px;
 }
 
 .records__row {
@@ -2296,8 +2310,6 @@ a {
   align-items: center;
   gap: 12px;
   background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
   padding: 10px 14px;
 }
 
@@ -2378,8 +2390,6 @@ a {
 
 .versus-duel {
   background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
   padding: 12px 14px;
   text-align: center;
 }
@@ -2401,7 +2411,7 @@ a {
 .versus {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
 
 .versus__row {
@@ -2410,16 +2420,12 @@ a {
   align-items: center;
   gap: 12px;
   background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
   padding: 8px 14px;
 }
 
 .versus__label {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-dim);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
   text-align: center;
 }
 
@@ -2485,8 +2491,7 @@ a {
   gap: 10px;
   padding: 26px 20px;
   background: var(--surface);
-  border: 1px solid var(--gold);
-  border-radius: var(--radius);
+  border-left: 4px solid var(--gold);
   text-align: center;
 }
 
@@ -2577,8 +2582,7 @@ a {
   gap: 10px;
   margin-bottom: 16px;
   padding: 10px 12px;
-  border: 1px solid var(--gold);
-  border-radius: var(--radius);
+  border-left: 4px solid var(--gold);
   background: color-mix(in srgb, var(--gold) 10%, var(--surface));
 }
 
@@ -2596,13 +2600,12 @@ a {
 .install-banner__cta {
   flex: none;
   padding: 8px 14px;
-  border-radius: 999px;
+  border-radius: var(--radius);
   background: var(--gold);
   color: var(--bg);
   font-family: var(--font-display-stack);
   font-weight: 700;
   font-size: 14px;
-  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
@@ -2614,6 +2617,110 @@ a {
 }
 
 /* ---------- Écrans larges (PC) ---------- */
+
+/* ---------- Dialogues ---------- */
+
+/* Une incrustation au centre de l'écran : titre en bandeau, actions à droite. */
+.ask {
+  margin: auto;
+  width: min(460px, calc(100vw - 32px));
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text);
+}
+
+.ask::backdrop {
+  background: color-mix(in srgb, #03061a 72%, transparent);
+  backdrop-filter: blur(3px);
+}
+
+.ask__box {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 0 22px 20px;
+  background: var(--surface);
+  border-top: 4px solid var(--gold);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
+}
+
+.ask__title {
+  align-self: flex-start;
+  margin-left: -22px;
+  padding: 8px calc(var(--bevel) * 2 + 10px) 6px 22px;
+  background: var(--gold);
+  color: var(--bg);
+  font-family: var(--font-display-stack);
+  font-weight: 800;
+  font-size: 24px;
+  line-height: 1.1;
+  text-transform: uppercase;
+  clip-path: polygon(0 0, 100% 0, calc(100% - var(--bevel)) 100%, 0 100%);
+}
+
+.ask__body {
+  color: var(--text-dim);
+}
+
+.ask__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--text-dim);
+}
+
+.ask__field input {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 16px;
+}
+
+.ask__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.ask__confirm {
+  padding: 10px 18px;
+  border-radius: var(--radius);
+  background: var(--gold);
+  color: var(--bg);
+  font-family: var(--font-display-stack);
+  font-weight: 800;
+  font-size: 18px;
+  text-transform: uppercase;
+}
+
+.ask__confirm--danger {
+  background: var(--red);
+  color: #fff;
+}
+
+.ask__confirm:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ask[open] .ask__box {
+    animation: ask-in 160ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+}
+
+@keyframes ask-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
 
 /* ---------- Écran d'attente ---------- */
 

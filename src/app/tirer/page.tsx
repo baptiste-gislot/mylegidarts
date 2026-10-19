@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { DartInput } from '@/components/DartInput'
+import { useDialog } from '@/components/Dialog'
 import { TurnGameScorer } from '@/components/TurnGameScorer'
 import { SetupNotice } from '@/components/SetupNotice'
 import {
@@ -143,6 +144,7 @@ function loadStoredMatch(): StoredMatch | null {
 export default function TirerPage() {
   const router = useRouter()
   const toast = useToast()
+  const ask = useDialog()
   const { players, stats, punchlines, loading, error, configured, saveSessions } =
     useLeagueContext()
   const { publish, stop: stopLive } = useLiveMatchPublisher()
@@ -912,6 +914,36 @@ export default function TirerPage() {
     setTurnJournal([])
   }
 
+  /**
+   * Abandon avec garde-fou : rien à perdre tant que rien n'est saisi ; une
+   * partie terminée mais pas enregistrée mérite un avertissement appuyé.
+   */
+  async function abandon() {
+    const anything =
+      thrownCount > 0 || journal.length > 0 || fletJournal.length > 0 || turnJournal.length > 0
+    if (anything) {
+      const answer = await ask(
+        finished
+          ? {
+              title: 'Abandonner sans enregistrer ?',
+              body: 'La partie est terminée mais pas encore enregistrée : ses scores seront perdus.',
+              confirmLabel: 'Abandonner la partie',
+              cancelLabel: 'Revenir',
+              danger: true,
+            }
+          : {
+              title: 'Abandonner la partie en cours ?',
+              body: 'Les fléchettes déjà saisies seront perdues.',
+              confirmLabel: 'Abandonner la partie',
+              cancelLabel: 'Continuer à jouer',
+              danger: true,
+            },
+      )
+      if (!answer) return
+    }
+    reset()
+  }
+
   async function save() {
     // Verrou anti double-clic : une partie ne s'enregistre qu'une fois.
     if (saving || savedRef.current) return
@@ -1072,7 +1104,7 @@ export default function TirerPage() {
                 className={powersEnabled ? 'chip chip--on' : 'chip'}
                 onClick={() => setPowersEnabled((on) => !on)}
               >
-                🃏 Pouvoirs
+                🃏 Variante avec pouvoirs
               </button>
             </div>
           )}
@@ -1220,8 +1252,8 @@ export default function TirerPage() {
               : gameMode === '301'
                 ? 'Fin de partie — 301'
                 : powersActive
-                  ? 'Fin de session — Pouvoirs'
-                  : 'Fin de session'}
+                  ? 'Fin de partie — Pouvoirs'
+                  : 'Fin de partie'}
           </h2>
           <div className="recap">
             {recap.map((line) => (
@@ -1266,8 +1298,8 @@ export default function TirerPage() {
         <button type="button" className="button-primary" disabled={saving} onClick={() => void save()}>
           {saving ? 'Enregistrement…' : 'Enregistrer les scores'}
         </button>
-        <button type="button" className="button-ghost" onClick={reset}>
-          Abandonner la session
+        <button type="button" className="button-ghost" onClick={() => void abandon()}>
+          Abandonner la partie
         </button>
         {flashOverlay}
       </div>
@@ -1286,7 +1318,7 @@ export default function TirerPage() {
           onThrow={throwDart}
           onUndo={undo}
           undoDisabled={turnJournal.length === 0}
-          onAbandon={reset}
+          onAbandon={() => void abandon()}
         />
         {flashOverlay}
       </>
@@ -1303,7 +1335,7 @@ export default function TirerPage() {
             <p className="scorer__volley">Flétanque · Mène {replay.menes.length + 1}</p>
             <p className="scorer__thrower">{SIDE_LABEL[replay.opener]} ouvre</p>
           </div>
-          <button type="button" className="button-ghost" onClick={reset}>
+          <button type="button" className="button-ghost" onClick={() => void abandon()}>
             Abandonner
           </button>
         </div>
@@ -1408,7 +1440,7 @@ export default function TirerPage() {
             {pendingSlot !== null && <em> relance !</em>}
           </p>
         </div>
-        <button type="button" className="button-ghost" onClick={reset}>
+        <button type="button" className="button-ghost" onClick={() => void abandon()}>
           Abandonner
         </button>
       </div>

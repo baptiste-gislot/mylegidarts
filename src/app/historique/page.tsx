@@ -3,7 +3,13 @@
 import Link from 'next/link'
 import { SetupNotice } from '@/components/SetupNotice'
 import { useToast } from '@/components/Toaster'
-import { askDeleteCode, forgetDeleteCode, rememberDeleteCode } from '@/lib/deleteCode'
+import { useDialog } from '@/components/Dialog'
+import {
+  DELETE_CODE_INPUT,
+  forgetDeleteCode,
+  rememberDeleteCode,
+  storedDeleteCode,
+} from '@/lib/deleteCode'
 import { SIDE_LABEL, type Side } from '@/lib/fletanque'
 import { TURN_GAMES, isTurnGame } from '@/lib/gameCatalog'
 import { groupByMatch } from '@/lib/matches'
@@ -20,6 +26,7 @@ const dateFormat = new Intl.DateTimeFormat('fr-FR', {
 
 export default function HistoriquePage() {
   const toast = useToast()
+  const ask = useDialog()
   const { players, configured, removeMatch } = useLeagueContext()
   const { rows, hasMore, error, loadMore, reload } = useSessionHistory()
 
@@ -127,13 +134,19 @@ export default function HistoriquePage() {
                   <button
                     type="button"
                     className="button-ghost"
-                    onClick={(e) => {
+                    onClick={async (e) => {
                       e.preventDefault()
                       e.stopPropagation()
-                      const label = group.sessions.length > 1 ? 'cette partie' : 'cette session'
-                      if (!window.confirm(`Supprimer ${label} ? Le classement sera recalculé.`)) return
-                      const code = askDeleteCode()
-                      if (code === null) return
+                      const stored = storedDeleteCode()
+                      const answer = await ask({
+                        title: 'Supprimer cette partie ?',
+                        body: 'Elle disparaît de l’historique et les classements sont recalculés.',
+                        confirmLabel: 'Supprimer la partie',
+                        danger: true,
+                        input: stored ? undefined : DELETE_CODE_INPUT,
+                      })
+                      if (!answer) return
+                      const code = stored ?? answer.value.trim()
                       void removeMatch(group.sessions.map((s) => s.id), code).then((err) => {
                         if (err) {
                           forgetDeleteCode()
