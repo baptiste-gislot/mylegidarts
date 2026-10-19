@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { LevelStandings } from '@/components/LevelStandings'
 import { MonthPodium } from '@/components/MonthPodium'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
 import { SetupNotice } from '@/components/SetupNotice'
@@ -10,6 +11,7 @@ import { useLeagueContext } from '@/lib/LeagueProvider'
 import { flopLine } from '@/lib/trashTalk'
 import { monthKey, type PlayerMonthStats } from '@/lib/useLeague'
 
+type View = 'niveau' | 'defi'
 type Period = 'mois' | 'toujours'
 type Ranking = 'record' | 'moyenne' | 'flop'
 
@@ -34,6 +36,7 @@ function monthLabel(key: string): string {
 export default function ClassementPage() {
   const { players, stats, punchlines, loading, error, configured } = useLeagueContext()
   const liveMatches = useLiveMatches()
+  const [view, setView] = useState<View>('niveau')
   const [period, setPeriod] = useState<Period>('mois')
   const [ranking, setRanking] = useState<Ranking>('record')
 
@@ -112,164 +115,192 @@ export default function ClassementPage() {
         </Link>
       )}
 
-      <div className="chips" role="radiogroup" aria-label="Période du classement">
+      {/* Deux classements : le niveau de la saison, et le défi du mois au score. */}
+      <div className="segmented" role="radiogroup" aria-label="Classement">
         <button
           type="button"
           role="radio"
-          aria-checked={period === 'mois'}
-          className={period === 'mois' ? 'chip chip--on' : 'chip'}
-          onClick={() => setPeriod('mois')}
+          aria-checked={view === 'niveau'}
+          className={view === 'niveau' ? 'segmented__option segmented__option--on' : 'segmented__option'}
+          onClick={() => setView('niveau')}
         >
-          {monthLabel(currentMonth)}
+          Niveau
         </button>
         <button
           type="button"
           role="radio"
-          aria-checked={period === 'toujours'}
-          className={period === 'toujours' ? 'chip chip--on' : 'chip'}
-          onClick={() => setPeriod('toujours')}
+          aria-checked={view === 'defi'}
+          className={view === 'defi' ? 'segmented__option segmented__option--on' : 'segmented__option'}
+          onClick={() => setView('defi')}
         >
-          Depuis toujours
-        </button>
-      </div>
-
-      <div className="chips" role="radiogroup" aria-label="Critère de classement">
-        <button
-          type="button"
-          role="radio"
-          aria-checked={ranking === 'record'}
-          className={ranking === 'record' ? 'chip chip--on' : 'chip'}
-          onClick={() => setRanking('record')}
-        >
-          Meilleur score
-        </button>
-        <button
-          type="button"
-          role="radio"
-          aria-checked={ranking === 'moyenne'}
-          className={ranking === 'moyenne' ? 'chip chip--on' : 'chip'}
-          onClick={() => setRanking('moyenne')}
-        >
-          Moyenne / partie
-        </button>
-        <button
-          type="button"
-          role="radio"
-          aria-checked={ranking === 'flop'}
-          className={ranking === 'flop' ? 'chip chip--on' : 'chip'}
-          onClick={() => setRanking('flop')}
-        >
-          Plus petit score
+          Défi du mois
         </button>
       </div>
 
-      {lines.length === 0 ? (
-        <div className="empty">
-          <p className="empty__title">
-            {period === 'mois' ? 'Aucune session ce mois-ci' : 'Aucune session jouée'}
-          </p>
-          <p>
-            {period === 'mois'
-              ? 'Le mois repart de zéro : premier arrivé à la ligne de tir, premier au tableau.'
-              : 'Le classement apparaîtra après la première session dans l’onglet Tirer.'}
-          </p>
-        </div>
+      {view === 'niveau' ? (
+        <LevelStandings players={players} />
       ) : (
-        <ol className="board">
-          {lines.map((line, index) => {
-            // Sans pique de tableau dans le répertoire, la rangée flop retombe
-            // sur les détails standard plutôt qu'une ligne vide.
-            const pique =
-              ranking === 'flop' ? flopLine(line.playerId + line.worst, punchlines) : null
-            return (
-              <li key={line.playerId}>
-                <Link
-                  href={`/profil/${line.playerId}`}
-                  className={`board__row${
-                    ranking === 'flop'
-                      ? index === 0
-                        ? ' board__row--flop'
-                        : ''
-                      : index === 0
-                        ? ' board__row--leader'
-                        : index === 1
-                          ? ' board__row--second'
-                          : index === 2
-                            ? ' board__row--third'
+        <>
+          <div className="chips" role="radiogroup" aria-label="Période du classement">
+            <button
+              type="button"
+              role="radio"
+              aria-checked={period === 'mois'}
+              className={period === 'mois' ? 'chip chip--on' : 'chip'}
+              onClick={() => setPeriod('mois')}
+            >
+              {monthLabel(currentMonth)}
+            </button>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={period === 'toujours'}
+              className={period === 'toujours' ? 'chip chip--on' : 'chip'}
+              onClick={() => setPeriod('toujours')}
+            >
+              Depuis toujours
+            </button>
+          </div>
+
+          <div className="chips" role="radiogroup" aria-label="Critère de classement">
+            <button
+              type="button"
+              role="radio"
+              aria-checked={ranking === 'record'}
+              className={ranking === 'record' ? 'chip chip--on' : 'chip'}
+              onClick={() => setRanking('record')}
+            >
+              Meilleur score
+            </button>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={ranking === 'moyenne'}
+              className={ranking === 'moyenne' ? 'chip chip--on' : 'chip'}
+              onClick={() => setRanking('moyenne')}
+            >
+              Moyenne / partie
+            </button>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={ranking === 'flop'}
+              className={ranking === 'flop' ? 'chip chip--on' : 'chip'}
+              onClick={() => setRanking('flop')}
+            >
+              Plus petit score
+            </button>
+          </div>
+
+          {lines.length === 0 ? (
+            <div className="empty">
+              <p className="empty__title">
+                {period === 'mois' ? 'Aucune session ce mois-ci' : 'Aucune session jouée'}
+              </p>
+              <p>
+                {period === 'mois'
+                  ? 'Le mois repart de zéro : premier arrivé à la ligne de tir, premier au tableau.'
+                  : 'Le classement apparaîtra après la première session dans l’onglet Tirer.'}
+              </p>
+            </div>
+          ) : (
+            <ol className="board">
+              {lines.map((line, index) => {
+                // Sans pique de tableau dans le répertoire, la rangée flop retombe
+                // sur les détails standard plutôt qu'une ligne vide.
+                const pique =
+                  ranking === 'flop' ? flopLine(line.playerId + line.worst, punchlines) : null
+                return (
+                  <li key={line.playerId}>
+                    <Link
+                      href={`/profil/${line.playerId}`}
+                      className={`board__row${
+                        ranking === 'flop'
+                          ? index === 0
+                            ? ' board__row--flop'
                             : ''
-                  }`}
-                >
-                  <span className="board__rank">
-                    {index < 3
-                      ? (ranking === 'flop' ? ['🤡', '🫣', '😬'] : ['🥇', '🥈', '🥉'])[index]
-                      : index + 1}
-                  </span>
-                  <PlayerAvatar name={line.name} leader={index === 0 && ranking !== 'flop'} />
-                  <span className="board__who">
-                    <span className="board__name">{line.name}</span>
-                    {pique !== null ? (
-                      <span className="board__record board__record--pique">{pique}</span>
-                    ) : (
-                      <span className="board__record">
-                        {line.sessionsCount} session{line.sessionsCount > 1 ? 's' : ''} ·{' '}
-                        {ranking === 'record' ? `moy. ${line.average}` : `record ${line.best}`} ·
-                        volée max {line.bestVolley}
-                        {line.count180 > 0 && (
-                          <em className="board__180"> · {line.count180}× 180</em>
+                          : index === 0
+                            ? ' board__row--leader'
+                            : index === 1
+                              ? ' board__row--second'
+                              : index === 2
+                                ? ' board__row--third'
+                                : ''
+                      }`}
+                    >
+                      <span className="board__rank">
+                        {index < 3
+                          ? (ranking === 'flop' ? ['🤡', '🫣', '😬'] : ['🥇', '🥈', '🥉'])[index]
+                          : index + 1}
+                      </span>
+                      <PlayerAvatar name={line.name} leader={index === 0 && ranking !== 'flop'} />
+                      <span className="board__who">
+                        <span className="board__name">{line.name}</span>
+                        {pique !== null ? (
+                          <span className="board__record board__record--pique">{pique}</span>
+                        ) : (
+                          <span className="board__record">
+                            {line.sessionsCount} session{line.sessionsCount > 1 ? 's' : ''} ·{' '}
+                            {ranking === 'record' ? `moy. ${line.average}` : `record ${line.best}`} ·
+                            volée max {line.bestVolley}
+                            {line.count180 > 0 && (
+                              <em className="board__180"> · {line.count180}× 180</em>
+                            )}
+                          </span>
                         )}
                       </span>
-                    )}
-                  </span>
-                  <span className="board__score">
-                    <span className="board__points">
-                      {ranking === 'record' ? line.best : ranking === 'moyenne' ? line.average : line.worst}
-                    </span>
-                    <span className="board__sub">
-                      {ranking === 'record' ? 'record' : ranking === 'moyenne' ? 'moyenne' : 'pire score'}
-                    </span>
-                  </span>
-                </Link>
-              </li>
-            )
-          })}
-        </ol>
-      )}
+                      <span className="board__score">
+                        <span className="board__points">
+                          {ranking === 'record' ? line.best : ranking === 'moyenne' ? line.average : line.worst}
+                        </span>
+                        <span className="board__sub">
+                          {ranking === 'record' ? 'record' : ranking === 'moyenne' ? 'moyenne' : 'pire score'}
+                        </span>
+                      </span>
+                    </Link>
+                  </li>
+                )
+              })}
+            </ol>
+          )}
 
-      {idle.length > 0 && lines.length > 0 && (
-        <section>
-          <h2 className="section-title">
-            {period === 'mois' ? 'Pas encore tiré ce mois-ci' : 'En attente d’une première session'}
-          </h2>
-          <ul className="board">
-            {idle.map((player) => (
-              <li key={player.id}>
-                <Link href={`/profil/${player.id}`} className="board__row">
-                  <span className="board__rank">–</span>
-                  <PlayerAvatar name={player.name} />
-                  <span className="board__who">
-                    <span className="board__name">{player.name}</span>
-                    <span className="board__record">non classé</span>
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+          {idle.length > 0 && lines.length > 0 && (
+            <section>
+              <h2 className="section-title">
+                {period === 'mois' ? 'Pas encore tiré ce mois-ci' : 'En attente d’une première session'}
+              </h2>
+              <ul className="board">
+                {idle.map((player) => (
+                  <li key={player.id}>
+                    <Link href={`/profil/${player.id}`} className="board__row">
+                      <span className="board__rank">–</span>
+                      <PlayerAvatar name={player.name} />
+                      <span className="board__who">
+                        <span className="board__name">{player.name}</span>
+                        <span className="board__record">non classé</span>
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
-      {period === 'toujours' && hallOfFame.length > 0 && (
-        <section>
-          <h2 className="section-title">Palmarès des mois</h2>
-          <ul className="hall">
-            {hallOfFame.map((entry) => (
-              <li key={entry.label} className="hall__row">
-                <span className="hall__month">{entry.label}</span>
-                <span className="hall__name">🏆 {entry.name}</span>
-                <span className="hall__score">{entry.best}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
+          {period === 'toujours' && hallOfFame.length > 0 && (
+            <section>
+              <h2 className="section-title">Palmarès des mois</h2>
+              <ul className="hall">
+                {hallOfFame.map((entry) => (
+                  <li key={entry.label} className="hall__row">
+                    <span className="hall__month">{entry.label}</span>
+                    <span className="hall__name">🏆 {entry.name}</span>
+                    <span className="hall__score">{entry.best}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+        </>
       )}
 
       <MonthPodium players={players} stats={stats} />

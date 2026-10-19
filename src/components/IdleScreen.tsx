@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { PlayerAvatar } from './PlayerAvatar'
 import { useLeagueContext } from '@/lib/LeagueProvider'
+import { computeStandings, seasonLabel, seasonOf } from '@/lib/elo'
 import { hasMatchInProgress } from '@/lib/matchInProgress'
 import { computeRecords } from '@/lib/records'
 import { monthKey, type PlayerRow } from '@/lib/useLeague'
@@ -58,7 +59,7 @@ export function IdleWatcher() {
   return idle ? <IdleScreen /> : null
 }
 
-type Slide = 'defi' | 'records' | 'joueur' | 'appel'
+type Slide = 'niveau' | 'defi' | 'records' | 'joueur' | 'appel'
 
 function IdleScreen() {
   const { players, stats } = useLeagueContext()
@@ -90,6 +91,9 @@ function IdleScreen() {
     .sort((a, b) => b.best_total - a.best_total || a.sessions_count - b.sessions_count)
   const leader = month[0]
 
+  const season = seasonOf(now.toISOString())
+  const levels = rows ? computeStandings(rows, season).filter((s) => !s.provisional).slice(0, 5) : []
+
   const records = rows ? computeRecords(rows, stats).slice(0, 4) : []
   const recent180 = rows
     ? rows
@@ -103,6 +107,7 @@ function IdleScreen() {
     contenders[(seed + Math.floor(step / 4)) % Math.max(1, contenders.length)]
 
   const slides: Slide[] = [
+    ...(levels.length > 0 ? (['niveau'] as const) : []),
     ...(month.length > 0 ? (['defi'] as const) : []),
     ...(records.length > 0 ? (['records'] as const) : []),
     ...(featured ? (['joueur'] as const) : []),
@@ -124,6 +129,25 @@ function IdleScreen() {
       </header>
 
       <div key={step} className="attente__stage">
+        {slide === 'niveau' && (
+          <>
+            <h2 className="attente__title">Niveau · {seasonLabel(season).split(' · ')[0]}</h2>
+            <ol className="attente__board">
+              {levels.map((standing, rank) => (
+                <li
+                  key={standing.playerId}
+                  className={rank === 0 ? 'attente__row attente__row--leader' : 'attente__row'}
+                >
+                  <span className="attente__rank">{rank + 1}</span>
+                  <PlayerAvatar name={name(standing.playerId)} leader={rank === 0} />
+                  <span className="attente__name">{name(standing.playerId)}</span>
+                  <span className="attente__value">{Math.round(standing.rating)}</span>
+                </li>
+              ))}
+            </ol>
+          </>
+        )}
+
         {slide === 'defi' && (
           <>
             <h2 className="attente__title">{challengeTitle(now)}</h2>

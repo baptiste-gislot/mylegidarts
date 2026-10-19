@@ -89,7 +89,7 @@ function DartBoard({ volley, onThrow }: { volley: (Dart | null)[]; onThrow: (dar
       key={key}
       d={d}
       fillRule={fillRule}
-      className={`${className}${marks.has(`${dart.sector}-${dart.mult}`) ? ' board-seg--hit' : ''}`}
+      className={`${className}${marks.has(`${dart.sector}-${dart.mult}`) ? ' dartboard-seg--hit' : ''}`}
       onPointerEnter={() => setAimed(dart)}
       onPointerLeave={() =>
         setAimed((current) =>
@@ -103,8 +103,8 @@ function DartBoard({ volley, onThrow }: { volley: (Dart | null)[]; onThrow: (dar
   )
 
   return (
-    <figure className="board">
-      <p className="board__aim" aria-live="off">
+    <figure className="dartboard">
+      <p className="dartboard__aim" aria-live="off">
         {aimed ? (
           <>
             <strong>{dartLabel(aimed)}</strong> {dartValue(aimed)} pts
@@ -114,7 +114,7 @@ function DartBoard({ volley, onThrow }: { volley: (Dart | null)[]; onThrow: (dar
         )}
       </p>
       <svg viewBox={`0 0 ${SIZE} ${SIZE}`} role="group" aria-label="Cible : cliquez le segment touché">
-        <circle cx={C} cy={C} r={OUTER_R} className="board__rim" />
+        <circle cx={C} cy={C} r={OUTER_R} className="dartboard__rim" />
         {BOARD_SECTORS.map((sector, i) => {
           const a0 = (i - 0.5) * SECTOR_STEP
           const a1 = (i + 0.5) * SECTOR_STEP
@@ -125,11 +125,11 @@ function DartBoard({ volley, onThrow }: { volley: (Dart | null)[]; onThrow: (dar
                 segment(
                   { sector, mult },
                   ringSector(C, r0, r1, a0, a1),
-                  `board-seg board-seg--${mult === 1 ? tone : mult === 3 ? `t-${tone}` : `d-${tone}`}`,
+                  `dartboard-seg dartboard-seg--${mult === 1 ? tone : mult === 3 ? `t-${tone}` : `d-${tone}`}`,
                   `${sector}-${j}`,
                 ),
               )}
-              <text x={px(C, NUM_R, i * SECTOR_STEP)} y={py(C, NUM_R, i * SECTOR_STEP)} className="board__num">
+              <text x={px(C, NUM_R, i * SECTOR_STEP)} y={py(C, NUM_R, i * SECTOR_STEP)} className="dartboard__num">
                 {sector}
               </text>
             </g>
@@ -138,20 +138,20 @@ function DartBoard({ volley, onThrow }: { volley: (Dart | null)[]; onThrow: (dar
         {segment(
           { sector: 25, mult: 1 },
           `${circlePath(C, BULL_R)} ${circlePath(C, BULLSEYE_R)}`,
-          'board-seg board-seg--bull25',
+          'dartboard-seg dartboard-seg--bull25',
           'bull25',
           'evenodd',
         )}
         {segment(
           { sector: 25, mult: 2 },
           circlePath(C, BULLSEYE_R),
-          'board-seg board-seg--bull50',
+          'dartboard-seg dartboard-seg--bull50',
           'bull50',
         )}
         {[...marks.values()].map(({ dart, numbers }) => {
           const { x, y } = anchor(dart)
           return (
-            <g key={`${dart.sector}-${dart.mult}`} className="board__mark" aria-hidden="true">
+            <g key={`${dart.sector}-${dart.mult}`} className="dartboard__mark" aria-hidden="true">
               <circle cx={x} cy={y} r={numbers.length > 1 ? 17 : 13} />
               <text x={x} y={y}>
                 {numbers.join(' ')}

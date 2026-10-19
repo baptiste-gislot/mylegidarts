@@ -434,6 +434,61 @@ a {
   color: var(--text-dim);
 }
 
+/* ---------- Niveau ---------- */
+
+/* Bascule entre les deux classements : deux bandeaux biseautés accolés. */
+.segmented {
+  display: flex;
+  gap: 2px;
+}
+
+.segmented__option {
+  flex: 1;
+  max-width: 240px;
+  padding: 10px calc(var(--bevel) + 14px) 8px;
+  background: var(--surface);
+  color: var(--text-dim);
+  font-family: var(--font-display-stack);
+  font-weight: 800;
+  font-size: 22px;
+  text-transform: uppercase;
+  clip-path: polygon(var(--bevel) 0, 100% 0, calc(100% - var(--bevel)) 100%, 0 100%);
+}
+
+.segmented__option:first-child {
+  clip-path: polygon(0 0, 100% 0, calc(100% - var(--bevel)) 100%, 0 100%);
+}
+
+.segmented__option:hover {
+  color: var(--text);
+}
+
+.segmented__option--on,
+.segmented__option--on:hover {
+  background: var(--gold);
+  color: var(--bg);
+}
+
+.level-head {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.level-head__title {
+  font-family: var(--font-display-stack);
+  font-weight: 700;
+  font-size: 24px;
+}
+
+.level-delta--up {
+  color: var(--green);
+}
+
+.level-delta--down {
+  color: var(--red);
+}
+
 /* ---------- Sélection de joueurs / chips ---------- */
 
 .chips {
@@ -669,14 +724,14 @@ a {
   gap: 6px;
 }
 
-.board {
+.dartboard {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
 }
 
-.board svg {
+.dartboard svg {
   display: block;
   width: min(100%, calc(100dvh - 260px));
   min-width: 320px;
@@ -685,14 +740,14 @@ a {
 }
 
 /* Ce qu'on vise, annoncé comme une incrustation au-dessus de la cible. */
-.board__aim {
+.dartboard__aim {
   min-height: 34px;
   font-size: 15px;
   color: var(--text-dim);
   font-variant-numeric: tabular-nums;
 }
 
-.board__aim strong {
+.dartboard__aim strong {
   margin-right: 6px;
   font-family: var(--font-display-stack);
   font-weight: 800;
@@ -700,11 +755,11 @@ a {
   color: var(--gold);
 }
 
-.board__rim {
+.dartboard__rim {
   fill: #070b1f;
 }
 
-.board__num {
+.dartboard__num {
   fill: var(--text);
   font-family: var(--font-display-stack);
   font-weight: 700;
@@ -714,61 +769,61 @@ a {
   pointer-events: none;
 }
 
-.board-seg {
+.dartboard-seg {
   cursor: pointer;
   stroke: #070b1f;
   stroke-width: 1.5;
   transition: filter 80ms ease-out;
 }
 
-.board-seg--dark {
+.dartboard-seg--dark {
   fill: #161a24;
 }
 
-.board-seg--light {
+.dartboard-seg--light {
   fill: #e9e1c8;
 }
 
-.board-seg--t-dark,
-.board-seg--d-dark,
-.board-seg--bull50 {
+.dartboard-seg--t-dark,
+.dartboard-seg--d-dark,
+.dartboard-seg--bull50 {
   fill: var(--red);
 }
 
-.board-seg--t-light,
-.board-seg--d-light,
-.board-seg--bull25 {
+.dartboard-seg--t-light,
+.dartboard-seg--d-light,
+.dartboard-seg--bull25 {
   fill: var(--green);
 }
 
 /* Survol : le segment s'éclaire et se cerne de jaune — on sait ce qu'on clique. */
-.board-seg:hover {
+.dartboard-seg:hover {
   filter: brightness(1.35);
   stroke: var(--gold);
   stroke-width: 4;
   paint-order: stroke;
 }
 
-.board-seg:active {
+.dartboard-seg:active {
   filter: brightness(1.7);
 }
 
-.board-seg--hit {
+.dartboard-seg--hit {
   stroke: var(--gold);
   stroke-width: 3;
 }
 
-.board__mark {
+.dartboard__mark {
   pointer-events: none;
 }
 
-.board__mark circle {
+.dartboard__mark circle {
   fill: var(--gold);
   stroke: #070b1f;
   stroke-width: 2;
 }
 
-.board__mark text {
+.dartboard__mark text {
   fill: var(--bg);
   font-family: var(--font-display-stack);
   font-weight: 800;
