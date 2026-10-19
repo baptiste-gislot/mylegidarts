@@ -10,7 +10,7 @@ function motionOk(): boolean {
   )
 }
 
-const PALETTE = ['#c9a22b', '#d8402f', '#f0e8d6', '#3f8f5b']
+const PALETTE = ['#ffd23f', '#e5383b', '#f4f6ff', '#1fa35c']
 
 export async function fireConfetti(kind: 'perfect' | 'record'): Promise<void> {
   if (!motionOk()) return

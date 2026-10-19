@@ -1,18 +1,18 @@
 import { SerwistProvider } from '@serwist/turbopack/react'
 import type { Metadata, Viewport } from 'next'
-import { Barlow_Condensed, IBM_Plex_Sans } from 'next/font/google'
+import { Archivo, Big_Shoulders } from 'next/font/google'
 import { AppShell } from '@/components/AppShell'
 import './globals.css'
 
-const display = Barlow_Condensed({
+// Lettrage de stade pour les titres et les scores, grotesque sobre pour le reste.
+const display = Big_Shoulders({
   subsets: ['latin'],
-  weight: ['500', '600', '700'],
+  axes: ['opsz'],
   variable: '--font-display',
 })
 
-const body = IBM_Plex_Sans({
+const body = Archivo({
   subsets: ['latin'],
-  weight: ['400', '500', '600'],
   variable: '--font-body',
 })
 
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#15120D',
+  themeColor: '#0B1230',
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',

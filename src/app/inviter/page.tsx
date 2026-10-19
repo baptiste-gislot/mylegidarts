@@ -19,7 +19,7 @@ export default function InviterPage() {
       void QRCode.toCanvas(canvasRef.current, appUrl, {
         width: 260,
         margin: 2,
-        color: { dark: '#15120d', light: '#f0e8d6' },
+        color: { dark: '#0b1230', light: '#f4f6ff' },
       })
     }
   }, [])

@@ -8,11 +8,12 @@ import { announcerVoice, setSoundsEnabled, soundsEnabled, warmUpVoices } from '@
 import { InstallBanner } from './InstallBanner'
 import { ToastProvider } from './Toaster'
 
+/** Onglets principaux, avec les pages qu'on atteint depuis chacun d'eux. */
 const TABS = [
-  { href: '/', label: 'Classement' },
-  { href: '/tirer', label: 'Tirer' },
-  { href: '/historique', label: 'Historique' },
-  { href: '/joueurs', label: 'Joueurs' },
+  { href: '/tirer', label: 'Jouer', also: [] },
+  { href: '/', label: 'Classements', also: ['/profil', '/records', '/comparer'] },
+  { href: '/historique', label: 'Historique', also: ['/partie', '/live'] },
+  { href: '/joueurs', label: 'Joueurs', also: ['/punchlines', '/inviter'] },
 ]
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -42,7 +43,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="app">
         <header className="masthead">
           <h1 className="masthead__title">
-            MyLegi<em>Darts</em>
+            <span>MyLegi</span>
+            <span>Darts</span>
           </h1>
           <p className="masthead__tagline">Mes fléchettes juridiques</p>
           {/* Le titre nomme la voix retenue : sur le kiosque, c'est le moyen le
@@ -70,11 +72,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <nav className="tabbar" aria-label="Navigation principale">
           {TABS.map((tab) => {
             const active =
-              pathname === tab.href ||
-              (tab.href === '/' &&
-                ['/profil', '/records', '/comparer'].some((p) => pathname.startsWith(p))) ||
-              (tab.href === '/historique' && pathname.startsWith('/partie')) ||
-              (tab.href === '/joueurs' && pathname.startsWith('/punchlines'))
+              pathname === tab.href || tab.also.some((prefix) => pathname.startsWith(prefix))
             return (
               <Link
                 key={tab.href}
