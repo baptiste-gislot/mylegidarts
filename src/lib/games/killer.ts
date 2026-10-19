@@ -1,11 +1,11 @@
 // Killer : chacun reçoit un numéro tiré au sort. On devient killer en
-// touchant le double de son propre numéro ; ensuite, chaque double d'un
-// adversaire lui retire une vie. Un killer qui touche son propre double
-// perd une vie. Le dernier en vie gagne.
+// touchant le double de son propre numéro ; ensuite, toucher le double d'un
+// adversaire l'élimine. Un killer qui touche son propre double s'élimine.
+// Le dernier en vie gagne.
 
 import type { TurnRules } from '../turnGames'
 
-export const KILLER_LIVES = 3
+export const KILLER_LIVES = 1
 
 export interface KillerState {
   numbers: number[]
@@ -52,15 +52,7 @@ export const killerRules: TurnRules<KillerState> = {
     if (owner !== player && !state.killer[player]) return { state }
 
     const lives = state.lives.map((l, i) => (i === owner ? l - 1 : l))
-    const left = lives[owner]
-    const text =
-      owner === player
-        ? left === 0
-          ? '{lanceur} se tire dessus et s’élimine !'
-          : '{lanceur} se tire dessus !'
-        : left === 0
-          ? '{lanceur} élimine {cible} !'
-          : `{lanceur} touche {cible}, plus que ${left} vie${left > 1 ? 's' : ''}.`
+    const text = owner === player ? '{lanceur} se tire dessus et s’élimine !' : '{lanceur} élimine {cible} !'
     return { state: { ...state, lives }, note: { text, target: owner } }
   },
 

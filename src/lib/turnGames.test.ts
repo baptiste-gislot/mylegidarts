@@ -99,29 +99,27 @@ describe('Killer', () => {
     expect(numbers.every((n) => n >= 1 && n <= 20)).toBe(true)
   })
 
-  it('fait devenir killer sur son propre double, et seulement ensuite on blesse', () => {
+  it('fait devenir killer sur son propre double, et seulement ensuite on élimine', () => {
     const before = replayTurnGame(killerRules, 3, setup, [D(1)])
     expect(before.state.lives[1]).toBe(KILLER_LIVES)
     const after = replayTurnGame(killerRules, 3, setup, [D(20), D(1)])
     expect(after.state.killer[0]).toBe(true)
-    expect(after.state.lives[1]).toBe(KILLER_LIVES - 1)
-    expect(after.lastNote).toEqual({ text: '{lanceur} touche {cible}, plus que 2 vies.', target: 1 })
+    expect(after.state.lives[1]).toBe(0)
+    expect(after.lastNote).toEqual({ text: '{lanceur} élimine {cible} !', target: 1 })
   })
 
   it('saute les éliminés et sacre le dernier en vie', () => {
-    // Le joueur 0 devient killer, élimine le 1 puis le 2 ; les autres ratent tout.
-    const firstRound = [D(20), D(1), D(1), ...misses(3), ...misses(3)]
-    const afterKill = replayTurnGame(killerRules, 3, setup, [...firstRound, D(1), D(5), D(5)])
+    // Le joueur 0 devient killer et élimine le 1 ; le 2 rate tout, puis tombe à son tour.
+    const afterKill = replayTurnGame(killerRules, 3, setup, [D(20), D(1), MISS])
     expect(afterKill.state.lives[1]).toBe(0)
     expect(afterKill.current).toBe(2)
-    const replay = replayTurnGame(killerRules, 3, setup, [...firstRound, D(1), D(5), D(5), ...misses(3), D(5)])
+    const replay = replayTurnGame(killerRules, 3, setup, [D(20), D(1), MISS, ...misses(3), D(5)])
     expect(replay.finished).toBe(true)
     expect(replay.winners).toEqual([0])
   })
 
   it('passe la main tout de suite au killer qui s’élimine lui-même', () => {
-    const lowLives = [D(20), D(20), D(20), ...misses(6), D(20)]
-    const replay = replayTurnGame(killerRules, 3, setup, lowLives)
+    const replay = replayTurnGame(killerRules, 3, setup, [D(20), D(20)])
     expect(replay.state.lives[0]).toBe(0)
     expect(replay.current).toBe(1)
   })

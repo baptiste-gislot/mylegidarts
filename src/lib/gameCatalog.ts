@@ -52,9 +52,9 @@ export const TURN_GAMES: Record<TurnGameId, TurnGameEntry> = {
   },
   killer: {
     label: 'Killer',
-    pitch: 'Un numéro chacun, 3 vies. Touchez votre double pour devenir killer, puis visez les doubles des autres.',
+    pitch: 'Un numéro chacun, une seule vie. Touchez votre double pour devenir killer, puis éliminez les autres sur leur double.',
     ...bind(killerRules),
-    totalLabel: (total) => (total === 0 ? 'éliminé' : `${total} vie${total > 1 ? 's' : ''}`),
+    totalLabel: (total) => (total === 0 ? 'éliminé' : 'survivant'),
   },
   shanghai: {
     label: 'Shanghai',
