@@ -17,19 +17,18 @@ import {
 import { useToast } from '@/components/Toaster'
 import { fireConfetti, vibrate } from '@/lib/effects'
 import {
-  DARTS_PER_PLAYER,
   PLAYERS_PER_MATCH,
   POINTS_OPTIONS,
   SIDE_LABEL,
   TARGET_SCORE,
   drawOpener,
+  migrateFletanqueJournal,
   otherSide,
   replayFletanque,
   sessionFletanque,
   teamOf,
   teamPlayers,
   type FletanqueEvent,
-  type FletanqueReplay,
   type Side,
 } from '@/lib/fletanque'
 import { useLiveMatchPublisher } from '@/lib/liveMatch'
@@ -94,7 +93,7 @@ interface StoredMatch {
   gameMode: GameMode
   /** Présent quand la session se joue avec pouvoirs : le journal fait foi. */
   powers?: { assignments: PowerId[]; journal: MatchEvent[] }
-  /** Présent en flétanque : l'équipe qui a ouvert, puis le journal. */
+  /** Présent en flétanque : l'équipe qui a ouvert, puis le journal des mènes. */
   fletanque?: { opener: Side; journal: FletanqueEvent[] }
 }
 
@@ -180,11 +179,11 @@ export default function TirerPage() {
   /** Index (dans order) du joueur dont le pouvoir attend un paramètre. */
   const [powerDialog, setPowerDialog] = useState<number | null>(null)
   // Flétanque : l'équipe qui ouvre est tirée au sort, tout le reste découle
-  // du journal (lancers et décomptes de mène).
+  // du journal des décomptes de mène.
   const [fletOpener, setFletOpener] = useState<Side | null>(null)
   const [fletJournal, setFletJournal] = useState<FletanqueEvent[]>([])
-  /** Joueur désigné à la main pour le prochain lancer : l'équipe choisit. */
-  const [throwerPick, setThrowerPick] = useState<number | null>(null)
+  /** Équipe désignée comme gagnante de la mène, en attente de ses points. */
+  const [menePick, setMenePick] = useState<Side | null>(null)
 
   useEffect(() => {
     if (flash === null) return
@@ -225,7 +224,7 @@ export default function TirerPage() {
       }
       if (stored.fletanque) {
         setFletOpener(stored.fletanque.opener)
-        setFletJournal(stored.fletanque.journal)
+        setFletJournal(migrateFletanqueJournal(stored.fletanque.journal))
       }
       setStarted(true)
     }
@@ -236,8 +235,8 @@ export default function TirerPage() {
     [gameMode, dartsByPlayer],
   )
 
-  // Rejeu du journal de flétanque : la main, les fléchettes restantes et les
-  // scores en découlent — comme pour les pouvoirs, l'annulation est gratuite.
+  // Rejeu du journal de flétanque : scores et équipe qui ouvre en découlent —
+  // comme pour les pouvoirs, l'annulation est gratuite.
   const fletanqueActive = started && gameMode === 'fletanque' && fletOpener !== null
   const fletReplay = useMemo(
     () => (fletOpener === null ? null : replayFletanque(fletOpener, fletJournal)),
@@ -307,9 +306,7 @@ export default function TirerPage() {
             fletanque: {
               scores: fletReplay.scores,
               mene: fletReplay.menes.length + 1,
-              holder: fletReplay.holder,
-              left: fletReplay.left,
-              thrower: fletReplay.thrower,
+              opener: fletReplay.opener,
             },
           }
         : {}),
@@ -480,16 +477,6 @@ export default function TirerPage() {
   const currentVolley = currentDarts.slice(currentRound * DARTS_PER_VOLLEY)
   const currentPlayer = players.find((p) => p.id === order[currentPlayerIndex])
 
-  /** Joueur à la cible en flétanque : le proposé, sauf si l'équipe en désigne un autre. */
-  const fletThrower =
-    fletReplay === null || fletReplay.side === null
-      ? null
-      : throwerPick !== null &&
-          teamOf(throwerPick) === fletReplay.side &&
-          fletReplay.left[throwerPick] > 0
-        ? throwerPick
-        : fletReplay.thrower
-
   const fletPlayer = (index: number) => players.find((p) => p.id === order[index])
   const teamSpeech = (side: Side) => (side === 0 ? 'L’équipe A' : 'L’équipe B')
   const teamRoster = (side: Side) =>
@@ -517,7 +504,7 @@ export default function TirerPage() {
     setStartedAt(new Date().toISOString())
     setStarted(true)
     setSaveError(null)
-    setThrowerPick(null)
+    setMenePick(null)
 
     if (gameMode === 'fletanque') {
       // Tirage au sort de l'équipe qui ouvre, comme au but en pétanque.
@@ -654,62 +641,23 @@ export default function TirerPage() {
     })
   }
 
-  /**
-   * L'annonce d'une action de flétanque : ce qui vient de se passer, puis le
-   * relais vers le prochain lanceur (thème musical à son entrée en piste).
-   */
-  function announceFletanque(lead: string, after: FletanqueReplay) {
-    const nextPlayer = after.thrower !== null ? fletPlayer(after.thrower) : undefined
-    const firstTurn = after.thrower !== null && after.thrown[after.thrower] === 0
-    const relay = nextPlayer ? relayText(nextPlayer, firstTurn) : ''
-    announce({ lead, signature: relay && firstTurn ? signatureOf(nextPlayer) : null, relay })
-  }
-
-  /** Une fléchette partie : les joueurs disent quelle équipe est désormais la plus proche. */
-  function fletThrow(holder: Side | null) {
-    if (fletReplay === null || fletOpener === null || fletThrower === null) return
-    const takes = holder !== null && holder !== fletReplay.holder
-    thock(takes ? 'bull' : 'normal')
-    vibrate(12)
-    const next: FletanqueEvent[] = [
-      ...fletJournal,
-      { kind: 'lance', player: fletThrower, holder },
-    ]
+  /** Clôt la mène : `points` fléchettes devant pour `holder`, ou null/0 pour une mène nulle. */
+  function closeMene(holder: Side | null, points: number) {
+    if (fletReplay === null || fletOpener === null || fletReplay.finished) return
+    const next: FletanqueEvent[] = [...fletJournal, { kind: 'mene', holder, points }]
     const after = replayFletanque(fletOpener, next)
     setFletJournal(next)
-    setThrowerPick(null)
-    // Première fléchette de la mène : seule sur la cible, rien à commenter.
-    const lead =
-      holder === null
-        ? 'Égalité au cochonnet !'
-        : fletReplay.opening || !takes
-          ? ''
-          : `${teamSpeech(holder)} ${fletReplay.holder === null ? 'prend' : 'reprend'} le point !`
-    if (after.awaitingCount) {
-      announce({ lead: `${lead} Plus de fléchettes, place au décompte.`.trim() })
-      return
-    }
-    announceFletanque(lead, after)
-  }
-
-  /** Clôt la mène : `points` fléchettes devant, ou 0 pour une mène nulle. */
-  function closeMene(points: number) {
-    if (fletReplay === null || fletOpener === null || !fletReplay.awaitingCount) return
-    const holder = fletReplay.holder
-    const next: FletanqueEvent[] = [...fletJournal, { kind: 'mene', points }]
-    const after = replayFletanque(fletOpener, next)
-    setFletJournal(next)
-    setThrowerPick(null)
+    setMenePick(null)
     vibrate([40, 60, 40])
     if (after.finished) return // le sacre est annoncé par la célébration
-    announceFletanque(
-      holder !== null && points > 0
-        ? `${teamSpeech(holder)} marque ${points} point${points > 1 ? 's' : ''} ! ${
-            after.scores[0]
-          } à ${after.scores[1]}.`
-        : 'Mène nulle, personne ne marque. On rejoue.',
-      after,
-    )
+    announce({
+      lead:
+        holder !== null && points > 0
+          ? `${teamSpeech(holder)} marque ${points} point${points > 1 ? 's' : ''} ! ${
+              after.scores[0]
+            } à ${after.scores[1]}. ${teamSpeech(after.opener)} ouvre la mène suivante.`
+          : `Mène nulle, personne ne marque. ${teamSpeech(after.opener)} rouvre la mène.`,
+    })
   }
 
   function throwDart(dart: Dart) {
@@ -774,11 +722,15 @@ export default function TirerPage() {
 
   function undo() {
     // En flétanque comme avec les pouvoirs, le journal fait foi : retirer le
-    // dernier événement rend la main, les fléchettes et le score d'avant.
+    // dernier décompte rend le score et l'équipe qui ouvre d'avant.
     if (fletanqueActive) {
+      if (menePick !== null) {
+        setMenePick(null)
+        return
+      }
       if (fletJournal.length === 0) return
       setFletJournal(fletJournal.slice(0, -1))
-      setThrowerPick(null)
+      setMenePick(null)
       return
     }
     // Avec pouvoirs : on retire le dernier événement du journal (fléchette ou
@@ -817,7 +769,7 @@ export default function TirerPage() {
     setPowerDialog(null)
     setFletOpener(null)
     setFletJournal([])
-    setThrowerPick(null)
+    setMenePick(null)
   }
 
   async function save() {
@@ -1131,27 +1083,17 @@ export default function TirerPage() {
     )
   }
 
-  // Flétanque : pas de clavier de saisie — les joueurs jugent à l'œil et
-  // désignent l'équipe la plus proche après chaque fléchette.
+  // Flétanque : pas de clavier de saisie — les quatre joueurs tirent toute
+  // leur main, puis désignent l'équipe qui prend la mène et ses points.
   if (fletanqueActive && fletReplay !== null) {
     const replay = fletReplay
-    const dartNumber = fletThrower === null ? 0 : DARTS_PER_PLAYER - replay.left[fletThrower] + 1
-    const outcomeLabel = (outcome: Side | null) => {
-      if (outcome === null) return 'Égalité'
-      if (replay.holder === outcome) return `${SIDE_LABEL[outcome]} garde le point`
-      return `${SIDE_LABEL[outcome]} ${replay.holder === null ? 'prend' : 'reprend'} le point`
-    }
 
     return (
       <div className="scorer">
         <div className="scorer__status">
           <div>
             <p className="scorer__volley">Flétanque · Mène {replay.menes.length + 1}</p>
-            <p className="scorer__thrower">
-              {replay.awaitingCount
-                ? 'Décompte de la mène'
-                : `${fletPlayer(fletThrower ?? 0)?.name ?? '?'} — fléchette ${dartNumber}/${DARTS_PER_PLAYER}`}
-            </p>
+            <p className="scorer__thrower">{SIDE_LABEL[replay.opener]} ouvre</p>
           </div>
           <button type="button" className="button-ghost" onClick={reset}>
             Abandonner
@@ -1162,107 +1104,64 @@ export default function TirerPage() {
           {([0, 1] as Side[]).map((side) => (
             <section
               key={side}
-              className={replay.holder === side ? 'flet-team flet-team--point' : 'flet-team'}
+              className={menePick === side ? 'flet-team flet-team--point' : 'flet-team'}
             >
               <div className="flet-team__head">
                 <span className="flet-team__label">
                   {SIDE_LABEL[side]}
-                  {replay.holder === side && <em className="flet-team__point"> · au point</em>}
+                  {replay.opener === side && <em className="flet-team__point"> · ouvre</em>}
                 </span>
                 <span className="flet-team__score">{replay.scores[side]}</span>
               </div>
-              <div className="flet-team__players">
-                {teamPlayers(side).map((index) => {
-                  const left = replay.left[index]
-                  const plural = left > 1 ? 's' : ''
-                  return (
-                    <button
-                      key={order[index]}
-                      type="button"
-                      className={
-                        index === fletThrower ? 'flet-player flet-player--active' : 'flet-player'
-                      }
-                      disabled={replay.side !== side || left === 0 || index === fletThrower}
-                      onClick={() => setThrowerPick(index)}
-                      aria-label={`${fletPlayer(index)?.name} — ${left} fléchette${plural} restante${plural}${
-                        replay.side === side && left > 0 ? ', lui passer la main' : ''
-                      }`}
-                    >
-                      <span className="flet-player__name">{fletPlayer(index)?.name}</span>
-                      <span className="flet-player__darts" aria-hidden="true">
-                        {'●'.repeat(left)}
-                        {'○'.repeat(DARTS_PER_PLAYER - left)}
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
+              <p className="flet-team__roster">{teamRoster(side)}</p>
             </section>
           ))}
         </div>
 
         <section className="flet-call">
-          {replay.awaitingCount ? (
-            replay.holder === null ? (
-              <>
-                <p className="flet-call__title">Mène nulle</p>
-                <p className="flet-call__hint">
-                  Les deux meilleures fléchettes sont à égalité : personne ne marque, on rejoue.
-                </p>
-                <button type="button" className="button-primary" onClick={() => closeMene(0)}>
-                  Rejouer la mène
-                </button>
-              </>
-            ) : (
-              <>
-                <p className="flet-call__title">{SIDE_LABEL[replay.holder]} prend la mène</p>
-                <p className="flet-call__hint">
-                  Combien de ses fléchettes sont plus proches que la meilleure de{' '}
-                  {SIDE_LABEL[otherSide(replay.holder)]} ?
-                </p>
-                <div className="flet-points">
-                  {POINTS_OPTIONS.map((points) => (
-                    <button
-                      key={points}
-                      type="button"
-                      className="key key--sector"
-                      onClick={() => closeMene(points)}
-                    >
-                      {points}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )
-          ) : (
+          {menePick === null ? (
             <>
-              <p className="flet-call__title">
-                {replay.opening
-                  ? 'Ouverture de la mène'
-                  : replay.outcomes.length === 1
-                    ? 'Au lancer'
-                    : 'Qui est le plus proche ?'}
-              </p>
+              <p className="flet-call__title">Qui prend la mène ?</p>
               <p className="flet-call__hint">
-                {replay.opening
-                  ? 'Seule sur la cible, cette fléchette prend le point d’office.'
-                  : replay.outcomes.length === 1
-                    ? 'L’adversaire n’a plus de fléchettes : le point ne peut plus changer de camp.'
-                    : 'Jugez à l’œil — la fléchette la plus proche du centre tient le point.'}
+                Une fois les douze fléchettes tirées, l’équipe la plus proche du centre prend la
+                mène.
               </p>
               <div className="flet-outcomes">
-                {replay.outcomes.map((outcome) => (
+                {([0, 1] as Side[]).map((side) => (
                   <button
-                    key={outcome === null ? 'egalite' : `equipe-${outcome}`}
+                    key={side}
                     type="button"
-                    className={
-                      outcome === null
-                        ? 'flet-outcome flet-outcome--tie'
-                        : `flet-outcome flet-outcome--${outcome === 0 ? 'a' : 'b'}`
-                    }
-                    onClick={() => fletThrow(outcome)}
+                    className={`flet-outcome flet-outcome--${side === 0 ? 'a' : 'b'}`}
+                    onClick={() => setMenePick(side)}
                   >
-                    {outcomeLabel(outcome)}
+                    {SIDE_LABEL[side]}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  className="flet-outcome flet-outcome--tie"
+                  onClick={() => closeMene(null, 0)}
+                >
+                  Mène nulle
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="flet-call__title">{SIDE_LABEL[menePick]} prend la mène</p>
+              <p className="flet-call__hint">
+                Combien de ses fléchettes sont plus proches que la meilleure de{' '}
+                {SIDE_LABEL[otherSide(menePick)]} ?
+              </p>
+              <div className="flet-points">
+                {POINTS_OPTIONS.map((points) => (
+                  <button
+                    key={points}
+                    type="button"
+                    className="key key--sector"
+                    onClick={() => closeMene(menePick, points)}
+                  >
+                    {points}
                   </button>
                 ))}
               </div>
@@ -1272,9 +1171,9 @@ export default function TirerPage() {
             type="button"
             className="button-ghost"
             onClick={undo}
-            disabled={fletJournal.length === 0}
+            disabled={menePick === null && fletJournal.length === 0}
           >
-            Annuler la dernière action
+            {menePick === null ? 'Annuler la dernière mène' : 'Retour'}
           </button>
         </section>
       </div>

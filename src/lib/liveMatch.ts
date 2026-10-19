@@ -21,12 +21,8 @@ export interface LiveMatchFletanque {
   scores: [number, number]
   /** Numéro de la mène en cours (1-based). */
   mene: number
-  /** Équipe qui tient le point, null à égalité ou sur une mène vierge. */
-  holder: Side | null
-  /** Fléchettes restantes de chaque joueur dans la mène. */
-  left: number[]
-  /** Joueur à la cible, null quand la mène attend son décompte. */
-  thrower: number | null
+  /** Équipe qui ouvre la mène en cours. */
+  opener: Side
 }
 
 /** État d'une partie en cours, diffusé via Supabase Realtime Presence. */

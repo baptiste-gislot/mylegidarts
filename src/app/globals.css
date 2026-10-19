@@ -736,45 +736,11 @@ a {
   line-height: 1;
 }
 
-.flet-team__players {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-
-.flet-player {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-  padding: 8px 10px;
-  border-radius: var(--radius);
-  background: var(--ink);
-  border: 1px solid var(--line);
-  text-align: left;
-  color: var(--craie-dim);
-}
-
-.flet-player:not(:disabled) {
-  cursor: pointer;
-}
-
-/* Le joueur à la cible : c'est lui qui lance la prochaine fléchette. */
-.flet-player--active {
-  border-color: var(--craie-dim);
-  background: var(--raised);
-  color: var(--craie);
-}
-
-.flet-player__name {
+.flet-team__roster {
+  margin: 0;
   font-weight: 600;
   font-size: 14px;
-}
-
-.flet-player__darts {
-  font-size: 13px;
-  letter-spacing: 0.18em;
-  color: var(--laiton);
+  color: var(--craie-dim);
 }
 
 .flet-call {

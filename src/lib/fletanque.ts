@@ -1,12 +1,11 @@
 // Flétanque : la pétanque aux fléchettes. Deux équipes de deux, trois
 // fléchettes chacun, et le cochonnet c'est le centre de la cible.
 //
-// Aucune fléchette n'est notée ici : ce sont les joueurs qui jugent à l'œil,
-// après chaque lancer, quelle équipe est la plus proche. Le moteur suit le
-// modèle de replay301 et replayPowers — une seule source de vérité, le journal
-// des lancers et des décomptes, rejoué pour dériver tout l'état. L'annulation
-// retire le dernier événement et tout le reste (main, fléchettes restantes,
-// équipe qui ouvre) retombe juste tout seul.
+// Aucune fléchette n'est notée ici : les quatre joueurs tirent toute leur
+// main, puis jugent à l'œil quelle équipe prend la mène et combien de ses
+// fléchettes sont devant. Le journal ne contient que ces décomptes, rejoués
+// pour dériver tout l'état — l'annulation retire le dernier et le score,
+// l'équipe qui ouvre et le vainqueur retombent juste tout seuls.
 
 /** Les deux équipes : 0 = A, 1 = B. */
 export type Side = 0 | 1
@@ -35,17 +34,17 @@ export function otherSide(side: Side): Side {
 }
 
 /**
- * Le journal d'une partie, dans l'ordre :
- * - `lance` : une fléchette partie, et l'équipe qui a le point une fois
- *   qu'elle s'est plantée (null = les deux meilleures sont à égalité) ;
- * - `mene` : la mène est close, le détenteur du point marque `points`
- *   (0 = mène nulle, personne ne marque et on rejoue).
+ * Le décompte d'une mène, saisi une fois les 12 fléchettes parties : l'équipe
+ * qui la prend et ses fléchettes devant (holder null, points 0 = mène nulle,
+ * personne ne marque et on rejoue).
  */
-export type FletanqueEvent =
-  | { kind: 'lance'; player: number; holder: Side | null }
-  | { kind: 'mene'; points: number }
+export interface FletanqueEvent {
+  kind: 'mene'
+  holder: Side | null
+  points: number
+}
 
-/** Une mène close : qui avait le point à la fin, et ce qu'elle a rapporté. */
+/** Une mène close : qui l'a prise, et ce qu'elle a rapporté. */
 export interface ClosedMene {
   holder: Side | null
   points: number
@@ -57,118 +56,63 @@ export interface FletanqueReplay {
   menes: ClosedMene[]
   /** Équipe qui ouvre la mène en cours (le vainqueur de la précédente). */
   opener: Side
-  /** Fléchettes restantes de chaque joueur dans la mène en cours. */
-  left: number[]
   /** Fléchettes lancées par chaque joueur depuis le début de la partie. */
   thrown: number[]
-  /** Équipe qui tient le point (null = égalité, ou mène pas encore ouverte). */
-  holder: Side | null
-  /** true tant qu'aucune fléchette n'est partie dans la mène en cours. */
-  opening: boolean
-  /** Équipe à qui c'est le tour, null si on attend le décompte ou si c'est fini. */
-  side: Side | null
-  /** Joueur proposé au lancer : celui de `side` à qui il reste le plus de fléchettes. */
-  thrower: number | null
-  /** Issues possibles du prochain lancer, à proposer telles quelles. */
-  outcomes: (Side | null)[]
-  /** true quand les 12 fléchettes sont parties : la mène attend son décompte. */
-  awaitingCount: boolean
   winner: Side | null
   finished: boolean
-}
-
-function freshDarts(): number[] {
-  return Array.from({ length: PLAYERS_PER_MATCH }, () => DARTS_PER_PLAYER)
 }
 
 /**
  * Rejoue une partie de flétanque depuis son journal.
  *
- * Règles de pétanque reprises telles quelles : l'équipe qui n'a pas le point
- * relance jusqu'à le reprendre ; à égalité, c'est celle qui vient de lancer
- * qui rejoue ; une équipe à court de fléchettes laisse l'autre terminer ; le
- * vainqueur de la mène ouvre la suivante, et une mène nulle est rejouée par
- * la même équipe.
+ * Le vainqueur de la mène ouvre la suivante, et une mène nulle est rejouée
+ * par la même équipe. Chaque mène close compte les trois fléchettes de
+ * chacun : tout le monde tire toute sa main avant le décompte.
  */
 export function replayFletanque(firstOpener: Side, journal: FletanqueEvent[]): FletanqueReplay {
   const scores: [number, number] = [0, 0]
   const menes: ClosedMene[] = []
-  const thrown = Array.from({ length: PLAYERS_PER_MATCH }, () => 0)
   let opener = firstOpener
-  let left = freshDarts()
-  let holder: Side | null = null
-  // Dernier lanceur de la mène en cours ; null tant qu'elle est vierge.
-  let last: number | null = null
 
-  for (const event of journal) {
-    if (event.kind === 'lance') {
-      if (left[event.player] > 0) left[event.player] -= 1
-      thrown[event.player] += 1
-      holder = event.holder
-      last = event.player
+  for (const { holder, points } of journal) {
+    if (holder === null || points <= 0) {
+      menes.push({ holder: null, points: 0 })
       continue
     }
-    menes.push({ holder, points: event.points })
-    if (holder !== null && event.points > 0) {
-      scores[holder] += event.points
-      opener = holder
-    }
-    left = freshDarts()
-    holder = null
-    last = null
+    menes.push({ holder, points })
+    scores[holder] += points
+    opener = holder
   }
 
   const winner = scores[0] >= TARGET_SCORE ? 0 : scores[1] >= TARGET_SCORE ? 1 : null
-  const remaining = (side: Side) => teamPlayers(side).reduce((sum, p) => sum + left[p], 0)
-  const awaitingCount = winner === null && remaining(0) + remaining(1) === 0
-
-  let side: Side | null = null
-  if (winner === null && !awaitingCount) {
-    side =
-      last === null
-        ? opener // ouverture de mène
-        : holder === null
-          ? teamOf(last) // égalité : celle qui vient de lancer rejoue
-          : otherSide(holder) // sinon, celle qui n'a pas le point
-    // Équipe à court de fléchettes : l'autre termine la mène.
-    if (remaining(side) === 0) side = otherSide(side)
-  }
-
-  const thrower =
-    side === null
-      ? null
-      : (teamPlayers(side)
-          .filter((p) => left[p] > 0)
-          .sort((a, b) => left[b] - left[a] || a - b)[0] ?? null)
-
-  // Ce que le prochain lancer peut changer : sa propre fléchette ne peut
-  // jamais donner le point à l'adversaire, ni le retirer à sa propre équipe.
-  const outcomes: (Side | null)[] =
-    side === null
-      ? []
-      : last === null
-        ? [side] // première fléchette de la mène : elle est seule, donc la plus proche
-        : holder === null
-          ? [side, null]
-          : holder === side
-            ? [side] // l'adversaire n'a plus de fléchette : rien ne peut bouger
-            : [side, null, holder]
-
   return {
     scores,
     menes,
     opener,
-    left,
-    thrown,
-    holder,
-    opening: last === null,
-    side,
-    thrower,
-    outcomes,
-    awaitingCount,
+    thrown: Array.from({ length: PLAYERS_PER_MATCH }, () => menes.length * DARTS_PER_PLAYER),
     winner,
     finished: winner !== null,
   }
+}
+
+/**
+ * Convertit un journal enregistré avant la saisie en fin de mène (un événement
+ * par fléchette) : chaque décompte reprend l'équipe qui tenait le point.
+ */
+export function migrateFletanqueJournal(journal: unknown[]): FletanqueEvent[] {
+  const events: FletanqueEvent[] = []
+  let holder: Side | null = null
+  for (const raw of journal) {
+    const event = raw as { kind?: string; holder?: Side | null; points?: number }
+    if (event.kind === 'lance') {
+      holder = event.holder ?? null
+    } else if (event.kind === 'mene') {
+      const meneHolder = event.holder !== undefined ? event.holder : holder
+      events.push({ kind: 'mene', holder: meneHolder, points: event.points ?? 0 })
+      holder = null
+    }
+  }
+  return events
 }
 
 /** Points possibles au décompte d'une mène : de 1 à 6 fléchettes devant. */

@@ -10,7 +10,7 @@ import {
   dartLabel,
   sessionTotal,
 } from '@/lib/scoring'
-import { DARTS_PER_PLAYER, SIDE_LABEL, teamPlayers, type Side } from '@/lib/fletanque'
+import { SIDE_LABEL, teamPlayers, type Side } from '@/lib/fletanque'
 import { replay301 } from '@/lib/play301'
 import { useLiveMatches, type LiveMatch, type LiveMatchFletanque } from '@/lib/liveMatch'
 import { supabase } from '@/lib/supabaseClient'
@@ -47,10 +47,8 @@ function LiveMatchCard({ match }: { match: LiveMatch }) {
   return <LiveScoreCard match={match} />
 }
 
-/** Le direct d'une flétanque : deux équipes, le point, et les fléchettes en main. */
+/** Le direct d'une flétanque : deux équipes, leur score et l'équipe qui ouvre. */
 function LiveFletanqueCard({ match, flet }: { match: LiveMatch; flet: LiveMatchFletanque }) {
-  const thrower = flet.thrower !== null ? match.players[flet.thrower] : null
-
   return (
     <section className="live-card" aria-live="polite">
       <div className="live-card__head">
@@ -58,7 +56,7 @@ function LiveFletanqueCard({ match, flet }: { match: LiveMatch; flet: LiveMatchF
           <span className="live-dot" aria-hidden="true" />
           {match.finished
             ? 'Terminée — en attente d’enregistrement'
-            : `En direct · 🍹 Flétanque · mène ${flet.mene}${thrower ? ` · ${thrower.name} à la cible` : ' · décompte'}`}
+            : `En direct · 🍹 Flétanque · mène ${flet.mene}`}
         </span>
       </div>
 
@@ -66,21 +64,17 @@ function LiveFletanqueCard({ match, flet }: { match: LiveMatch; flet: LiveMatchF
         {([0, 1] as Side[]).map((side) => (
           <li
             key={side}
-            className={flet.holder === side ? 'live-row live-row--active' : 'live-row'}
+            className={flet.opener === side ? 'live-row live-row--active' : 'live-row'}
           >
             <span className="live-row__who">
               <span className="board__name">
                 {SIDE_LABEL[side]}
-                {flet.holder === side && <em className="live-row__turn"> · au point</em>}
+                {flet.opener === side && <em className="live-row__turn"> · ouvre</em>}
               </span>
               <span className="board__record">
                 {teamPlayers(side)
-                  .map((index) => {
-                    const left = flet.left[index] ?? 0
-                    const name = match.players[index]?.name ?? '?'
-                    return `${name} ${'●'.repeat(left)}${'○'.repeat(DARTS_PER_PLAYER - left)}`
-                  })
-                  .join('  ·  ')}
+                  .map((index) => match.players[index]?.name ?? '?')
+                  .join(' & ')}
               </span>
             </span>
             <span className="board__points">{flet.scores[side]}</span>
