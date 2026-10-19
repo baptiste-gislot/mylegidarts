@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
+import type { DuelSession } from './headToHead'
 import type { DuelStatRow, SessionRow, SessionStatRow } from './useLeague'
 
 /** Taille de page de l'historique, en sessions (une partie = 1 à N sessions). */
@@ -138,6 +139,30 @@ export function useDuels(playerId: string | undefined) {
   }, [playerId])
 
   return duels
+}
+
+/** Les parties en commun de deux joueurs, pour le face-à-face jeu par jeu. */
+export function useHeadToHeadRows(a: string | undefined, b: string | undefined) {
+  const [rows, setRows] = useState<DuelSession[] | null>(null)
+
+  useEffect(() => {
+    if (!supabase || !a || !b) return
+    let cancelled = false
+    void supabase
+      .from('session_stats')
+      .select('player_id, match_id, total, mode, won')
+      .in('player_id', [a, b])
+      .not('match_id', 'is', null)
+      .then(({ data, error: err }) => {
+        if (cancelled) return
+        setRows(err ? [] : (data as DuelSession[]))
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [a, b])
+
+  return rows
 }
 
 /** Sessions complètes d'une partie (match_id partagé, ou session seule). */

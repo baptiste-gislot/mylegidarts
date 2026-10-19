@@ -66,6 +66,8 @@ export interface TurnReplay<S> {
   lastNote: TurnNote | null
   /** true si la dernière fléchette a clos une volée (la main passe). */
   volleyClosed: boolean
+  /** La dernière volée achevée, pour la laisser lisible quand la main passe. */
+  lastVolley: { player: number; darts: Dart[] } | null
 }
 
 export function replayTurnGame<S>(
@@ -82,6 +84,7 @@ export function replayTurnGame<S>(
   let winners: number[] | null = null
   let lastNote: TurnNote | null = null
   let volleyClosed = false
+  let lastVolley: { player: number; darts: Dart[] } | null = null
 
   const nextAlive = (from: number): number | null => {
     for (let step = 1; step <= players; step++) {
@@ -107,6 +110,7 @@ export function replayTurnGame<S>(
     // lanceur vient de s'éliminer lui-même.
     if (volley.length === DARTS_PER_VOLLEY || rules.isOut(state, current)) {
       volleyClosed = true
+      lastVolley = { player: current, darts: volley }
       volley = []
       const next = nextAlive(current)
       if (next === null) {
@@ -133,6 +137,7 @@ export function replayTurnGame<S>(
     winners: winners ?? [],
     lastNote,
     volleyClosed,
+    lastVolley,
   }
 }
 

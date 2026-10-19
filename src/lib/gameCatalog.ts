@@ -67,3 +67,11 @@ export const TURN_GAMES: Record<TurnGameId, TurnGameEntry> = {
 export function isTurnGame(mode: string): mode is TurnGameId {
   return (TURN_GAME_IDS as readonly string[]).includes(mode)
 }
+
+/** Le nom d'un jeu tel qu'on l'affiche, quel qu'il soit. */
+export function gameLabel(mode: string): string {
+  if (isTurnGame(mode)) return TURN_GAMES[mode].label
+  if (mode === '301') return '301'
+  if (mode === 'fletanque') return 'Flétanque'
+  return 'Défi 4 volées'
+}

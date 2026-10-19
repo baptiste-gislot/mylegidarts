@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { DartInput } from '@/components/DartInput'
+import { LastVolley } from '@/components/LastVolley'
 import { useDialog } from '@/components/Dialog'
 import { TurnGameScorer } from '@/components/TurnGameScorer'
 import { SetupNotice } from '@/components/SetupNotice'
@@ -1421,6 +1422,22 @@ export default function TirerPage() {
   }
 
   const activeTurn = powersActive ? (powersReplay?.activeTurn ?? null) : null
+  // La volée qui vient de s'achever reste lisible quand la main passe.
+  const previousVolley: { player: number; darts: Dart[] } | null = (() => {
+    if (powersActive && powersReplay !== null) {
+      const done = powersReplay.turns.filter(
+        (t) => t !== activeTurn && t.darts.length >= t.size && t.darts.every((d) => d !== null),
+      )
+      const last = done[done.length - 1]
+      return last ? { player: last.player, darts: last.darts as Dart[] } : null
+    }
+    if (globalVolley === 0) return null
+    const index = globalVolley - 1
+    const player = index % order.length
+    const round = Math.floor(index / order.length)
+    const darts = (dartsByPlayer[player] ?? []).slice(round * DARTS_PER_VOLLEY, (round + 1) * DARTS_PER_VOLLEY)
+    return darts.length > 0 ? { player, darts } : null
+  })()
   const slotCount = activeTurn ? activeTurn.size : DARTS_PER_VOLLEY
   const pendingSlot = powersActive ? (powersReplay?.pendingSlot ?? null) : null
 
@@ -1463,6 +1480,13 @@ export default function TirerPage() {
           )
         })}
       </div>
+
+      {previousVolley && order.length > 1 && (
+        <LastVolley
+          name={players.find((p) => p.id === order[previousVolley.player])?.name ?? '?'}
+          darts={previousVolley.darts}
+        />
+      )}
 
       <ol className="scoreboard" aria-label={gameMode === '301' ? 'Points restants' : 'Scores'}>
         {order.map((playerId, i) => {

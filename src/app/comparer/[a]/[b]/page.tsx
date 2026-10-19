@@ -2,15 +2,18 @@
 
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
+import { useState } from 'react'
 import { DartHeatmap } from '@/components/DartHeatmap'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
 import { SetupNotice } from '@/components/SetupNotice'
+import { gameLabel } from '@/lib/gameCatalog'
+import { headToHead } from '@/lib/headToHead'
 import { consistency, recentForm } from '@/lib/profileStats'
 import { bestVolley, count180s } from '@/lib/scoring'
 import type { Dart } from '@/lib/scoring'
 import { useLeagueContext } from '@/lib/LeagueProvider'
-import type { SessionRow } from '@/lib/useLeague'
-import { useDuels, usePlayerSessions } from '@/lib/useSessions'
+import type { GameMode, SessionRow } from '@/lib/useLeague'
+import { useHeadToHeadRows, usePlayerSessions } from '@/lib/useSessions'
 
 interface Side {
   record: number
@@ -56,7 +59,8 @@ export default function ComparerPage() {
   const { players, loading, error, configured } = useLeagueContext()
   const { sessions: ownA, error: errorA } = usePlayerSessions(a)
   const { sessions: ownB, error: errorB } = usePlayerSessions(b)
-  const duels = useDuels(a)
+  const duelRows = useHeadToHeadRows(a, b)
+  const [duelGame, setDuelGame] = useState<GameMode | 'all'>('all')
 
   if (!configured) return <SetupNotice />
   if (loading) return <p className="empty">Chargement de la comparaison…</p>
@@ -80,8 +84,12 @@ export default function ComparerPage() {
 
   const sideA = summarize(ownA)
   const sideB = summarize(ownB)
-  const duel = duels?.find((d) => d.opponent_id === b)
-  const draws = duel ? duel.played - duel.wins - duel.losses : 0
+  // Bilan par jeu : un filtre n'apparaît que pour les jeux réellement joués.
+  const byGame = headToHead(duelRows ?? [], a, b)
+  const games = [...byGame.keys()].filter((key): key is GameMode => key !== 'all')
+  const activeGame = byGame.has(duelGame) ? duelGame : 'all'
+  const duel = byGame.get(activeGame)
+  const draws = duel?.draws ?? 0
 
   const rows: VersusRow[] = [
     { label: 'record', a: sideA?.record ?? null, b: sideB?.record ?? null, better: 'high' },
@@ -142,6 +150,22 @@ export default function ComparerPage() {
 
       <section>
         <h2 className="section-title">Face-à-face</h2>
+        {games.length > 1 && (
+          <div className="chips versus-games" role="radiogroup" aria-label="Jeu du face-à-face">
+            {(['all', ...games] as const).map((key) => (
+              <button
+                key={key}
+                type="button"
+                role="radio"
+                aria-checked={activeGame === key}
+                className={activeGame === key ? 'chip chip--on' : 'chip'}
+                onClick={() => setDuelGame(key)}
+              >
+                {key === 'all' ? 'Tous les jeux' : gameLabel(key)}
+              </button>
+            ))}
+          </div>
+        )}
         {duel ? (
           <p className="versus-duel">
             <span className="versus-duel__score">{duel.wins}</span> victoire{duel.wins > 1 ? 's' : ''}

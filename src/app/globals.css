@@ -487,6 +487,41 @@ a.board__row:hover {
   font-size: 24px;
 }
 
+/* Le niveau en tête du profil : saison, cote, rang. */
+.level-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+  padding: 12px 16px;
+  background: var(--raised);
+  border-left: 4px solid var(--gold);
+}
+
+.level-card__season {
+  font-family: var(--font-display-stack);
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--text-dim);
+}
+
+.level-card__rating {
+  font-family: var(--font-display-stack);
+  font-weight: 800;
+  font-size: 44px;
+  line-height: 1;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}
+
+.level-card__detail {
+  font-size: 15px;
+}
+
+.level-card__detail em {
+  font-style: normal;
+}
+
 .level-delta--up {
   color: var(--green);
 }
@@ -614,6 +649,43 @@ a.board__row:hover {
   font-size: 18px;
   text-transform: uppercase;
   color: var(--red);
+}
+
+.last-volley {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  padding: 8px 14px;
+  background: var(--surface);
+  font-variant-numeric: tabular-nums;
+}
+
+.last-volley__label {
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.last-volley__who {
+  font-family: var(--font-display-stack);
+  font-weight: 700;
+  font-size: 18px;
+  text-transform: uppercase;
+}
+
+.last-volley__darts {
+  font-family: var(--font-display-stack);
+  font-weight: 700;
+  font-size: 18px;
+  word-spacing: 0.3em;
+  color: var(--text-dim);
+}
+
+.last-volley__total {
+  margin-left: auto;
+  font-family: var(--font-display-stack);
+  font-weight: 800;
+  font-size: 22px;
 }
 
 /* Le tableau des scores, une ligne par joueur, celui à la cible surligné. */
@@ -2386,6 +2458,10 @@ a.board__row:hover {
   font-weight: 700;
   color: var(--gold);
   text-transform: uppercase;
+}
+
+.versus-games {
+  margin-bottom: 10px;
 }
 
 .versus-duel {

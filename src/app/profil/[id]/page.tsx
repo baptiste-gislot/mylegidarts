@@ -6,6 +6,7 @@ import { useState } from 'react'
 import { BadgeGrid } from '@/components/BadgeGrid'
 import { DartHeatmap } from '@/components/DartHeatmap'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
+import { PlayerLevel } from '@/components/PlayerLevel'
 import { ScoreChart } from '@/components/ScoreChart'
 import { SetupNotice } from '@/components/SetupNotice'
 import { computeBadges } from '@/lib/badges'
@@ -62,7 +63,7 @@ export default function ProfilPage() {
         <ProfilHeader player={player} />
         <div className="empty">
           <p className="empty__title">Aucune partie</p>
-          <p>{player.name} n’a pas encore tiré. Le profil se remplira dès la première session.</p>
+          <p>{player.name} n’a pas encore tiré. Le profil se remplira dès la première partie.</p>
         </div>
       </div>
     )
@@ -103,6 +104,7 @@ export default function ProfilPage() {
   return (
     <div className="stack">
       <ProfilHeader player={player} />
+      <PlayerLevel playerId={player.id} />
 
       <div className="tiles">
         <div className="tile tile--hero">

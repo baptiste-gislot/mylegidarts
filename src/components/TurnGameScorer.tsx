@@ -1,6 +1,7 @@
 'use client'
 
 import { DartInput } from './DartInput'
+import { LastVolley } from './LastVolley'
 import { TURN_GAMES, type TurnGameId } from '@/lib/gameCatalog'
 import { CRICKET_ROUNDS, CRICKET_TARGETS, type CricketState } from '@/lib/games/cricket'
 import { SHANGHAI_ROUNDS } from '@/lib/games/shanghai'
@@ -63,6 +64,10 @@ export function TurnGameScorer({ game, replay, names, onThrow, onUndo, undoDisab
           )
         })}
       </div>
+
+      {replay.lastVolley && names.length > 1 && (
+        <LastVolley name={names[replay.lastVolley.player]} darts={replay.lastVolley.darts} showTotal={false} />
+      )}
 
       {game === 'cricket' ? (
         <CricketGrid state={replay.state as CricketState} names={names} current={current} />
