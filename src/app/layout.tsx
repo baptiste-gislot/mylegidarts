@@ -1,6 +1,6 @@
 import { SerwistProvider } from '@serwist/turbopack/react'
 import type { Metadata, Viewport } from 'next'
-import { Archivo, Big_Shoulders } from 'next/font/google'
+import { Archivo, Big_Shoulders, Noto_Color_Emoji } from 'next/font/google'
 import { AppShell } from '@/components/AppShell'
 import './globals.css'
 
@@ -14,6 +14,17 @@ const display = Big_Shoulders({
 const body = Archivo({
   subsets: ['latin'],
   variable: '--font-body',
+})
+
+// Le kiosque (Ubuntu Server) n'a aucune police emoji : sans celle-ci, Chromium
+// affiche des carrés. Découpée en tranches unicode-range, seules les tranches
+// réellement utilisées sont téléchargées.
+const emoji = Noto_Color_Emoji({
+  weight: '400',
+  subsets: ['emoji'],
+  variable: '--font-emoji',
+  preload: false,
+  adjustFontFallback: false,
 })
 
 export const metadata: Metadata = {
@@ -43,7 +54,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr" className={`${display.variable} ${body.variable}`}>
+    <html lang="fr" className={`${display.variable} ${body.variable} ${emoji.variable}`}>
       <body>
         <SerwistProvider swUrl="/serwist/sw.js" disable={process.env.NODE_ENV === 'development'}>
           <AppShell>{children}</AppShell>

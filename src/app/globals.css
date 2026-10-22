@@ -47,8 +47,9 @@
   --radius: 6px;
   /* Le biseau des bandeaux d'incrustation, en largeur de pente. */
   --bevel: 12px;
-  --font-display-stack: var(--font-display), 'Arial Narrow', sans-serif;
-  --font-body-stack: var(--font-body), system-ui, sans-serif;
+  /* L'emoji en dernier : Chromium ne s'y rabat que pour les glyphes absents des autres. */
+  --font-display-stack: var(--font-display), 'Arial Narrow', sans-serif, var(--font-emoji);
+  --font-body-stack: var(--font-body), system-ui, sans-serif, var(--font-emoji);
 }
 
 * {
