@@ -8,6 +8,8 @@ import { LastVolley } from '@/components/LastVolley'
 import { useDialog } from '@/components/Dialog'
 import { TurnGameScorer } from '@/components/TurnGameScorer'
 import { SetupNotice } from '@/components/SetupNotice'
+import { RollingNumber } from '@/components/RollingNumber'
+import { SoundToggle } from '@/components/SoundToggle'
 import {
   DARTS_PER_SESSION,
   DARTS_PER_VOLLEY,
@@ -37,7 +39,9 @@ import {
 } from '@/lib/fletanque'
 import { TURN_GAMES, TURN_GAME_IDS, gameLabel, isTurnGame } from '@/lib/gameCatalog'
 import { drawKillerNumbers } from '@/lib/games/killer'
+import { drawShanghaiTargets, type ShanghaiState } from '@/lib/games/shanghai'
 import { useLiveMatchPublisher } from '@/lib/liveMatch'
+import { shuffle } from '@/lib/random'
 import { IN_PROGRESS_KEY, IN_PROGRESS_MAX_AGE_MS } from '@/lib/matchInProgress'
 import { padVolley, replay301, START_301 } from '@/lib/play301'
 import type { TurnSetup } from '@/lib/turnGames'
@@ -87,8 +91,6 @@ interface Announcement {
 
 const SECTORS = Array.from({ length: 20 }, (_, i) => i + 1)
 
-/** Places de flétanque, dans l'ordre de sélection : deux par équipe. */
-const FLETANQUE_SLOTS = ['A1.', 'A2.', 'B1.', 'B2.']
 
 
 interface StoredMatch {
@@ -629,7 +631,13 @@ export default function TirerPage() {
 
     if (turnGame !== null) {
       // Killer : chacun reçoit son numéro au lancement, révélé joueur par joueur.
-      const setup: TurnSetup = turnGame === 'killer' ? { numbers: drawKillerNumbers(order.length) } : {}
+      // Shanghai : les sept numéros à viser sont tirés au sort.
+      const setup: TurnSetup =
+        turnGame === 'killer'
+          ? { numbers: drawKillerNumbers(order.length) }
+          : turnGame === 'shanghai'
+            ? { targets: drawShanghaiTargets() }
+            : {}
       setTurnSetup(setup)
       setTurnJournal([])
       setFletOpener(null)
@@ -639,9 +647,12 @@ export default function TirerPage() {
       setup.numbers?.forEach((number, i) => {
         toast(`🎯 ${players.find((p) => p.id === order[i])?.name ?? '?'} a le ${number}`)
       })
+      if (setup.targets) toast(`🎯 Les numéros à viser : ${setup.targets.join(', ')}`)
       const first = players.find((p) => p.id === order[0])
       announce({
-        lead: `${TURN_GAMES[turnGame].label}, c'est parti !`,
+        lead: `${TURN_GAMES[turnGame].label}, c'est parti !${
+          setup.targets ? ` Première manche : on vise le ${setup.targets[0]}.` : ''
+        }`,
         signature: signatureOf(first),
         relay: relayText(first, true),
       })
@@ -651,12 +662,21 @@ export default function TirerPage() {
     setTurnJournal([])
 
     if (gameMode === 'fletanque') {
+      // Les équipes sont tirées au sort : l'ordre de passage mélangé donne
+      // l'équipe A (les deux premiers) et l'équipe B.
+      const lineup = shuffle(order)
+      setOrder(lineup)
+      const roster = (side: Side) =>
+        teamPlayers(side)
+          .map((i) => players.find((p) => p.id === lineup[i])?.name ?? '?')
+          .join(' & ')
+      ;([0, 1] as Side[]).forEach((side) => toast(`${SIDE_LABEL[side]} : ${roster(side)}`))
       // Tirage au sort de l'équipe qui ouvre, comme au but en pétanque.
       const opener = drawOpener()
       setFletOpener(opener)
       setFletJournal([])
       setAssignments(null)
-      const first = players.find((p) => p.id === order[teamPlayers(opener)[0]])
+      const first = players.find((p) => p.id === lineup[teamPlayers(opener)[0]])
       announce({
         lead: `Flétanque ! Premier à ${TARGET_SCORE} points. ${teamSpeech(opener)} ouvre la mène.`,
         signature: signatureOf(first),
@@ -826,6 +846,13 @@ export default function TirerPage() {
     const nextPlayer = players.find((p) => p.id === order[after.current!])
     const firstTurn = after.dartsByPlayer[after.current].length === 0
     const relay = relayText(nextPlayer, firstTurn)
+    // Shanghai : chaque nouvelle manche annonce son numéro tiré au sort.
+    if (turnGame === 'shanghai' && after.round > turnReplay.round) {
+      const target = (after.state as ShanghaiState).targets[after.round]
+      const manche = `Manche ${after.round + 1} : on vise le ${target} !`
+      announce({ lead: lead ? `${lead} ${manche}` : manche, signature: firstTurn ? signatureOf(nextPlayer) : null, relay })
+      return
+    }
     announce({ lead, signature: firstTurn ? signatureOf(nextPlayer) : null, relay })
   }
 
@@ -1106,14 +1133,31 @@ export default function TirerPage() {
   }
 
   if (!started) {
+    // Le bouton dit ce qui manque plutôt que de rester grisé sans explication.
+    const needed =
+      gameMode === 'fletanque'
+        ? PLAYERS_PER_MATCH
+        : turnGame !== null
+          ? TURN_GAMES[turnGame].minPlayers
+          : 1
+    const missing = needed - order.length
+    const startLabel =
+      order.length === 0
+        ? 'Choisissez qui tire'
+        : missing > 0
+          ? `Encore ${missing} joueur${missing > 1 ? 's' : ''} à choisir`
+          : gameMode === 'fletanque'
+            ? 'Lancer la flétanque'
+            : turnGame !== null
+              ? `Lancer le ${TURN_GAMES[turnGame].label}`
+              : 'Commencer la partie'
+
     return (
       <div className="stack">
-        <div className="idle-board" aria-hidden="true">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/icons/icon-512.png" alt="" width={180} height={180} />
-        </div>
         <section>
-          <h2 className="section-title">Jeu</h2>
+          <h2 className="section-title">
+            <span className="step">1</span> Le jeu
+          </h2>
           <div className="chips" role="radiogroup" aria-label="Type de jeu">
             <button
               type="button"
@@ -1182,35 +1226,36 @@ export default function TirerPage() {
             </p>
           )}
           {gameMode === 'volees' && (
-            <div className="chips chips--powers">
-              <button
-                type="button"
-                aria-pressed={powersEnabled}
-                className={powersEnabled ? 'chip chip--on' : 'chip'}
-                onClick={() => setPowersEnabled((on) => !on)}
-              >
-                🃏 Variante avec pouvoirs
-              </button>
-            </div>
-          )}
-          {gameMode === 'volees' && powersEnabled && (
-            <p className="mode-hint">
-              Chaque joueur reçoit au hasard un pouvoir secret de l’équipe, utilisable une seule
-              fois. Partie hors classement, mais l’honneur est en jeu.
-            </p>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={powersEnabled}
+              className="option-switch"
+              onClick={() => setPowersEnabled((on) => !on)}
+            >
+              <span className="option-switch__text">
+                <span className="option-switch__title">🃏 Variante avec pouvoirs</span>
+                <span className="option-switch__hint">
+                  {powersEnabled
+                    ? 'Chaque joueur reçoit au hasard un pouvoir secret, utilisable une seule fois. Partie hors classement.'
+                    : 'Un pouvoir secret par joueur. Partie hors classement.'}
+                </span>
+              </span>
+              <span className="option-switch__track" aria-hidden="true">
+                <span className="option-switch__thumb" />
+              </span>
+            </button>
           )}
         </section>
         <section>
           <h2 className="section-title">
-            {gameMode === 'fletanque'
-              ? 'Les deux équipes'
-              : 'Qui tire ? (dans l’ordre de passage)'}
+            <span className="step">2</span> {gameMode === 'fletanque' ? 'Les quatre joueurs' : 'Qui tire ?'}
           </h2>
-          {gameMode === 'fletanque' && (
-            <p className="mode-hint">
-              Les deux premiers sélectionnés forment l’équipe A, les deux suivants l’équipe B.
-            </p>
-          )}
+          <p className="mode-hint mode-hint--lead">
+            {gameMode === 'fletanque'
+              ? 'Les équipes sont tirées au sort au lancement.'
+              : 'Touchez les joueurs dans l’ordre de passage.'}
+          </p>
           <div className="chips">
             {players.map((p) => {
               const position = order.indexOf(p.id)
@@ -1218,7 +1263,7 @@ export default function TirerPage() {
                 position === -1
                   ? ''
                   : gameMode === 'fletanque'
-                    ? `${FLETANQUE_SLOTS[position]} `
+                    ? '✓ '
                     : `${position + 1}. `
               return (
                 <button
@@ -1234,31 +1279,14 @@ export default function TirerPage() {
               )
             })}
           </div>
-          {gameMode === 'fletanque' && order.length > 0 && (
-            <div className="flet-lineup">
-              {([0, 1] as Side[]).map((side) => (
-                <p key={side} className="flet-lineup__row">
-                  <strong>{SIDE_LABEL[side]}</strong> {teamRoster(side)}
-                </p>
-              ))}
-            </div>
-          )}
         </section>
         <button
           type="button"
           className="button-primary"
-          disabled={
-            gameMode === 'fletanque'
-              ? order.length !== PLAYERS_PER_MATCH
-              : order.length < (turnGame !== null ? TURN_GAMES[turnGame].minPlayers : 1)
-          }
+          disabled={missing > 0}
           onClick={start}
         >
-          {gameMode === 'fletanque'
-            ? 'Lancer la flétanque'
-            : turnGame !== null
-              ? `Lancer le ${TURN_GAMES[turnGame].label}`
-              : 'Commencer la partie'}
+          {startLabel}
         </button>
       </div>
     )
@@ -1352,7 +1380,7 @@ export default function TirerPage() {
                 </span>
                 {line.record && <span className="recap__badge">Nouveau record</span>}
                 {line.sub && !line.won && <span className="recap__badge">{line.sub}</span>}
-                <span className="recap__total">{line.total}</span>
+                <RollingNumber className="recap__total" value={line.total} from={0} />
               </div>
             ))}
           </div>
@@ -1418,11 +1446,16 @@ export default function TirerPage() {
         <div className="scorer__status">
           <div>
             <p className="scorer__volley">Flétanque · Mène {replay.menes.length + 1}</p>
-            <p className="scorer__thrower">{SIDE_LABEL[replay.opener]} ouvre</p>
+            <p className="scorer__thrower" key={replay.opener}>
+              {SIDE_LABEL[replay.opener]} ouvre
+            </p>
           </div>
-          <button type="button" className="button-ghost" onClick={() => void abandon()}>
-            Abandonner
-          </button>
+          <div className="scorer__actions">
+            <SoundToggle />
+            <button type="button" className="button-ghost" onClick={() => void abandon()}>
+              Abandonner
+            </button>
+          </div>
         </div>
 
         <div className="flet-teams">
@@ -1436,7 +1469,7 @@ export default function TirerPage() {
                   {SIDE_LABEL[side]}
                   {replay.opener === side && <em className="flet-team__point"> · ouvre</em>}
                 </span>
-                <span className="flet-team__score">{replay.scores[side]}</span>
+                <RollingNumber className="flet-team__score" value={replay.scores[side]} />
               </div>
               <p className="flet-team__roster">{teamRoster(side)}</p>
             </section>
@@ -1536,14 +1569,17 @@ export default function TirerPage() {
                 ? `🃏 Volée ${currentRound + 1} sur ${VOLLEYS_PER_SESSION}`
                 : `Volée ${currentRound + 1} sur ${VOLLEYS_PER_SESSION}`}
           </p>
-          <p className="scorer__thrower">
+          <p className="scorer__thrower" key={currentPlayer?.id}>
             {currentPlayer?.name}
             {pendingSlot !== null && <em> relance !</em>}
           </p>
         </div>
-        <button type="button" className="button-ghost" onClick={() => void abandon()}>
-          Abandonner
-        </button>
+        <div className="scorer__actions">
+          <SoundToggle />
+          <button type="button" className="button-ghost" onClick={() => void abandon()}>
+            Abandonner
+          </button>
+        </div>
       </div>
 
       <div className="scorer__slots">
@@ -1582,13 +1618,16 @@ export default function TirerPage() {
               aria-current={i === currentPlayerIndex ? 'step' : undefined}
             >
               <span className="scoreboard__name">{player?.name}</span>
-              <span className="scoreboard__score">
-                {powersActive && powersReplay !== null
-                  ? powersReplay.totals[i]
-                  : gameMode === '301'
-                    ? (replays[i]?.remaining ?? START_301)
-                    : sessionTotal(dartsByPlayer[i])}
-              </span>
+              <RollingNumber
+                className="scoreboard__score"
+                value={
+                  powersActive && powersReplay !== null
+                    ? powersReplay.totals[i]
+                    : gameMode === '301'
+                      ? (replays[i]?.remaining ?? START_301)
+                      : sessionTotal(dartsByPlayer[i])
+                }
+              />
             </li>
           )
         })}

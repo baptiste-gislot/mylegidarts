@@ -62,7 +62,15 @@ export function DialogProvider({ children }: { children: React.ReactNode }) {
 function AskDialog({ options, onSettle }: { options: AskOptions; onSettle: (answer: { value: string } | null) => void }) {
   const ref = useRef<HTMLDialogElement>(null)
   const [value, setValue] = useState(options.input?.initial ?? '')
+  /** La réponse, gardée le temps que la boîte reparte par où elle est venue. */
+  const [leaving, setLeaving] = useState<{ answer: { value: string } | null } | null>(null)
   const missing = options.input?.required === true && value.trim() === ''
+
+  const settle = (answer: { value: string } | null) => {
+    if (leaving) return
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) onSettle(answer)
+    else setLeaving({ answer })
+  }
 
   useEffect(() => {
     ref.current?.showModal()
@@ -71,16 +79,19 @@ function AskDialog({ options, onSettle }: { options: AskOptions; onSettle: (answ
   return (
     <dialog
       ref={ref}
-      className="ask"
+      className={leaving ? 'ask ask--closing' : 'ask'}
       aria-labelledby="ask-title"
       onCancel={(e) => {
         // Échap : on referme nous-mêmes pour résoudre la promesse.
         e.preventDefault()
-        onSettle(null)
+        settle(null)
       }}
       onClick={(e) => {
         // Un clic sur le fond (hors de la boîte) vaut « annuler ».
-        if (e.target === ref.current) onSettle(null)
+        if (e.target === ref.current) settle(null)
+      }}
+      onAnimationEnd={(e) => {
+        if (leaving && e.animationName === 'ask-out') onSettle(leaving.answer)
       }}
     >
       <form
@@ -88,7 +99,7 @@ function AskDialog({ options, onSettle }: { options: AskOptions; onSettle: (answ
         className="ask__box"
         onSubmit={(e) => {
           e.preventDefault()
-          if (!missing) onSettle({ value })
+          if (!missing) settle({ value })
         }}
       >
         <h2 id="ask-title" className="ask__title">
@@ -110,7 +121,7 @@ function AskDialog({ options, onSettle }: { options: AskOptions; onSettle: (answ
           </label>
         )}
         <div className="ask__actions">
-          <button type="button" className="button-ghost" onClick={() => onSettle(null)}>
+          <button type="button" className="button-ghost" onClick={() => settle(null)}>
             {options.cancelLabel ?? 'Annuler'}
           </button>
           <button

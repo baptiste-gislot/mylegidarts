@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
+import { RANKING_LINKS, SectionNav } from '@/components/SectionNav'
 import { SetupNotice } from '@/components/SetupNotice'
 import { computeRecords } from '@/lib/records'
 import { useLeagueContext } from '@/lib/LeagueProvider'
@@ -28,12 +29,7 @@ export default function RecordsPage() {
 
   return (
     <div className="stack">
-      <div className="profil-head">
-        <Link href="/" className="button-ghost">
-          ← Classement
-        </Link>
-        <h2 className="profil-head__name">Records de la ligue</h2>
-      </div>
+      <SectionNav label="Classements" links={RANKING_LINKS} />
 
       {records.length === 0 ? (
         <div className="empty">

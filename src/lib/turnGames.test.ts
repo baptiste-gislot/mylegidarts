@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { CLOCK_STEPS, clockRules } from './games/aroundTheClock'
 import { CRICKET_ROUNDS, cricketRules } from './games/cricket'
 import { KILLER_LIVES, drawKillerNumbers, killerRules } from './games/killer'
-import { SHANGHAI_ROUNDS, shanghaiRules } from './games/shanghai'
+import { SHANGHAI_ROUNDS, drawShanghaiTargets, shanghaiRules } from './games/shanghai'
 import type { Dart } from './scoring'
 import { replayTurnGame } from './turnGames'
 
@@ -135,6 +135,21 @@ describe('Shanghai', () => {
     const replay = replayTurnGame(shanghaiRules, 2, {}, [S(1), T(1), D(1)])
     expect(replay.finished).toBe(true)
     expect(replay.winners).toEqual([0])
+  })
+
+  it('vise les numéros tirés au sort, manche après manche', () => {
+    const targets = [17, 4, 9, 12, 1, 20, 6]
+    // Joueur 0 : un 17 en manche 1 (le 1 ne compte plus), puis joueur 1, puis le 4.
+    const replay = replayTurnGame(shanghaiRules, 2, { targets }, [S(17), S(1), S(1), ...misses(3), D(4)])
+    expect(replay.round).toBe(1)
+    expect(replay.state.points[0]).toBe(17 + 8)
+  })
+
+  it('tire sept numéros distincts entre 1 et 20', () => {
+    const targets = drawShanghaiTargets()
+    expect(targets).toHaveLength(SHANGHAI_ROUNDS)
+    expect(new Set(targets).size).toBe(SHANGHAI_ROUNDS)
+    expect(targets.every((n) => n >= 1 && n <= 20)).toBe(true)
   })
 
   it('se règle aux points après sept manches, ex æquo compris', () => {

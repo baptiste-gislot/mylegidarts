@@ -81,6 +81,17 @@ export function TournamentBoard({ tournament, view, players, onUpdate, onDelete 
 
   const rounds = view.bracket.length
 
+  // La prochaine rencontre à jouer : les poules dans l'ordre, puis le tableau.
+  // C'est la seule qui porte le bouton jaune ; les autres restent discrètes.
+  const next = live
+    ? ([
+        ...view.pools.flatMap((pool) => pool.rencontres.map((r) => ({ r, label: poolName(pool.index) }))),
+        ...view.bracket.flatMap(({ round, rencontres }) =>
+          rencontres.map((r) => ({ r, label: roundLabel(round, rounds) })),
+        ),
+      ].find(({ r }) => r.status === 'a_jouer' && r.a !== null && r.b !== null) ?? null)
+    : null
+
   return (
     <div className="stack">
       <header className="tournament-head">
@@ -89,6 +100,20 @@ export function TournamentBoard({ tournament, view, players, onUpdate, onDelete 
           {gameLabel(tournament.mode)}, {dateFormat.format(new Date(tournament.created_at))}
         </p>
       </header>
+
+      {next && (
+        <section className="next-up">
+          <p className="next-up__label">Prochaine rencontre · {next.label}</p>
+          <p className="next-up__players">
+            <span>{name(next.r.a)}</span>
+            <span className="next-up__vs">contre</span>
+            <span>{name(next.r.b)}</span>
+          </p>
+          <Link href={playHref(next.r, next.label)} className="button-primary next-up__play">
+            Lancer la rencontre
+          </Link>
+        </section>
+      )}
 
       {view.champion && (
         <section className="champion">
@@ -187,7 +212,7 @@ export function TournamentBoard({ tournament, view, players, onUpdate, onDelete 
         </section>
       ))}
 
-      <button type="button" className="button-ghost tournament-delete" onClick={() => void remove()}>
+      <button type="button" className="button-ghost button-ghost--danger tournament-delete" onClick={() => void remove()}>
         Supprimer le tournoi
       </button>
     </div>
@@ -222,7 +247,7 @@ function RencontreCard({
       {side(r.b, r.scores?.b)}
       <span className="fixture-card__status">
         {r.status === 'a_jouer' && playHref ? (
-          <Link href={playHref} className="fixture-card__play">
+          <Link href={playHref} className="button-secondary fixture-card__play">
             Jouer
           </Link>
         ) : r.status === 'jouee' && r.winner === null ? (

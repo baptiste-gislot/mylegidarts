@@ -3,6 +3,7 @@
 // adversaire l'élimine. Un killer qui touche son propre double s'élimine.
 // Le dernier en vie gagne.
 
+import { shuffle } from '../random'
 import type { TurnRules } from '../turnGames'
 
 export const KILLER_LIVES = 1
@@ -15,14 +16,7 @@ export interface KillerState {
 
 /** Numéros distincts tirés au sort, un par joueur. */
 export function drawKillerNumbers(players: number): number[] {
-  const pool = Array.from({ length: 20 }, (_, i) => i + 1)
-  const random = new Uint32Array(pool.length)
-  crypto.getRandomValues(random)
-  for (let i = pool.length - 1; i > 0; i--) {
-    const j = random[i] % (i + 1)
-    ;[pool[i], pool[j]] = [pool[j], pool[i]]
-  }
-  return pool.slice(0, players)
+  return shuffle(Array.from({ length: 20 }, (_, i) => i + 1)).slice(0, players)
 }
 
 export const killerRules: TurnRules<KillerState> = {

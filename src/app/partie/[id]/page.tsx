@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
+import { DeleteMatchButton } from '@/components/DeleteMatchButton'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
 import { SetupNotice } from '@/components/SetupNotice'
 import { SIDE_LABEL, type Side } from '@/lib/fletanque'
@@ -109,6 +110,7 @@ export default function PartiePage() {
             ))}
           </div>
         </section>
+        <DeleteMatchButton sessionIds={matchSessions.map((s) => s.id)} />
       </div>
     )
   }
@@ -204,6 +206,7 @@ export default function PartiePage() {
           </section>
         )
       })}
+      <DeleteMatchButton sessionIds={matchSessions.map((s) => s.id)} />
     </div>
   )
 }

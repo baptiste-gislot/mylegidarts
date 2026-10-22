@@ -8,7 +8,6 @@ import {
   poolSlot,
   replayTournament,
   roundLabel,
-  seedOrder,
   type TournamentDef,
   type TournamentSession,
 } from './tournament'
@@ -54,17 +53,11 @@ describe('composition', () => {
     expect(poolSizes(10)).toEqual([4, 3, 3])
   })
 
-  it('répartit les têtes de série en serpentin', () => {
+  it('répartit les joueurs en serpentin', () => {
     expect(drawPools(['1', '2', '3', '4', '5', '6'])).toEqual([
       ['1', '4', '5'],
       ['2', '3', '6'],
     ])
-  })
-
-  it('classe d’abord les joueurs cotés, puis les autres', () => {
-    const order = seedOrder(['a', 'b', 'c', 'd'], new Map([['c', 1100], ['a', 1050]]), () => 0)
-    expect(order.slice(0, 2)).toEqual(['c', 'a'])
-    expect(new Set(order)).toEqual(new Set(['a', 'b', 'c', 'd']))
   })
 
   it('place les têtes de série d’un tableau de 8', () => {

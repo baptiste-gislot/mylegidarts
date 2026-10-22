@@ -107,20 +107,9 @@ export function poolSizes(players: number): number[] {
 }
 
 /**
- * Ordre des têtes de série : les joueurs cotés la saison précédente par
- * niveau décroissant, puis les autres dans un ordre tiré au sort.
+ * Répartit les joueurs en serpentin dans l'ordre donné : A B C, C B A, A B C…
+ * Mélangé au préalable, c'est un tirage au sort des poules.
  */
-export function seedOrder(players: string[], ratings: Map<string, number>, random: () => number): string[] {
-  const rated = players.filter((p) => ratings.has(p)).sort((x, y) => ratings.get(y)! - ratings.get(x)!)
-  const unrated = players.filter((p) => !ratings.has(p))
-  for (let i = unrated.length - 1; i > 0; i--) {
-    const j = Math.floor(random() * (i + 1))
-    ;[unrated[i], unrated[j]] = [unrated[j], unrated[i]]
-  }
-  return [...rated, ...unrated]
-}
-
-/** Répartit les têtes de série en serpentin : A B C, C B A, A B C… */
 export function drawPools(seeded: string[]): string[][] {
   const count = poolSizes(seeded.length).length
   const pools: string[][] = Array.from({ length: count }, () => [])

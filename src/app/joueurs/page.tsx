@@ -3,7 +3,9 @@
 import { useRef, useState } from 'react'
 import Link from 'next/link'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
+import { PLAYERS_LINKS, SectionNav } from '@/components/SectionNav'
 import { SetupNotice } from '@/components/SetupNotice'
+import { Sheet } from '@/components/Sheet'
 import { useDialog } from '@/components/Dialog'
 import { useToast } from '@/components/Toaster'
 import {
@@ -40,6 +42,8 @@ export default function JoueursPage() {
   const sessionCount = (playerId: string) =>
     stats.filter((s) => s.player_id === playerId).reduce((sum, s) => sum + s.sessions_count, 0)
   const [name, setName] = useState('')
+  /** Le joueur dont la feuille d'actions est ouverte. */
+  const [managed, setManaged] = useState<PlayerRow | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
 
   if (!configured) return <SetupNotice />
@@ -143,6 +147,8 @@ export default function JoueursPage() {
 
   return (
     <div className="stack">
+      <SectionNav label="Joueurs" links={PLAYERS_LINKS} />
+
       <form className="add-form" onSubmit={(e) => void submit(e)}>
         <input
           type="text"
@@ -186,85 +192,72 @@ export default function JoueursPage() {
           {players.map((player) => {
             const count = sessionCount(player.id)
             return (
-              <li key={player.id} className="board__row board__row--manage">
-                <PlayerAvatar name={player.name} />
-                <span className="board__who">
-                  <span className="board__name">
-                    {player.name}
-                    {player.nickname && <em className="board__nickname"> « {player.nickname} »</em>}
+              <li key={player.id}>
+                <button
+                  type="button"
+                  className="board__row board__row--manage"
+                  onClick={() => setManaged(player)}
+                  aria-haspopup="dialog"
+                >
+                  <PlayerAvatar name={player.name} />
+                  <span className="board__who">
+                    <span className="board__name">
+                      {player.name}
+                      {player.nickname && <em className="board__nickname"> « {player.nickname} »</em>}
+                    </span>
+                    <span className="board__record">
+                      {count} partie{count > 1 ? 's' : ''}
+                      {player.signature_path && ' · 🎵 signature'}
+                    </span>
                   </span>
-                  <span className="board__record">
-                    {count} partie{count > 1 ? 's' : ''}
+                  <span className="board__chevron" aria-hidden="true">
+                    ›
                   </span>
-                </span>
-                <span className="board__actions">
-                  <button
-                    type="button"
-                    className="button-ghost"
-                    title={
-                      player.signature_path
-                        ? `Remplacer la signature sonore de ${player.name} (MP3)`
-                        : `Ajouter une signature sonore à ${player.name} (MP3, jouée à son entrée en piste)`
-                    }
-                    aria-label={
-                      player.signature_path
-                        ? `Remplacer la signature sonore de ${player.name}`
-                        : `Ajouter une signature sonore à ${player.name}`
-                    }
-                    onClick={() => pickSignature(player)}
-                  >
-                    🎵
-                  </button>
-                  {player.signature_path && (
-                    <>
-                      <button
-                        type="button"
-                        className="button-ghost"
-                        title={`Écouter la signature de ${player.name}`}
-                        aria-label={`Écouter la signature de ${player.name}`}
-                        onClick={() => listenSignature(player)}
-                      >
-                        ▶
-                      </button>
-                      <button
-                        type="button"
-                        className="button-ghost"
-                        title={`Retirer la signature de ${player.name}`}
-                        aria-label={`Retirer la signature de ${player.name}`}
-                        onClick={() => void removeSignature(player)}
-                      >
-                        🔇
-                      </button>
-                    </>
-                  )}
-                  <button
-                    type="button"
-                    className="button-ghost"
-                    onClick={() => void editNickname(player.id, player.name, player.nickname)}
-                  >
-                    Surnom
-                  </button>
-                  <button
-                    type="button"
-                    className="button-ghost"
-                    onClick={() => void remove(player.id, player.name)}
-                  >
-                    Supprimer
-                  </button>
-                </span>
+                </button>
               </li>
             )
           })}
         </ul>
       )}
 
-      <Link href="/punchlines" className="button-ghost invite-link">
-        Punchlines de l’annonceur
-      </Link>
-
-      <Link href="/inviter" className="button-ghost invite-link">
-        Afficher le QR code d’installation
-      </Link>
+      {managed && (
+        <Sheet
+          title={managed.name}
+          subtitle={managed.nickname ? `« ${managed.nickname} »` : undefined}
+          onClose={() => setManaged(null)}
+        >
+          <Link href={`/profil/${managed.id}`} className="sheet__action">
+            Voir le profil
+          </Link>
+          <button
+            type="button"
+            className="sheet__action"
+            onClick={() => void editNickname(managed.id, managed.name, managed.nickname)}
+          >
+            {managed.nickname ? 'Changer le surnom' : 'Donner un surnom'}
+          </button>
+          <button type="button" className="sheet__action" onClick={() => pickSignature(managed)}>
+            {managed.signature_path ? 'Remplacer la signature sonore' : 'Ajouter une signature sonore (MP3)'}
+          </button>
+          {managed.signature_path && (
+            <>
+              <button type="button" className="sheet__action" onClick={() => listenSignature(managed)}>
+                Écouter la signature
+              </button>
+              <button type="button" className="sheet__action" onClick={() => void removeSignature(managed)}>
+                Retirer la signature
+              </button>
+            </>
+          )}
+          <button
+            type="button"
+            className="sheet__action sheet__action--danger"
+            onClick={() => void remove(managed.id, managed.name)}
+          >
+            Supprimer {managed.name}
+          </button>
+        </Sheet>
+      )}
     </div>
   )
 }

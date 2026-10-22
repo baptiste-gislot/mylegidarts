@@ -13,11 +13,25 @@ export function soundsEnabled(): boolean {
   return localStorage.getItem(SOUND_KEY) !== 'off'
 }
 
+/** Diffusé à chaque bascule, pour que tous les interrupteurs restent d'accord. */
+const SOUND_EVENT = 'mylegidarts-sons'
+
 export function setSoundsEnabled(on: boolean): void {
   localStorage.setItem(SOUND_KEY, on ? 'on' : 'off')
   if (!on) {
     stopSignature?.()
     if ('speechSynthesis' in window) window.speechSynthesis.cancel()
+  }
+  window.dispatchEvent(new Event(SOUND_EVENT))
+}
+
+/** Abonnement à la bascule des sons (pour useSyncExternalStore). */
+export function subscribeSounds(onChange: () => void): () => void {
+  window.addEventListener(SOUND_EVENT, onChange)
+  window.addEventListener('storage', onChange)
+  return () => {
+    window.removeEventListener(SOUND_EVENT, onChange)
+    window.removeEventListener('storage', onChange)
   }
 }
 

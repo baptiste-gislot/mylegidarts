@@ -7,9 +7,12 @@
 
 import { DARTS_PER_VOLLEY, type Dart } from './scoring'
 
-/** Paramètres tirés au lancement de la partie (les numéros du Killer). */
+/** Paramètres tirés au lancement de la partie. */
 export interface TurnSetup {
+  /** Killer : le numéro de chaque joueur. */
   numbers?: number[]
+  /** Shanghai : le numéro visé à chaque manche. */
+  targets?: number[]
 }
 
 export interface ThrowContext {

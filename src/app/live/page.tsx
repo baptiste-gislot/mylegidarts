@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
+import { SectionNav, historyLinks } from '@/components/SectionNav'
 import { SetupNotice } from '@/components/SetupNotice'
 import {
   DARTS_PER_SESSION,
@@ -26,20 +27,26 @@ export default function LivePage() {
 
   if (!supabase) return <SetupNotice />
 
+  const nav = <SectionNav label="Historique" links={historyLinks(matches.length > 0)} />
+
   if (matches.length === 0) {
     return (
-      <div className="empty">
-        <p className="empty__title">Aucune partie en cours</p>
-        <p>
-          Dès que quelqu’un lance une partie dans l’onglet{' '}
-          <Link href="/tirer">Jouer</Link>, elle apparaîtra ici en direct.
-        </p>
+      <div className="stack">
+        {nav}
+        <div className="empty">
+          <p className="empty__title">Aucune partie en cours</p>
+          <p>
+            Dès que quelqu’un lance une partie dans l’onglet{' '}
+            <Link href="/tirer">Jouer</Link>, elle apparaîtra ici en direct.
+          </p>
+        </div>
       </div>
     )
   }
 
   return (
     <div className="stack">
+      {nav}
       {matches.map((match) => (
         <LiveMatchCard key={match.id} match={match} />
       ))}

@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { SetupNotice } from '@/components/SetupNotice'
 import { useToast } from '@/components/Toaster'
 import { TournamentBoard, poolName } from '@/components/TournamentBoard'
-import { computeStandings, previousSeason, seasonOf } from '@/lib/elo'
 import { gameLabel } from '@/lib/gameCatalog'
 import { useLeagueContext } from '@/lib/LeagueProvider'
 import {
@@ -13,11 +12,10 @@ import {
   TOURNAMENT_MODES,
   drawPools,
   replayTournament,
-  seedOrder,
   type TournamentMode,
   type TournamentView,
 } from '@/lib/tournament'
-import { useAllSessionStats } from '@/lib/useSessions'
+import { shuffle } from '@/lib/random'
 import { useTournamentSessions, useTournaments } from '@/lib/useTournaments'
 
 const dayFormat = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long' })
@@ -87,7 +85,6 @@ function CreateTournament({
   onCreate: (name: string, mode: TournamentMode, pools: string[][]) => Promise<{ id: string } | { error: string }>
 }) {
   const { players } = useLeagueContext()
-  const { rows } = useAllSessionStats()
   const toast = useToast()
   const [name, setName] = useState(() => `Tournoi du ${dayFormat.format(new Date())}`)
   const [mode, setMode] = useState<TournamentMode>('volees')
@@ -101,12 +98,8 @@ function CreateTournament({
     event.preventDefault()
     if (!enough || busy) return
     setBusy(true)
-    // Têtes de série : le niveau de la saison précédente, sinon le hasard.
-    const last = previousSeason(seasonOf(new Date().toISOString()))
-    const ratings = new Map(
-      computeStandings(rows ?? [], last).map((s) => [s.playerId, s.rating] as const),
-    )
-    const pools = drawPools(seedOrder(selected, ratings, Math.random))
+    // Poules tirées au sort.
+    const pools = drawPools(shuffle(selected))
     const result = await onCreate(name, mode, pools)
     setBusy(false)
     if ('error' in result) {
@@ -164,8 +157,7 @@ function CreateTournament({
       <section>
         <h2 className="section-title">Participants</h2>
         <p className="mode-hint">
-          {MIN_TOURNAMENT_PLAYERS} joueurs minimum. Les têtes de série suivent le niveau de la saison
-          précédente.
+          {MIN_TOURNAMENT_PLAYERS} joueurs minimum. Les poules sont tirées au sort.
         </p>
         <div className="chips">
           {players.map((p) => {

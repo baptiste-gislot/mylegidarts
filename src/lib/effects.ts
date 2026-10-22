@@ -12,9 +12,14 @@ function motionOk(): boolean {
 
 const PALETTE = ['#ffd23f', '#e5383b', '#f4f6ff', '#1fa35c']
 
-export async function fireConfetti(kind: 'perfect' | 'record'): Promise<void> {
+/**
+ * `canvas` : où tirer, quand la fête se passe dans une fenêtre modale (la
+ * couche du dessus masquerait le canevas plein écran par défaut).
+ */
+export async function fireConfetti(kind: 'perfect' | 'record', canvas?: HTMLCanvasElement | null): Promise<void> {
   if (!motionOk()) return
-  const confetti = (await import('canvas-confetti')).default
+  const lib = (await import('canvas-confetti')).default
+  const confetti = canvas ? lib.create(canvas, { resize: true }) : lib
 
   if (kind === 'perfect') {
     // 180 : deux canons croisés depuis le bas, dans les couleurs de la cible.

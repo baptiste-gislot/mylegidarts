@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import Link from 'next/link'
+import { PLAYERS_LINKS, SectionNav } from '@/components/SectionNav'
 import QRCode from 'qrcode'
 
 /**
@@ -26,9 +26,7 @@ export default function InviterPage() {
 
   return (
     <div className="stack invite">
-      <Link href="/joueurs" className="button-ghost">
-        ← Joueurs
-      </Link>
+      <SectionNav label="Joueurs" links={PLAYERS_LINKS} />
       <div className="invite__card">
         <h2 className="invite__title">Rejoignez la ligue</h2>
         <p className="invite__sub">

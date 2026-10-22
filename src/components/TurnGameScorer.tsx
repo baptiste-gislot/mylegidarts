@@ -2,9 +2,11 @@
 
 import { DartInput } from './DartInput'
 import { LastVolley } from './LastVolley'
+import { RollingNumber } from './RollingNumber'
+import { SoundToggle } from './SoundToggle'
 import { TURN_GAMES, type TurnGameId } from '@/lib/gameCatalog'
 import { CRICKET_ROUNDS, CRICKET_TARGETS, type CricketState } from '@/lib/games/cricket'
-import { SHANGHAI_ROUNDS } from '@/lib/games/shanghai'
+import { SHANGHAI_ROUNDS, type ShanghaiState } from '@/lib/games/shanghai'
 import { dartLabel, dartValue, DARTS_PER_VOLLEY, type Dart } from '@/lib/scoring'
 import type { TurnReplay } from '@/lib/turnGames'
 
@@ -21,8 +23,11 @@ interface TurnGameScorerProps {
 /** Marques du Cricket : une barre, une croix, une croix cerclée (fermé). */
 const MARK_GLYPHS = ['', '/', '✕', 'ⓧ']
 
-function roundLabel(game: TurnGameId, round: number): string {
-  if (game === 'shanghai') return `Manche ${round + 1} sur ${SHANGHAI_ROUNDS} · on vise le ${round + 1}`
+function roundLabel(game: TurnGameId, round: number, state: unknown): string {
+  if (game === 'shanghai') {
+    const target = (state as ShanghaiState).targets[round]
+    return `Manche ${round + 1} sur ${SHANGHAI_ROUNDS} · on vise le ${target}`
+  }
   if (game === 'cricket') return `Volée ${round + 1} sur ${CRICKET_ROUNDS}`
   return `Tour ${round + 1}`
 }
@@ -38,14 +43,19 @@ export function TurnGameScorer({ game, replay, names, onThrow, onUndo, undoDisab
       <div className="scorer__status">
         <div>
           <p className="scorer__volley">
-            {entry.label} · {roundLabel(game, replay.round)}
+            {entry.label} · {roundLabel(game, replay.round, replay.state)}
           </p>
-          <p className="scorer__thrower">{names[current]}</p>
+          <p className="scorer__thrower" key={current}>
+            {names[current]}
+          </p>
           {game === 'clock' && <p className="scorer__goal">Vise le {view.primary}</p>}
         </div>
-        <button type="button" className="button-ghost" onClick={onAbandon}>
-          Abandonner
-        </button>
+        <div className="scorer__actions">
+          <SoundToggle />
+          <button type="button" className="button-ghost" onClick={onAbandon}>
+            Abandonner
+          </button>
+        </div>
       </div>
 
       <div className="scorer__slots">
@@ -92,7 +102,12 @@ export function TurnGameScorer({ game, replay, names, onThrow, onUndo, undoDisab
                   <span className="scoreboard__name">{name}</span>
                   <span className="scoreboard__detail">{line.secondary}</span>
                 </span>
-                <span className="scoreboard__score">{line.primary}</span>
+                {/* Les points défilent ; un numéro à viser ou des vies, non. */}
+                {game === 'shanghai' ? (
+                  <RollingNumber className="scoreboard__score" value={Number(line.primary)} />
+                ) : (
+                  <span className="scoreboard__score">{line.primary}</span>
+                )}
               </li>
             )
           })}
@@ -138,7 +153,9 @@ function CricketGrid({ state, names, current }: { state: CricketState; names: st
         <tr className="cricket__points">
           <th scope="row">Points</th>
           {state.points.map((pts, p) => (
-            <td key={p}>{pts}</td>
+            <td key={p}>
+              <RollingNumber value={pts} />
+            </td>
           ))}
         </tr>
       </tbody>

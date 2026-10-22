@@ -12,12 +12,38 @@
   --green: #1fa35c;
   --green-deep: #157a44;
   --gold: #ffd23f;
+  /* Rouge des actions destructives : plus clair que --red pour rester lisible en texte. */
+  --danger: #ff6b6e;
   /* Rampe séquentielle de la heatmap : du bleu studio au jaune broadcast. */
   --heat-1: #24306a;
   --heat-2: #3d4f8f;
   --heat-3: #8a8a6e;
   --heat-4: #d9b43a;
   --heat-5: #ffe27a;
+  /* Échelle typographique : huit crans, du plus petit libellé au score géant.
+     Les grands crans servent aux chiffres et titres en Big Shoulders. */
+  --fs-caption: 12px;
+  --fs-footnote: 14px;
+  --fs-body: 16px;
+  --fs-lead: 20px;
+  --fs-title: 24px;
+  --fs-headline: 32px;
+  --fs-display: 44px;
+  --fs-hero: 60px;
+  /* Espacements : une grille de 4 px. */
+  --sp-0: 2px;
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --sp-7: 48px;
+  /* Ressort sans rebond (amortissement critique, réponse 0,35 s), pour ce
+     qui se déplace d'une place à une autre : interrompu en route, il repart
+     de là où il est. */
+  --ease-spring: linear(0, 0.075, 0.227, 0.39, 0.536, 0.656, 0.75, 0.821, 0.873, 0.911, 0.938, 0.957, 0.971, 0.98, 0.986, 0.991, 0.994, 0.996, 1);
+  --dur-spring: 450ms;
   --radius: 6px;
   /* Le biseau des bandeaux d'incrustation, en largeur de pente. */
   --bevel: 12px;
@@ -41,7 +67,7 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-body-stack);
-  font-size: 15px;
+  font-size: var(--fs-body);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
@@ -66,6 +92,11 @@ a {
   text-decoration: none;
 }
 
+/* Un groupe de mots qui ne se coupe pas. */
+.nowrap {
+  white-space: nowrap;
+}
+
 /* ---------- Coquille de l'app ---------- */
 
 .app {
@@ -82,7 +113,7 @@ a {
 .masthead {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: var(--sp-3);
   padding: calc(14px + env(safe-area-inset-top)) 0 14px;
   border-bottom: 1px solid var(--line);
   margin-bottom: 18px;
@@ -119,7 +150,7 @@ a {
 
 .masthead__tagline {
   flex: 1;
-  font-size: 13px;
+  font-size: var(--fs-footnote);
   color: var(--text-dim);
 }
 
@@ -129,9 +160,8 @@ a {
   }
 }
 
-.masthead__sound {
-  margin-left: auto;
-  font-size: 18px;
+.sound-toggle {
+  font-size: var(--fs-lead);
   padding: 7px 9px;
   border-radius: var(--radius);
   border: 1px solid var(--line);
@@ -139,15 +169,85 @@ a {
   line-height: 1;
 }
 
-.masthead__sound:hover {
+.masthead .sound-toggle {
+  margin-left: auto;
+}
+
+.sound-toggle:hover {
   background: var(--raised);
+}
+
+.sound-toggle:active {
+  transform: scale(0.94);
 }
 
 .content {
   flex: 1;
 }
 
-/* ---------- Barre d'onglets ---------- */
+/* ---------- Mode partie ----------
+   Pendant une partie, l'écran appartient au jeu : ni en-tête ni onglets, la
+   barre de partie garde le son et « Abandonner ». Le récapitulatif de fin
+   n'est plus un scorer : la navigation revient d'elle-même. */
+
+.app:has(.scorer) {
+  padding-top: calc(16px + env(safe-area-inset-top));
+  padding-bottom: calc(16px + env(safe-area-inset-bottom));
+}
+
+.app:has(.scorer) > .masthead,
+.app:has(.scorer) > .tabbar,
+.app:has(.scorer) .install-banner {
+  display: none;
+}
+
+/* Les commentaires passent en haut : en bas, ils masqueraient Raté / Annuler. */
+body:has(.scorer) .toasts {
+  top: calc(12px + env(safe-area-inset-top));
+  bottom: auto;
+}
+
+body:has(.scorer) .toast {
+  animation-name: toast-in-top;
+}
+
+/* Sur téléphone, on resserre pour que le pavé, Raté et Annuler tiennent sans
+   défiler, jusqu'à quatre joueurs. */
+@media (max-width: 899px) {
+  .app:has(.scorer) .scorer {
+    gap: var(--sp-2);
+  }
+
+  .app:has(.scorer) .slot {
+    height: 52px;
+  }
+
+  .app:has(.scorer) .dart-pad__cell {
+    grid-template-rows: 38px 30px;
+  }
+
+  /* À trois joueurs et plus, le tableau passe sur deux colonnes : quatre
+     joueurs prennent la hauteur de deux. */
+  .app:has(.scorer) .scoreboard:has(> :nth-child(3)) {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .app:has(.scorer) .scoreboard:has(> :nth-child(3)) .scoreboard__row {
+    padding-inline: 10px;
+  }
+
+  .app:has(.scorer) .scoreboard:has(> :nth-child(3)) :is(.scoreboard__name, .scoreboard__who) {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* ---------- Barre d'onglets ----------
+   En bas sur téléphone (picto + libellé), en haut sur grand écran (libellé
+   seul). Le bandeau jaune de l'onglet courant glisse d'un onglet à l'autre. */
 
 .tabbar {
   position: fixed;
@@ -157,27 +257,48 @@ a {
   z-index: 10;
   display: flex;
   justify-content: center;
-  gap: 2px;
-  padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
-  background: color-mix(in srgb, var(--bg) 92%, black);
+  gap: var(--sp-0);
+  padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
   border-top: 1px solid var(--line);
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(16px) saturate(140%);
 }
 
 .tabbar__tab {
-  flex: 1;
-  max-width: 150px;
-  padding: 10px calc(var(--bevel) + 2px) 8px;
-  text-align: center;
+  --bevel: 7px;
+  position: relative;
+  z-index: 1;
+  flex: 1 1 0;
+  max-width: 130px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 2px 5px;
   font-family: var(--font-display-stack);
   font-weight: 700;
-  font-size: 17px;
+  font-size: var(--fs-caption);
+  letter-spacing: 0.01em;
   text-transform: uppercase;
   color: var(--text-dim);
   clip-path: polygon(var(--bevel) 0, 100% 0, calc(100% - var(--bevel)) 100%, 0 100%);
   transition:
-    color 120ms ease-out,
+    color 160ms ease-out,
     background-color 120ms ease-out;
+}
+
+.tabbar__icon {
+  width: 24px;
+  height: 24px;
+  flex: none;
+}
+
+.tabbar__label {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .tabbar__tab:hover {
@@ -185,28 +306,56 @@ a {
   background: var(--surface);
 }
 
-/* Cinq onglets sur un téléphone : on resserre lettrage, marges et biseau. */
-@media (max-width: 519px) {
-  .tabbar {
-    gap: 0;
-    padding-left: 4px;
-    padding-right: 4px;
-  }
-
-  .tabbar__tab {
-    --bevel: 7px;
-    flex: 1 1 auto;
-    max-width: none;
-    padding: 10px 9px 8px;
-    font-size: 14px;
-  }
+.tabbar__tab:active {
+  color: var(--text);
+  background: var(--raised);
 }
 
 /* L'onglet courant prend le bandeau jaune, comme le joueur à la cible. */
 .tabbar__tab--on,
-.tabbar__tab--on:hover {
+.tabbar__tab--on:hover,
+.tabbar__tab--on:active {
   color: var(--bg);
   background: var(--gold);
+}
+
+/* Le bandeau qui glisse : un seul élément, placé sous l'onglet courant. Une
+   fois mesuré, il remplace le bandeau propre à chaque onglet. */
+.tabbar__indicator {
+  --bevel: 7px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 0;
+  opacity: 0;
+  background: var(--gold);
+  clip-path: polygon(var(--bevel) 0, 100% 0, calc(100% - var(--bevel)) 100%, 0 100%);
+  pointer-events: none;
+}
+
+.tabbar[data-indicator] .tabbar__indicator {
+  opacity: 1;
+}
+
+.tabbar[data-indicator] .tabbar__tab--on {
+  background: transparent;
+}
+
+/* Le libellé suit le bandeau : l'onglet cliqué passe en sombre tout de suite,
+   l'ancien retrouve sa couleur avant même que la page ait changé. */
+.tabbar__tab[data-pending] {
+  color: var(--bg);
+}
+
+.tabbar:has([data-pending]) .tabbar__tab--on {
+  color: var(--text-dim);
+}
+
+.tabbar[data-animate] .tabbar__indicator {
+  transition:
+    transform var(--dur-spring) var(--ease-spring),
+    width var(--dur-spring) var(--ease-spring),
+    height var(--dur-spring) var(--ease-spring);
 }
 
 /* ---------- Blocs génériques ---------- */
@@ -214,13 +363,13 @@ a {
 .stack {
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: var(--sp-5);
 }
 
 .section-title {
   font-family: var(--font-display-stack);
   font-weight: 800;
-  font-size: 24px;
+  font-size: var(--fs-title);
   line-height: 1.1;
   margin-bottom: 10px;
 }
@@ -235,7 +384,7 @@ a {
 .empty__title {
   font-family: var(--font-display-stack);
   font-weight: 800;
-  font-size: 26px;
+  font-size: var(--fs-title);
   line-height: 1.1;
   text-transform: uppercase;
   color: var(--text);
@@ -254,6 +403,25 @@ a {
 }
 
 /* L'action principale prend le jaune « en jeu » ; le rouge reste au danger. */
+/* ---------- Boutons ----------
+   Quatre rôles, pas un de plus :
+   - principal (.button-primary) : l'action de l'écran, une seule à la fois ;
+   - secondaire (.button-secondary) : aller ailleurs, voir plus ;
+   - discret (.button-ghost) : réglages et actions annexes ;
+   - destructif (.button-ghost--danger) : supprimer, toujours en rouge.
+   Tous répondent à l'appui, pas au relâchement. */
+
+.button-primary,
+.button-secondary,
+.button-ghost,
+.chip,
+.segmented__option,
+.tabbar__tab,
+.sound-toggle {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
 .button-primary {
   display: block;
   width: 100%;
@@ -263,9 +431,11 @@ a {
   color: var(--bg);
   font-family: var(--font-display-stack);
   font-weight: 800;
-  font-size: 22px;
+  font-size: var(--fs-title);
   text-transform: uppercase;
-  transition: filter 120ms ease-out;
+  transition:
+    filter 120ms ease-out,
+    transform 160ms ease-out;
 }
 
 .button-primary:not(:disabled):hover {
@@ -274,6 +444,8 @@ a {
 
 .button-primary:not(:disabled):active {
   filter: brightness(0.92);
+  transform: scale(0.985);
+  transition-duration: 0ms;
 }
 
 .button-primary:disabled {
@@ -282,20 +454,70 @@ a {
   cursor: not-allowed;
 }
 
+.button-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  padding: 10px 18px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--text);
+  font-weight: 500;
+  font-size: var(--fs-body);
+  transition:
+    background-color 120ms ease-out,
+    transform 160ms ease-out;
+}
+
+.button-secondary:hover:not(:disabled) {
+  background: var(--raised);
+}
+
+.button-secondary:active:not(:disabled) {
+  background: color-mix(in srgb, var(--raised) 80%, var(--text));
+  transform: scale(0.97);
+  transition-duration: 0ms;
+}
+
 .button-ghost {
   padding: 7px 12px;
   border-radius: var(--radius);
   border: 1px solid var(--line);
   color: var(--text-dim);
-  font-size: 14px;
+  font-size: var(--fs-footnote);
   transition:
     color 120ms ease-out,
-    background-color 120ms ease-out;
+    background-color 120ms ease-out,
+    transform 160ms ease-out;
 }
 
 .button-ghost:hover:not(:disabled) {
   color: var(--text);
   background: var(--raised);
+}
+
+.button-ghost:active:not(:disabled) {
+  color: var(--text);
+  background: color-mix(in srgb, var(--raised) 80%, var(--text));
+  transform: scale(0.97);
+  transition-duration: 0ms;
+}
+
+.button-ghost--danger,
+.button-ghost--danger:hover:not(:disabled) {
+  color: var(--danger);
+}
+
+.button-ghost--danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  border-color: color-mix(in srgb, var(--danger) 40%, transparent);
+}
+
+.button-ghost--danger:active:not(:disabled) {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 22%, transparent);
 }
 
 .button-ghost:disabled {
@@ -317,7 +539,7 @@ a {
   border: 1px solid var(--line);
   font-family: var(--font-display-stack);
   font-weight: 800;
-  font-size: 18px;
+  font-size: var(--fs-lead);
 }
 
 /* Le badge du leader : un œil de cible. */
@@ -339,21 +561,36 @@ a {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: var(--sp-0);
 }
 
 .board__row {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: var(--sp-3);
   background: var(--surface);
   border-left: 4px solid transparent;
   padding: 12px 16px;
   transition: background-color 120ms ease-out;
 }
 
-a.board__row:hover {
+a.board__row:hover,
+button.board__row:hover {
   background: var(--raised);
+}
+
+/* Une rangée qui ouvre une feuille d'actions : tout le bandeau est cliquable. */
+button.board__row {
+  width: 100%;
+  text-align: left;
+}
+
+.board__chevron {
+  margin-left: auto;
+  padding-left: var(--sp-2);
+  font-size: var(--fs-title);
+  line-height: 1;
+  color: var(--text-dim);
 }
 
 .board__row--leader {
@@ -390,12 +627,12 @@ a.board__row:hover {
   text-align: center;
   font-family: var(--font-display-stack);
   font-weight: 800;
-  font-size: 24px;
+  font-size: var(--fs-title);
   color: var(--text-dim);
 }
 
 .board__row--leader .board__rank {
-  font-size: 28px;
+  font-size: var(--fs-headline);
 }
 
 .board__who {
@@ -408,7 +645,7 @@ a.board__row:hover {
 .board__name {
   font-family: var(--font-display-stack);
   font-weight: 700;
-  font-size: 21px;
+  font-size: var(--fs-lead);
   line-height: 1.15;
   text-transform: uppercase;
   white-space: nowrap;
@@ -420,13 +657,13 @@ a.board__row:hover {
 .board__name--quote {
   font-family: var(--font-body-stack);
   font-weight: 600;
-  font-size: 17px;
+  font-size: var(--fs-body);
   text-transform: none;
   white-space: normal;
 }
 
 .board__record {
-  font-size: 13px;
+  font-size: var(--fs-footnote);
   color: var(--text-dim);
 }
 
@@ -437,23 +674,23 @@ a.board__row:hover {
 .board__points {
   font-family: var(--font-display-stack);
   font-weight: 800;
-  font-size: 34px;
+  font-size: var(--fs-headline);
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 
 .board__row--leader .board__points {
-  font-size: 48px;
+  font-size: var(--fs-display);
   color: var(--gold);
 }
 
 .board__row--leader .board__name {
-  font-size: 26px;
+  font-size: var(--fs-title);
 }
 
 .board__sub {
   display: block;
-  font-size: 12px;
+  font-size: var(--fs-caption);
   color: var(--text-dim);
 }
 
@@ -462,20 +699,37 @@ a.board__row:hover {
 /* Bascule entre les deux classements : deux bandeaux biseautés accolés. */
 .segmented {
   display: flex;
-  gap: 2px;
+  gap: var(--sp-0);
 }
 
 .segmented__option {
   flex: 1;
   max-width: 240px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
   padding: 10px calc(var(--bevel) + 14px) 8px;
   background: var(--surface);
   color: var(--text-dim);
   font-family: var(--font-display-stack);
   font-weight: 800;
-  font-size: 22px;
+  font-size: var(--fs-lead);
   text-transform: uppercase;
+  white-space: nowrap;
   clip-path: polygon(var(--bevel) 0, 100% 0, calc(100% - var(--bevel)) 100%, 0 100%);
+  transition:
+    color 120ms ease-out,
+    background-color 120ms ease-out;
+}
+
+/* Trois sous-pages sur un téléphone : le libellé se resserre. */
+@media (max-width: 519px) {
+  .segmented__option {
+    --bevel: 8px;
+    padding: 9px calc(var(--bevel) + 4px) 7px;
+    font-size: var(--fs-body);
+  }
 }
 
 .segmented__option:first-child {
@@ -484,6 +738,10 @@ a.board__row:hover {
 
 .segmented__option:hover {
   color: var(--text);
+}
+
+.segmented__option:active {
+  filter: brightness(1.25);
 }
 
 .segmented__option--on,
@@ -495,13 +753,13 @@ a.board__row:hover {
 .level-head {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--sp-3);
 }
 
 .level-head__title {
   font-family: var(--font-display-stack);
   font-weight: 700;
-  font-size: 24px;
+  font-size: var(--fs-title);
 }
 
 /* Le niveau en tête du profil : saison, cote, rang. */
@@ -509,7 +767,7 @@ a.board__row:hover {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 4px 14px;
+  gap: var(--sp-1) var(--sp-3);
   padding: 12px 16px;
   background: var(--raised);
   border-left: 4px solid var(--gold);
@@ -518,21 +776,21 @@ a.board__row:hover {
 .level-card__season {
   font-family: var(--font-display-stack);
   font-weight: 700;
-  font-size: 18px;
+  font-size: var(--fs-lead);
   color: var(--text-dim);
 }
 
 .level-card__rating {
   font-family: var(--font-display-stack);
   font-weight: 800;
-  font-size: 44px;
+  font-size: var(--fs-display);
   line-height: 1;
   color: var(--gold);
   font-variant-numeric: tabular-nums;
 }
 
 .level-card__detail {
-  font-size: 15px;
+  font-size: var(--fs-body);
 }
 
 .level-card__detail em {
@@ -552,7 +810,7 @@ a.board__row:hover {
 .chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--sp-2);
 }
 
 .chip {
@@ -561,11 +819,18 @@ a.board__row:hover {
   background: var(--surface);
   color: var(--text);
   font-weight: 500;
-  transition: background-color 120ms ease-out;
+  transition:
+    background-color 120ms ease-out,
+    transform 160ms ease-out;
 }
 
 .chip:hover {
   background: var(--raised);
+}
+
+.chip:active {
+  transform: scale(0.96);
+  transition-duration: 0ms;
 }
 
 .chip--on,
@@ -580,18 +845,24 @@ a.board__row:hover {
 .scorer {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--sp-4);
 }
 
 .scorer__status {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--sp-3);
+}
+
+.scorer__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
 }
 
 .scorer__volley {
-  font-size: 14px;
+  font-size: var(--fs-footnote);
   color: var(--text-dim);
   margin-bottom: 6px;
 }
@@ -604,7 +875,7 @@ a.board__row:hover {
   color: var(--bg);
   font-family: var(--font-display-stack);
   font-weight: 800;
-  font-size: 34px;
+  font-size: var(--fs-headline);
   line-height: 1.05;
   text-transform: uppercase;
   clip-path: polygon(0 0, 100% 0, calc(100% - var(--bevel)) 100%, 0 100%);
@@ -620,7 +891,7 @@ a.board__row:hover {
   display: grid;
   grid-auto-columns: 1fr;
   grid-auto-flow: column;
-  gap: 4px;
+  gap: var(--sp-1);
 }
 
 .slot {
@@ -643,19 +914,19 @@ a.board__row:hover {
   position: absolute;
   top: 6px;
   left: 9px;
-  font-size: 12px;
+  font-size: var(--fs-caption);
   color: var(--text-dim);
 }
 
 .slot__label {
   font-family: var(--font-display-stack);
   font-weight: 800;
-  font-size: 28px;
+  font-size: var(--fs-headline);
   line-height: 1;
 }
 
 .slot__value {
-  font-size: 13px;
+  font-size: var(--fs-footnote);
   color: var(--text-dim);
   font-variant-numeric: tabular-nums;
 }
@@ -663,7 +934,7 @@ a.board__row:hover {
 .slot__empty {
   font-family: var(--font-display-stack);
   font-weight: 700;
-  font-size: 18px;
+  font-size: var(--fs-lead);
   text-transform: uppercase;
   color: var(--red);
 }
@@ -672,28 +943,28 @@ a.board__row:hover {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 4px 12px;
+  gap: var(--sp-1) var(--sp-3);
   padding: 8px 14px;
   background: var(--surface);
   font-variant-numeric: tabular-nums;
 }
 
 .last-volley__label {
-  font-size: 13px;
+  font-size: var(--fs-footnote);
   color: var(--text-dim);
 }
 
 .last-volley__who {
   font-family: var(--font-display-stack);
   font-weight: 700;
-  font-size: 18px;
+  font-size: var(--fs-lead);
   text-transform: uppercase;
 }
 
 .last-volley__darts {
   font-family: var(--font-display-stack);
   font-weight: 700;
-  font-size: 18px;
+  font-size: var(--fs-lead);
   word-spacing: 0.3em;
   color: var(--text-dim);
 }
@@ -702,7 +973,7 @@ a.board__row:hover {
   margin-left: auto;
   font-family: var(--font-display-stack);
   font-weight: 800;
-  font-size: 22px;
+  font-size: var(--fs-title);
 }
 
 /* Le tableau des scores, une ligne par joueur, celui à la cible surligné. */
@@ -710,17 +981,21 @@ a.board__row:hover {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--sp-0);
 }
 
 .scoreboard__row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--sp-3);
   padding: 7px 14px;
   background: var(--surface);
   border-left: 4px solid transparent;
+  /* Quand la main passe, la rangée active s'éclaire au lieu de basculer. */
+  transition:
+    background-color 240ms ease-out,
+    border-color 240ms ease-out;
 }
 
 .scoreboard__row--active {
@@ -731,7 +1006,7 @@ a.board__row:hover {
 .scoreboard__name {
   font-family: var(--font-display-stack);
   font-weight: 700;
-  font-size: 20px;
+  font-size: var(--fs-lead);
   text-transform: uppercase;
   color: var(--text-dim);
 }
@@ -743,7 +1018,7 @@ a.board__row:hover {
 .scoreboard__score {
   font-family: var(--font-display-stack);
   font-weight: 800;
-  font-size: 28px;
+  font-size: var(--fs-headline);
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
@@ -759,7 +1034,7 @@ a.board__row:hover {
 }
 
 .scoreboard__detail {
-  font-size: 13px;
+  font-size: var(--fs-footnote);
   color: var(--text-dim);
 }
 
@@ -773,7 +1048,7 @@ a.board__row:hover {
 
 .scorer__goal {
   margin-top: 6px;
-  font-size: 15px;
+  font-size: var(--fs-body);
   color: var(--text-dim);
 }
 
@@ -797,7 +1072,7 @@ a.board__row:hover {
 .cricket__player {
   font-family: var(--font-display-stack);
   font-weight: 700;
-  font-size: 17px;
+  font-size: var(--fs-body);
   text-transform: uppercase;
   color: var(--text-dim);
   white-space: nowrap;
@@ -815,11 +1090,11 @@ a.board__row:hover {
   width: 64px;
   font-family: var(--font-display-stack);
   font-weight: 800;
-  font-size: 22px;
+  font-size: var(--fs-title);
 }
 
 .cricket__marks {
-  font-size: 22px;
+  font-size: var(--fs-title);
   font-weight: 700;
   color: var(--text-dim);
 }
@@ -839,7 +1114,7 @@ a.board__row:hover {
   background: var(--raised);
   font-family: var(--font-display-stack);
   font-weight: 800;
-  font-size: 24px;
+  font-size: var(--fs-title);
 }
 
 .visually-hidden {
@@ -854,16 +1129,19 @@ a.board__row:hover {
 /* ---------- Touches ---------- */
 
 .key {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
   border-radius: var(--radius);
   background: var(--surface);
   border: 1px solid var(--line);
   font-family: var(--font-display-stack);
   font-weight: 700;
-  font-size: 20px;
+  font-size: var(--fs-lead);
   padding: 12px 0;
   transition:
     background-color 100ms ease-out,
-    border-color 100ms ease-out;
+    border-color 100ms ease-out,
+    transform 160ms ease-out;
 }
 
 .key:hover:not(:disabled) {
@@ -872,6 +1150,8 @@ a.board__row:hover {
 
 .key:active:not(:disabled) {
   background: color-mix(in srgb, var(--raised) 70%, var(--text));
+  transform: scale(0.97);
+  transition-duration: 0ms;
 }
 
 .key:disabled {
@@ -896,7 +1176,7 @@ a.board__row:hover {
 .key--miss,
 .key--undo {
   color: var(--text-dim);
-  font-size: 17px;
+  font-size: var(--fs-body);
 }
 
 /* ---------- Saisie : cible ou pavé selon le pointeur ---------- */
@@ -909,7 +1189,7 @@ a.board__row:hover {
   .dart-input__board {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: var(--sp-3);
   }
 
   .dart-input .dart-input__pad {
@@ -920,28 +1200,37 @@ a.board__row:hover {
 .dart-extras {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 6px;
+  gap: var(--sp-2);
 }
 
 .dartboard {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-2);
 }
 
 .dartboard svg {
   display: block;
   width: min(100%, calc(100dvh - 260px));
+}
+
+/* En partie, sans en-tête ni onglets, la cible prend toute la hauteur. */
+.app:has(.scorer) .dartboard svg {
+  width: min(100%, calc(100dvh - 170px));
   min-width: 320px;
   height: auto;
   user-select: none;
 }
 
 /* Ce qu'on vise, annoncé comme une incrustation au-dessus de la cible. */
+/* Hauteur fixe : passer de la consigne au segment visé ne déplace pas la cible. */
 .dartboard__aim {
-  min-height: 34px;
-  font-size: 15px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  font-size: var(--fs-body);
+  line-height: 1;
   color: var(--text-dim);
   font-variant-numeric: tabular-nums;
 }
@@ -950,7 +1239,7 @@ a.board__row:hover {
   margin-right: 6px;
   font-family: var(--font-display-stack);
   font-weight: 800;
-  font-size: 28px;
+  font-size: var(--fs-headline);
   color: var(--gold);
 }
 
@@ -1004,7 +1293,8 @@ a.board__row:hover {
 }
 
 .dartboard-seg:active {
-  filter: brightness(1.7);
+  filter: brightness(1.8);
+  transition-duration: 0ms;
 }
 
 .dartboard-seg--hit {
@@ -1034,13 +1324,13 @@ a.board__row:hover {
 .dart-input__pad {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--sp-2);
 }
 
 .dart-pad {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--sp-2);
 }
 
 /* Une case par numéro, dans l'ordre de la cible : le numéro en grand pour
@@ -1048,35 +1338,43 @@ a.board__row:hover {
 .dart-pad__sectors {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 5px;
+  gap: var(--sp-1);
 }
 
 .dart-pad__cell {
   display: grid;
   grid-template-columns: 1fr 1fr;
   grid-template-rows: 42px 34px;
-  gap: 2px;
+  gap: var(--sp-0);
 }
 
 .dart-pad__cell > button {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
   font-family: var(--font-display-stack);
   font-weight: 800;
   background: var(--surface);
+  transition:
+    background-color 100ms ease-out,
+    transform 160ms ease-out;
 }
 
+/* L'appui se voit tout de suite ; la fléchette n'est comptée qu'au relâcher. */
 .dart-pad__cell > button:active {
   background: color-mix(in srgb, var(--raised) 70%, var(--text));
+  transform: scale(0.95);
+  transition-duration: 0ms;
 }
 
 .dart-pad__single {
   grid-column: 1 / -1;
-  font-size: 24px;
+  font-size: var(--fs-title);
   border-radius: var(--radius) var(--radius) 0 0;
 }
 
 .dart-pad__double,
 .dart-pad__triple {
-  font-size: 16px;
+  font-size: var(--fs-body);
 }
 
 .dart-pad__double {
@@ -1092,36 +1390,32 @@ a.board__row:hover {
 .dart-pad__bulls {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 6px;
+  gap: var(--sp-2);
 }
 
 /* ---------- Pouvoirs ---------- */
 
-.chips--powers {
-  margin-top: 8px;
-}
-
 .powers-bar {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--sp-2);
 }
 
 .power-chip {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sp-2);
   padding: 5px 10px;
   border-radius: 999px;
   background: var(--surface);
   border: 1px solid var(--line);
-  font-size: 12px;
+  font-size: var(--fs-caption);
   color: var(--text-dim);
   cursor: pointer;
 }
 
 .power-chip__emoji {
-  font-size: 15px;
+  font-size: var(--fs-body);
 }
 
 .power-chip__who {
@@ -1152,22 +1446,22 @@ a.board__row:hover {
   padding: 12px 14px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--sp-3);
 }
 
 .power-dialog__title {
   font-family: var(--font-display-stack);
   font-weight: 700;
-  font-size: 18px;
+  font-size: var(--fs-lead);
 }
 
 .power-dialog__desc {
-  font-size: 13px;
+  font-size: var(--fs-footnote);
   color: var(--text-dim);
 }
 
 .match-detail__power {
-  font-size: 13px;
+  font-size: var(--fs-footnote);
   color: var(--text-dim);
   font-style: italic;
   margin: 4px 0 8px;
@@ -1179,29 +1473,10 @@ a.board__row:hover {
 
 /* ---------- Flétanque ---------- */
 
-.flet-lineup {
-  margin-top: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.flet-lineup__row {
-  font-size: 13px;
-  color: var(--text-dim);
-}
-
-.flet-lineup__row strong {
-  font-family: var(--font-display-stack);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text);
-}
-
 .flet-teams {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--sp-2);
 }
 
 .flet-team {
@@ -1211,7 +1486,7 @@ a.board__row:hover {
   padding: 12px 14px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--sp-3);
   transition: border-color 120ms ease;
 }
 
@@ -1225,13 +1500,13 @@ a.board__row:hover {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--sp-3);
 }
 
 .flet-team__label {
   font-family: var(--font-display-stack);
   font-weight: 600;
-  font-size: 15px;
+  font-size: var(--fs-body);
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--text-dim);
@@ -1249,14 +1524,14 @@ a.board__row:hover {
 .flet-team__score {
   font-family: var(--font-display-stack);
   font-weight: 700;
-  font-size: 34px;
+  font-size: var(--fs-headline);
   line-height: 1;
 }
 
 .flet-team__roster {
   margin: 0;
   font-weight: 600;
-  font-size: 14px;
+  font-size: var(--fs-footnote);
   color: var(--text-dim);
 }
 
@@ -1267,30 +1542,30 @@ a.board__row:hover {
   padding: 14px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--sp-3);
 }
 
 .flet-call__title {
   font-family: var(--font-display-stack);
   font-weight: 700;
-  font-size: 20px;
+  font-size: var(--fs-lead);
 }
 
 .flet-call__hint {
-  font-size: 13px;
+  font-size: var(--fs-footnote);
   color: var(--text-dim);
 }
 
 .flet-points {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
-  gap: 8px;
+  gap: var(--sp-2);
 }
 
 .flet-outcomes {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--sp-2);
 }
 
 .flet-outcome {
@@ -1299,7 +1574,7 @@ a.board__row:hover {
   background: var(--surface);
   font-family: var(--font-display-stack);
   font-weight: 600;
-  font-size: 18px;
+  font-size: var(--fs-lead);
   padding: 16px 12px;
   cursor: pointer;
   transition: background 100ms ease, border-color 100ms ease;
@@ -1326,13 +1601,13 @@ a.board__row:hover {
 .recap {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: var(--sp-0);
 }
 
 .recap__row {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: var(--sp-3);
   background: var(--surface);
   border-left: 4px solid transparent;
   padding: 14px 16px;
@@ -1348,7 +1623,7 @@ a.board__row:hover {
   flex: 1;
   font-family: var(--font-display-stack);
   font-weight: 700;
-  font-size: 24px;
+  font-size: var(--fs-title);
   text-transform: uppercase;
 }
 
@@ -1356,14 +1631,14 @@ a.board__row:hover {
   padding: 3px 8px;
   background: var(--gold);
   color: var(--bg);
-  font-size: 12px;
+  font-size: var(--fs-caption);
   font-weight: 600;
 }
 
 .recap__total {
   font-family: var(--font-display-stack);
   font-weight: 800;
-  font-size: 40px;
+  font-size: var(--fs-display);
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
@@ -1378,7 +1653,7 @@ a.board__row:hover {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--sp-2);
 }
 
 .history__item {
@@ -1386,14 +1661,14 @@ a.board__row:hover {
   padding: 12px 16px;
   display: grid;
   grid-template-columns: 1fr auto;
-  gap: 4px 12px;
+  gap: var(--sp-1) var(--sp-3);
   align-items: center;
 }
 
 .history__head {
   display: flex;
   align-items: baseline;
-  gap: 10px;
+  gap: var(--sp-3);
 }
 
 .history__player {
@@ -1401,7 +1676,7 @@ a.board__row:hover {
 }
 
 .history__date {
-  font-size: 12px;
+  font-size: var(--fs-caption);
   color: var(--text-dim);
 }
 
@@ -1409,14 +1684,14 @@ a.board__row:hover {
   grid-row: span 2;
   font-family: var(--font-display-stack);
   font-weight: 700;
-  font-size: 30px;
+  font-size: var(--fs-headline);
   text-align: right;
 }
 
 .history__darts {
   font-family: var(--font-display-stack);
   font-weight: 600;
-  font-size: 16px;
+  font-size: var(--fs-body);
   color: var(--text-dim);
 }
 
@@ -1425,20 +1700,17 @@ a.board__row:hover {
   font-weight: 600;
 }
 
-.history__actions {
-  grid-column: 1 / -1;
-  justify-self: end;
-}
-
 /* ---------- Formulaires ---------- */
 
 .add-form {
   display: flex;
-  gap: 8px;
+  gap: var(--sp-2);
 }
 
 .add-form input {
   flex: 1;
+  /* Sans ça, la largeur naturelle du champ pousse le bouton hors de l'écran. */
+  min-width: 0;
   padding: 12px 14px;
   border-radius: var(--radius);
   border: 1px solid var(--line);
@@ -1454,7 +1726,7 @@ a.board__row:hover {
 .add-form .button-primary {
   width: auto;
   padding: 12px 22px;
-  font-size: 16px;
+  font-size: var(--fs-body);
 }
 
 .setup-notice {
@@ -1463,21 +1735,21 @@ a.board__row:hover {
   padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--sp-3);
 }
 
 .setup-notice code {
   background: var(--bg);
   border-radius: 6px;
   padding: 2px 6px;
-  font-size: 13px;
+  font-size: var(--fs-footnote);
 }
 
 .setup-notice ol {
   padding-left: 20px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--sp-2);
   color: var(--text-dim);
 }
 
@@ -1496,14 +1768,14 @@ a.board__row:hover {
 .profil-head {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--sp-3);
   align-items: flex-start;
 }
 
 .profil-head__who {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--sp-3);
 }
 
 .profil-head__name {
@@ -1516,14 +1788,14 @@ a.board__row:hover {
 
 .history__player--gold {
   color: var(--gold);
-  font-size: 15px;
+  font-size: var(--fs-body);
 }
 
 /* Les chiffres du joueur, façon incrustation de statistiques. */
 .tiles {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 3px;
+  gap: var(--sp-0);
 }
 
 .tile {
@@ -1533,7 +1805,7 @@ a.board__row:hover {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 2px;
+  gap: var(--sp-0);
 }
 
 .tile--hero {
@@ -1552,14 +1824,14 @@ a.board__row:hover {
 .tile__value {
   font-family: var(--font-display-stack);
   font-weight: 800;
-  font-size: 36px;
+  font-size: var(--fs-headline);
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 
 .tile__label {
   order: -1;
-  font-size: 13px;
+  font-size: var(--fs-footnote);
   color: var(--text-dim);
 }
 
@@ -1568,7 +1840,7 @@ a.board__row:hover {
 }
 
 .tile__sub {
-  font-size: 11px;
+  font-size: var(--fs-caption);
   color: var(--text-dim);
   white-space: nowrap;
 }
@@ -1586,7 +1858,7 @@ a.board__row:hover {
 .badges {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 3px;
+  gap: var(--sp-0);
 }
 
 .badge {
@@ -1596,7 +1868,7 @@ a.board__row:hover {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
+  gap: var(--sp-0);
   text-align: center;
 }
 
@@ -1607,18 +1879,18 @@ a.board__row:hover {
 }
 
 .badge__icon {
-  font-size: 22px;
+  font-size: var(--fs-title);
   line-height: 1;
 }
 
 .badge__name {
   font-family: var(--font-display-stack);
   font-weight: 700;
-  font-size: 16px;
+  font-size: var(--fs-body);
 }
 
 .badge__desc {
-  font-size: 11px;
+  font-size: var(--fs-caption);
   color: var(--text-dim);
 }
 
@@ -1676,7 +1948,7 @@ a.board__row:hover {
 .chart__caption {
   display: flex;
   justify-content: space-between;
-  font-size: 11px;
+  font-size: var(--fs-caption);
   color: var(--text-dim);
   padding: 4px 2px 0;
 }
@@ -1743,15 +2015,15 @@ a.board__row:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--sp-2);
   padding-top: 8px;
-  font-size: 11px;
+  font-size: var(--fs-caption);
   color: var(--text-dim);
 }
 
 .heatmap__steps {
   display: flex;
-  gap: 2px;
+  gap: var(--sp-0);
 }
 
 .heatmap__step {
@@ -1765,18 +2037,18 @@ a.board__row:hover {
 .bars {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--sp-2);
 }
 
 .bars__row {
   display: grid;
   grid-template-columns: 92px 1fr 74px;
   align-items: center;
-  gap: 10px;
+  gap: var(--sp-3);
 }
 
 .bars__label {
-  font-size: 13px;
+  font-size: var(--fs-footnote);
   color: var(--text-dim);
 }
 
@@ -1798,7 +2070,7 @@ a.board__row:hover {
 .bars__value {
   font-family: var(--font-display-stack);
   font-weight: 600;
-  font-size: 15px;
+  font-size: var(--fs-body);
   text-align: right;
   white-space: nowrap;
 }
@@ -1807,7 +2079,7 @@ a.board__row:hover {
   font-style: normal;
   font-family: var(--font-body-stack);
   font-weight: 400;
-  font-size: 12px;
+  font-size: var(--fs-caption);
   color: var(--text-dim);
 }
 
@@ -1817,28 +2089,6 @@ a.board__row:hover {
   font-style: normal;
   color: var(--gold);
   font-weight: 500;
-}
-
-/* ---------- Cible en attente ---------- */
-
-.idle-board {
-  display: flex;
-  justify-content: center;
-  padding: 4px 0 0;
-}
-
-.idle-board img {
-  animation: idle-spin 90s linear infinite;
-  filter: drop-shadow(0 0 24px color-mix(in srgb, var(--red) 25%, transparent));
-}
-
-@keyframes idle-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 /* ---------- Ripple cible touchée (Bull / 25) ---------- */
@@ -1876,14 +2126,14 @@ a.board__row:hover {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  gap: 10px;
+  gap: var(--sp-3);
   margin-bottom: 8px;
 }
 
 .match-card__type {
   font-family: var(--font-display-stack);
   font-weight: 700;
-  font-size: 18px;
+  font-size: var(--fs-lead);
   color: var(--text-dim);
 }
 
@@ -1891,20 +2141,20 @@ a.board__row:hover {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--sp-1);
 }
 
 .match-card__line {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  gap: 10px;
+  gap: var(--sp-3);
 }
 
 .match-card__player {
   font-family: var(--font-display-stack);
   font-weight: 700;
-  font-size: 19px;
+  font-size: var(--fs-lead);
   text-transform: uppercase;
 }
 
@@ -1915,12 +2165,8 @@ a.board__row:hover {
 .match-card__total {
   font-family: var(--font-display-stack);
   font-weight: 800;
-  font-size: 24px;
+  font-size: var(--fs-title);
   font-variant-numeric: tabular-nums;
-}
-
-.match-card .history__actions {
-  margin-top: 8px;
 }
 
 .history__more {
@@ -1943,7 +2189,7 @@ a.board__row:hover {
 .match-detail__head {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--sp-3);
   padding: 12px 14px;
   border-bottom: 1px solid var(--line);
 }
@@ -1952,14 +2198,14 @@ a.board__row:hover {
   flex: 1;
   font-family: var(--font-display-stack);
   font-weight: 700;
-  font-size: 24px;
+  font-size: var(--fs-title);
   text-transform: uppercase;
 }
 
 .match-detail__total {
   font-family: var(--font-display-stack);
   font-weight: 800;
-  font-size: 34px;
+  font-size: var(--fs-headline);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1971,32 +2217,32 @@ a.board__row:hover {
   padding: 8px 14px 12px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--sp-2);
 }
 
 .volley-line {
   display: grid;
   grid-template-columns: 72px 1fr auto;
   align-items: baseline;
-  gap: 10px;
+  gap: var(--sp-3);
 }
 
 .volley-line__label {
-  font-size: 13px;
+  font-size: var(--fs-footnote);
   color: var(--text-dim);
 }
 
 .volley-line__darts {
   font-family: var(--font-display-stack);
   font-weight: 700;
-  font-size: 18px;
+  font-size: var(--fs-lead);
   word-spacing: 0.3em;
 }
 
 .volley-line__total {
   font-family: var(--font-display-stack);
   font-weight: 800;
-  font-size: 20px;
+  font-size: var(--fs-lead);
   font-variant-numeric: tabular-nums;
 }
 
@@ -2006,13 +2252,13 @@ a.board__row:hover {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--sp-2);
 }
 
 .hall__row {
   display: grid;
   grid-template-columns: 1fr auto auto;
-  gap: 12px;
+  gap: var(--sp-3);
   align-items: baseline;
   background: var(--surface);
   padding: 10px 16px;
@@ -2020,42 +2266,120 @@ a.board__row:hover {
 
 .hall__month {
   color: var(--text-dim);
-  font-size: 14px;
+  font-size: var(--fs-footnote);
   text-transform: capitalize;
 }
 
 .hall__name {
   font-family: var(--font-display-stack);
   font-weight: 700;
-  font-size: 19px;
+  font-size: var(--fs-lead);
   text-transform: uppercase;
 }
 
 .hall__score {
   font-family: var(--font-display-stack);
   font-weight: 800;
-  font-size: 24px;
+  font-size: var(--fs-title);
   color: var(--gold);
 }
 
 /* ---------- Podium de fin de mois ---------- */
 
 .podium {
-  position: fixed;
-  inset: 0;
-  z-index: 80;
-  background: color-mix(in srgb, var(--bg) 96%, black);
+  /* La fenêtre couvre l'écran : son fond fait office de voile, et les
+     confettis peuvent tomber partout par-dessus. */
+  margin: 0;
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  border: none;
+  padding: 16px;
+  background: color-mix(in srgb, #03061a 78%, transparent);
+  backdrop-filter: blur(6px);
+  color: var(--text);
+}
+
+.podium[open] {
+  display: grid;
+  place-items: center;
+}
+
+.podium::backdrop {
+  background: transparent;
+}
+
+.podium__card {
+  width: min(560px, 100%);
+  max-height: 100%;
+  overflow: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 18px;
-  padding: 24px;
+  gap: var(--sp-4);
+  padding: 32px 24px 24px;
+  background: var(--surface);
+  border-top: 4px solid var(--gold);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
   text-align: center;
 }
 
+.podium__confetti {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* La carte monte en s'ouvrant et redescend en se fermant : même chemin. */
+@media (prefers-reduced-motion: no-preference) {
+  .podium[open] {
+    animation: backdrop-in 240ms ease-out;
+  }
+
+  .podium[open] .podium__card {
+    animation: podium-in var(--dur-spring) var(--ease-spring);
+  }
+
+  .podium--closing[open] {
+    animation: backdrop-out 220ms ease-in forwards;
+  }
+
+  .podium--closing[open] .podium__card {
+    animation: podium-out 220ms ease-in forwards;
+  }
+}
+
+@keyframes podium-in {
+  from {
+    opacity: 0;
+    transform: translateY(32px) scale(0.96);
+  }
+}
+
+@keyframes podium-out {
+  to {
+    opacity: 0;
+    transform: translateY(32px) scale(0.96);
+  }
+}
+
+@keyframes backdrop-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes backdrop-out {
+  to {
+    opacity: 0;
+  }
+}
+
 .podium__eyebrow {
-  font-size: 16px;
+  font-size: var(--fs-body);
   color: var(--text-dim);
 }
 
@@ -2065,16 +2389,17 @@ a.board__row:hover {
   color: var(--bg);
   font-family: var(--font-display-stack);
   font-weight: 800;
-  font-size: 40px;
+  font-size: var(--fs-headline);
   text-transform: uppercase;
   line-height: 1.05;
+  text-wrap: balance;
   clip-path: polygon(0 0, 100% 0, calc(100% - var(--bevel)) 100%, 0 100%);
 }
 
 .podium__steps {
   display: flex;
   align-items: flex-end;
-  gap: 10px;
+  gap: var(--sp-3);
   width: 100%;
   max-width: 420px;
 }
@@ -2084,17 +2409,17 @@ a.board__row:hover {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: var(--sp-1);
 }
 
 .podium__medal {
-  font-size: 30px;
+  font-size: var(--fs-headline);
 }
 
 .podium__name {
   font-family: var(--font-display-stack);
   font-weight: 700;
-  font-size: 20px;
+  font-size: var(--fs-lead);
   text-transform: uppercase;
   max-width: 100%;
   overflow: hidden;
@@ -2105,19 +2430,20 @@ a.board__row:hover {
 .podium__score {
   font-family: var(--font-display-stack);
   font-weight: 800;
-  font-size: 28px;
+  font-size: var(--fs-headline);
   color: var(--gold);
 }
 
 .podium__block {
   width: 100%;
-  background: var(--surface);
+  background: var(--raised);
   border-top: 4px solid var(--line);
 }
 
+/* Les marches se détachent de la carte : un cran plus clair qu'elle. */
 .podium__step--1 .podium__block {
   height: 110px;
-  background: var(--raised);
+  background: color-mix(in srgb, var(--raised) 85%, var(--text));
   border-top-color: var(--gold);
 }
 
@@ -2133,6 +2459,223 @@ a.board__row:hover {
   max-width: 420px;
 }
 
+/* ---------- Rangées cliquables ----------
+   Une rangée qui mène quelque part s'éclaire dès l'appui, comme une cellule
+   iOS : pas de rétrécissement, la rangée est trop large pour ça. */
+
+a.board__row,
+button.board__row,
+a.duels__row,
+a.match-card,
+a.hall__row--link,
+a.live-banner {
+  -webkit-tap-highlight-color: transparent;
+}
+
+a.board__row:active,
+button.board__row:active,
+a.duels__row:active,
+a.match-card:active,
+a.hall__row--link:active,
+a.live-banner:active {
+  background: color-mix(in srgb, var(--raised) 75%, var(--text));
+  transition-duration: 0ms;
+}
+
+/* ---------- Feuille d'actions ----------
+   Glissée depuis le bas sur téléphone, posée au centre sur grand écran ;
+   elle repart par le même chemin. */
+
+.sheet {
+  margin: auto auto 0;
+  width: 100%;
+  max-width: 100%;
+  max-height: calc(100dvh - 48px);
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text);
+}
+
+.sheet::backdrop {
+  background: color-mix(in srgb, #03061a 72%, transparent);
+  backdrop-filter: blur(4px);
+}
+
+.sheet__panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  padding: 20px 16px calc(16px + env(safe-area-inset-bottom));
+  background: var(--surface);
+  border-top: 4px solid var(--gold);
+  box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.45);
+}
+
+.sheet__title {
+  font-family: var(--font-display-stack);
+  font-weight: 800;
+  font-size: var(--fs-headline);
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.sheet__subtitle {
+  margin-top: var(--sp-1);
+  font-family: var(--font-display-stack);
+  font-weight: 700;
+  font-size: var(--fs-lead);
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+/* Les actions forment une seule liste groupée, comme sur iPhone. */
+.sheet__actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-0);
+}
+
+.sheet__action {
+  display: block;
+  width: 100%;
+  padding: 14px 16px;
+  background: var(--raised);
+  color: var(--text);
+  font-size: var(--fs-body);
+  font-weight: 500;
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 120ms ease-out;
+}
+
+.sheet__action:first-child {
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+
+.sheet__action:last-child {
+  border-radius: 0 0 var(--radius) var(--radius);
+}
+
+.sheet__action:hover {
+  background: color-mix(in srgb, var(--raised) 88%, var(--text));
+}
+
+.sheet__action:active {
+  background: color-mix(in srgb, var(--raised) 75%, var(--text));
+  transition-duration: 0ms;
+}
+
+.sheet__action--danger {
+  color: var(--danger);
+}
+
+.sheet__close {
+  width: 100%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .sheet[open] .sheet__panel {
+    animation: sheet-in var(--dur-spring) var(--ease-spring);
+  }
+
+  .sheet[open]::backdrop {
+    animation: backdrop-in 240ms ease-out;
+  }
+
+  .sheet--closing[open] .sheet__panel {
+    animation: sheet-out 220ms ease-in forwards;
+  }
+
+  .sheet--closing[open]::backdrop {
+    animation: backdrop-out 220ms ease-in forwards;
+  }
+}
+
+@keyframes sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes sheet-out {
+  to {
+    transform: translateY(100%);
+  }
+}
+
+@media (min-width: 900px) {
+  .sheet {
+    margin: auto;
+    width: min(440px, calc(100vw - 32px));
+  }
+
+  .sheet__panel {
+    padding-bottom: 20px;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
+  }
+
+  /* Sur grand écran, la feuille monte de quelques pixels seulement. */
+  @keyframes sheet-in {
+    from {
+      opacity: 0;
+      transform: translateY(32px) scale(0.96);
+    }
+  }
+
+  @keyframes sheet-out {
+    to {
+      opacity: 0;
+      transform: translateY(32px) scale(0.96);
+    }
+  }
+}
+
+/* ---------- Mouvement en partie ----------
+   Peu d'effets, chacun dit quelque chose : qui prend la main, où la
+   fléchette s'est plantée, ce qu'elle a rapporté. */
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Le joueur à la cible entre comme un bandeau d'incrustation : il se
+     déroule depuis la gauche quand la main passe. */
+  .scorer__thrower {
+    animation: thrower-in var(--dur-spring) var(--ease-spring);
+  }
+
+  /* La fléchette se pose : la marque tombe sur son segment. */
+  .dartboard__mark {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: mark-in 320ms var(--ease-spring);
+  }
+
+  /* Ce qu'elle vaut s'inscrit dans sa case. */
+  .slot__label {
+    animation: slot-in 260ms var(--ease-spring);
+  }
+}
+
+@keyframes thrower-in {
+  from {
+    clip-path: polygon(0 0, 0 0, calc(0% - var(--bevel)) 100%, 0 100%);
+    transform: translateX(-12px);
+  }
+}
+
+@keyframes mark-in {
+  from {
+    opacity: 0;
+    transform: scale(1.8);
+  }
+}
+
+@keyframes slot-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.9);
+  }
+}
+
 /* ---------- Toasts ---------- */
 
 .toasts {
@@ -2144,7 +2687,7 @@ a.board__row:hover {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-2);
   pointer-events: none;
 }
 
@@ -2154,7 +2697,7 @@ a.board__row:hover {
   background: var(--raised);
   border-left: 4px solid var(--gold);
   color: var(--text);
-  font-size: 14px;
+  font-size: var(--fs-footnote);
   font-weight: 500;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
   animation: toast-in 220ms ease-out;
@@ -2172,6 +2715,41 @@ a.board__row:hover {
   from {
     opacity: 0;
     transform: translateY(10px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Il repart par où il est venu : vers le bas, ou vers le haut en partie. */
+.toast--leaving {
+  animation: toast-out 200ms ease-in forwards;
+}
+
+body:has(.scorer) .toast.toast--leaving {
+  animation-name: toast-out-top;
+}
+
+@keyframes toast-out {
+  to {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+}
+
+@keyframes toast-out-top {
+  to {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.97);
+  }
+}
+
+/* Posé en haut, il arrive d'en haut. */
+@keyframes toast-in-top {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.97);
   }
   to {
     opacity: 1;
@@ -2203,7 +2781,7 @@ a.board__row:hover {
 .live-banner {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--sp-3);
   padding: 12px 16px;
   border-left: 4px solid var(--red);
   background: var(--surface);
@@ -2229,7 +2807,7 @@ a.board__row:hover {
   color: #fff;
   font-family: var(--font-display-stack);
   font-weight: 800;
-  font-size: 17px;
+  font-size: var(--fs-body);
   text-transform: uppercase;
 }
 
@@ -2246,10 +2824,10 @@ a.board__row:hover {
 .live-card__status {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-2);
   font-family: var(--font-display-stack);
   font-weight: 700;
-  font-size: 18px;
+  font-size: var(--fs-lead);
   color: var(--text-dim);
 }
 
@@ -2260,7 +2838,7 @@ a.board__row:hover {
 .live-row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--sp-3);
   padding: 12px 14px;
 }
 
@@ -2300,7 +2878,7 @@ a.board__row:hover {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: var(--sp-1);
   background: color-mix(in srgb, var(--red) 92%, black);
   pointer-events: none;
   animation: flash180 1.8s ease forwards;
@@ -2317,7 +2895,7 @@ a.board__row:hover {
 .flash180__name {
   font-family: var(--font-display-stack);
   font-weight: 600;
-  font-size: 22px;
+  font-size: var(--fs-title);
   letter-spacing: 0.24em;
   text-transform: uppercase;
   color: var(--text);
@@ -2346,13 +2924,13 @@ a.board__row:hover {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: var(--sp-0);
 }
 
 .duels__row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--sp-3);
   background: var(--surface);
   padding: 10px 14px;
 }
@@ -2367,7 +2945,7 @@ a.board__row:hover {
 .duels__score {
   font-family: var(--font-display-stack);
   font-weight: 700;
-  font-size: 20px;
+  font-size: var(--fs-lead);
   white-space: nowrap;
 }
 
@@ -2377,7 +2955,7 @@ a.board__row:hover {
 
 .duels__go {
   color: var(--text-dim);
-  font-size: 20px;
+  font-size: var(--fs-lead);
   line-height: 1;
 }
 
@@ -2391,19 +2969,19 @@ a.board__row:hover {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: var(--sp-0);
 }
 
 .records__row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--sp-3);
   background: var(--surface);
   padding: 10px 14px;
 }
 
 .records__icon {
-  font-size: 22px;
+  font-size: var(--fs-title);
   line-height: 1;
 }
 
@@ -2419,7 +2997,7 @@ a.board__row:hover {
 }
 
 .records__detail {
-  font-size: 12px;
+  font-size: var(--fs-caption);
   color: var(--text-dim);
 }
 
@@ -2427,12 +3005,12 @@ a.board__row:hover {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: var(--sp-0);
 }
 
 .records__avatars {
   display: flex;
-  gap: 4px;
+  gap: var(--sp-1);
 }
 
 .records__holder {
@@ -2440,7 +3018,7 @@ a.board__row:hover {
 }
 
 .records__names {
-  font-size: 11px;
+  font-size: var(--fs-caption);
   color: var(--text-dim);
   max-width: 90px;
   text-align: center;
@@ -2449,7 +3027,7 @@ a.board__row:hover {
 .records__value {
   font-family: var(--font-display-stack);
   font-weight: 700;
-  font-size: 24px;
+  font-size: var(--fs-title);
   color: var(--gold);
   min-width: 48px;
   text-align: right;
@@ -2460,13 +3038,13 @@ a.board__row:hover {
 .versus-head {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: var(--sp-3);
 }
 
 .versus-head__side {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-2);
   min-width: 0;
 }
 
@@ -2490,13 +3068,13 @@ a.board__row:hover {
 .versus-duel__score {
   font-family: var(--font-display-stack);
   font-weight: 700;
-  font-size: 20px;
+  font-size: var(--fs-lead);
   color: var(--gold);
 }
 
 .versus-duel__hint {
   display: block;
-  font-size: 12px;
+  font-size: var(--fs-caption);
   color: var(--text-dim);
   margin-top: 4px;
 }
@@ -2504,20 +3082,20 @@ a.board__row:hover {
 .versus {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: var(--sp-0);
 }
 
 .versus__row {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  gap: 12px;
+  gap: var(--sp-3);
   background: var(--surface);
   padding: 8px 14px;
 }
 
 .versus__label {
-  font-size: 13px;
+  font-size: var(--fs-footnote);
   color: var(--text-dim);
   text-align: center;
 }
@@ -2525,7 +3103,7 @@ a.board__row:hover {
 .versus__value {
   font-family: var(--font-display-stack);
   font-weight: 700;
-  font-size: 20px;
+  font-size: var(--fs-lead);
 }
 
 .versus__value:first-child {
@@ -2543,7 +3121,7 @@ a.board__row:hover {
 .versus-heatmaps {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: var(--sp-2);
   align-items: start;
 }
 
@@ -2561,8 +3139,108 @@ a.board__row:hover {
 
 .mode-hint {
   margin-top: 10px;
-  font-size: 13px;
+  font-size: var(--fs-footnote);
   color: var(--text-dim);
+}
+
+/* Sous un titre d'étape : la consigne avant les choix. */
+.mode-hint--lead {
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+
+/* Le numéro d'étape de la préparation : l'ordre est réel, on joue 1 puis 2. */
+.step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.3em;
+  height: 1.3em;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--gold);
+  color: var(--bg);
+  font-size: 0.75em;
+  vertical-align: 0.12em;
+}
+
+/* Une option qui s'active ou non : un interrupteur, pas une puce de plus. */
+.option-switch {
+  width: 100%;
+  margin-top: var(--sp-3);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  text-align: left;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 120ms ease-out;
+}
+
+.option-switch:hover {
+  background: var(--raised);
+}
+
+.option-switch__text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.option-switch__title {
+  font-weight: 600;
+}
+
+.option-switch__hint {
+  font-size: var(--fs-footnote);
+  color: var(--text-dim);
+}
+
+.option-switch__track {
+  flex: none;
+  position: relative;
+  width: 48px;
+  height: 28px;
+  border-radius: 14px;
+  background: var(--raised);
+  border: 1px solid var(--line);
+  transition: background-color 200ms ease-out;
+}
+
+.option-switch__thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--text);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  transition: transform var(--dur-spring) var(--ease-spring);
+}
+
+.option-switch[aria-checked='true'] .option-switch__track {
+  background: var(--gold);
+  border-color: var(--gold);
+}
+
+.option-switch[aria-checked='true'] .option-switch__thumb {
+  transform: translateX(20px);
+  background: var(--bg);
+}
+
+/* Le pouce s'étire à l'appui, comme un interrupteur iOS. */
+.option-switch:active .option-switch__thumb {
+  width: 26px;
+}
+
+.option-switch[aria-checked='true']:active .option-switch__thumb {
+  transform: translateX(16px);
 }
 
 /* ---------- Invitation / QR ---------- */
@@ -2581,7 +3259,7 @@ a.board__row:hover {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: var(--sp-3);
   padding: 26px 20px;
   background: var(--surface);
   border-left: 4px solid var(--gold);
@@ -2591,14 +3269,14 @@ a.board__row:hover {
 .invite__title {
   font-family: var(--font-display-stack);
   font-weight: 700;
-  font-size: 30px;
+  font-size: var(--fs-headline);
   text-transform: uppercase;
   line-height: 1;
 }
 
 .invite__sub {
   color: var(--text-dim);
-  font-size: 14px;
+  font-size: var(--fs-footnote);
 }
 
 .invite__qr {
@@ -2607,13 +3285,9 @@ a.board__row:hover {
 }
 
 .invite__url {
-  font-size: 13px;
+  font-size: var(--fs-footnote);
   color: var(--text-dim);
   word-break: break-all;
-}
-
-.invite-link {
-  align-self: center;
 }
 
 /* ---------- Page Joueurs : rangée gérable ---------- */
@@ -2625,7 +3299,7 @@ a.board__row:hover {
 
 .board__actions {
   display: flex;
-  gap: 8px;
+  gap: var(--sp-2);
   margin-left: auto;
 }
 
@@ -2643,7 +3317,7 @@ a.board__row:hover {
 }
 
 @media print {
-  .masthead__sound,
+  .sound-toggle,
   .tabbar,
   .invite > .button-ghost,
   button {
@@ -2672,7 +3346,7 @@ a.board__row:hover {
 .install-banner {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--sp-3);
   margin-bottom: 16px;
   padding: 10px 12px;
   border-left: 4px solid var(--gold);
@@ -2680,13 +3354,13 @@ a.board__row:hover {
 }
 
 .install-banner__icon {
-  font-size: 20px;
+  font-size: var(--fs-lead);
 }
 
 .install-banner__text {
   flex: 1;
   min-width: 0;
-  font-size: 13px;
+  font-size: var(--fs-footnote);
   line-height: 1.35;
 }
 
@@ -2698,7 +3372,7 @@ a.board__row:hover {
   color: var(--bg);
   font-family: var(--font-display-stack);
   font-weight: 700;
-  font-size: 14px;
+  font-size: var(--fs-footnote);
   text-transform: uppercase;
 }
 
@@ -2706,7 +3380,7 @@ a.board__row:hover {
   flex: none;
   padding: 6px 8px;
   color: var(--text-dim);
-  font-size: 14px;
+  font-size: var(--fs-footnote);
 }
 
 /* ---------- Écrans larges (PC) ---------- */
@@ -2746,7 +3420,7 @@ a.board__row:hover {
   grid-row: span 2;
   width: 56px;
   height: 56px;
-  font-size: 24px;
+  font-size: var(--fs-title);
 }
 
 .champion__label {
@@ -2756,7 +3430,7 @@ a.board__row:hover {
 .champion__name {
   font-family: var(--font-display-stack);
   font-weight: 800;
-  font-size: 40px;
+  font-size: var(--fs-display);
   line-height: 1;
   color: var(--gold);
   text-transform: uppercase;
@@ -2771,7 +3445,7 @@ a.board__row:hover {
 
 .pool th {
   padding: 0 10px 4px;
-  font-size: 13px;
+  font-size: var(--fs-footnote);
   font-weight: 500;
   color: var(--text-dim);
   text-align: center;
@@ -2804,14 +3478,14 @@ a.board__row:hover {
 .pool td.pool__name {
   font-family: var(--font-display-stack);
   font-weight: 700;
-  font-size: 19px;
+  font-size: var(--fs-lead);
   text-transform: uppercase;
 }
 
 .pool__name em {
   font-family: var(--font-body-stack);
   font-style: normal;
-  font-size: 13px;
+  font-size: var(--fs-footnote);
   text-transform: none;
   color: var(--red);
 }
@@ -2825,7 +3499,7 @@ a.board__row:hover {
 .pool__points {
   font-family: var(--font-display-stack);
   font-weight: 800;
-  font-size: 20px;
+  font-size: var(--fs-lead);
 }
 
 /* Le bouton forfait reste discret : on ne le voit qu'au survol de la ligne. */
@@ -2835,7 +3509,7 @@ a.board__row:hover {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   font-family: var(--font-body-stack);
-  font-size: 12px;
+  font-size: var(--fs-caption);
   font-weight: 500;
   text-transform: none;
   color: var(--text-dim);
@@ -2857,14 +3531,14 @@ a.board__row:hover {
 .fixtures {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 3px;
+  gap: var(--sp-0);
   margin-top: 10px;
 }
 
 .fixture-card {
   display: grid;
   grid-template-columns: 1fr auto;
-  gap: 2px 10px;
+  gap: var(--sp-0) var(--sp-3);
   padding: 10px 12px;
   background: var(--surface);
   border-left: 4px solid transparent;
@@ -2882,7 +3556,7 @@ a.board__row:hover {
   grid-column: 1;
   display: flex;
   justify-content: space-between;
-  gap: 10px;
+  gap: var(--sp-3);
   color: var(--text-dim);
 }
 
@@ -2893,7 +3567,7 @@ a.board__row:hover {
 .fixture-card__name {
   font-family: var(--font-display-stack);
   font-weight: 700;
-  font-size: 18px;
+  font-size: var(--fs-lead);
   text-transform: uppercase;
 }
 
@@ -2905,7 +3579,7 @@ a.board__row:hover {
 .fixture-card__score {
   font-family: var(--font-display-stack);
   font-weight: 800;
-  font-size: 18px;
+  font-size: var(--fs-lead);
   font-variant-numeric: tabular-nums;
 }
 
@@ -2913,24 +3587,52 @@ a.board__row:hover {
   grid-column: 2;
   grid-row: 1 / span 2;
   align-self: center;
-  font-size: 13px;
+  font-size: var(--fs-footnote);
   color: var(--text-dim);
 }
 
+/* Les autres rencontres restent jouables, mais discrètes : le jaune est
+   réservé à la prochaine, en tête de page. */
 .fixture-card__play {
-  display: inline-block;
   padding: 6px 14px;
-  border-radius: var(--radius);
-  background: var(--gold);
-  color: var(--bg);
+  font-size: var(--fs-footnote);
+}
+
+.next-up {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: 18px 20px 20px;
+  background: var(--raised);
+  border-left: 6px solid var(--gold);
+}
+
+.next-up__label {
+  font-size: var(--fs-footnote);
+  color: var(--text-dim);
+}
+
+.next-up__players {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--sp-1) var(--sp-3);
   font-family: var(--font-display-stack);
   font-weight: 800;
-  font-size: 18px;
+  font-size: var(--fs-headline);
+  line-height: 1;
   text-transform: uppercase;
 }
 
-.fixture-card__play:hover {
-  filter: brightness(1.08);
+.next-up__vs {
+  font-size: var(--fs-body);
+  font-weight: 700;
+  color: var(--text-dim);
+  text-transform: none;
+}
+
+.next-up__play {
+  text-align: center;
 }
 
 /* Le tableau : un tour par colonne, défilement horizontal sur petit écran. */
@@ -2938,7 +3640,7 @@ a.board__row:hover {
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: minmax(230px, 1fr);
-  gap: 14px;
+  gap: var(--sp-3);
   overflow-x: auto;
   padding-bottom: 6px;
 }
@@ -2947,13 +3649,13 @@ a.board__row:hover {
   display: flex;
   flex-direction: column;
   justify-content: space-around;
-  gap: 8px;
+  gap: var(--sp-2);
 }
 
 .bracket__title {
   font-family: var(--font-display-stack);
   font-weight: 700;
-  font-size: 18px;
+  font-size: var(--fs-lead);
   color: var(--text-dim);
 }
 
@@ -2961,7 +3663,7 @@ a.board__row:hover {
   grid-column: 1 / -1;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: var(--sp-2);
   margin-top: 8px;
   padding-top: 8px;
   border-top: 1px solid var(--line);
@@ -2971,22 +3673,22 @@ a.board__row:hover {
   grid-column: 1 / -1;
   font-family: var(--font-display-stack);
   font-weight: 800;
-  font-size: 18px;
+  font-size: var(--fs-lead);
   color: var(--red);
   text-transform: uppercase;
 }
 
 .sudden-death__hint {
   grid-column: 1 / -1;
-  font-size: 13px;
+  font-size: var(--fs-footnote);
   color: var(--text-dim);
 }
 
 .sudden-death__field {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  font-size: 13px;
+  gap: var(--sp-1);
+  font-size: var(--fs-footnote);
 }
 
 .sudden-death__field input {
@@ -2996,16 +3698,17 @@ a.board__row:hover {
   background: var(--bg);
   color: var(--text);
   font: inherit;
-  font-size: 18px;
+  font-size: var(--fs-lead);
 }
 
 .sudden-death .button-primary {
   grid-column: 1 / -1;
-  font-size: 18px;
+  font-size: var(--fs-lead);
   padding: 10px;
 }
 
-.tournament-delete {
+.tournament-delete,
+.match-delete {
   align-self: flex-start;
 }
 
@@ -3036,7 +3739,7 @@ a.board__row:hover {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 4px 16px;
+  gap: var(--sp-1) var(--sp-4);
   margin: 8px 0;
   font-family: var(--font-display-stack);
   font-weight: 800;
@@ -3051,7 +3754,7 @@ a.board__row:hover {
 }
 
 .fixture__hint {
-  font-size: 14px;
+  font-size: var(--fs-footnote);
   color: var(--text-dim);
 }
 
@@ -3079,7 +3782,7 @@ a.board__row:hover {
 .ask__box {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--sp-3);
   padding: 0 22px 20px;
   background: var(--surface);
   border-top: 4px solid var(--gold);
@@ -3094,7 +3797,7 @@ a.board__row:hover {
   color: var(--bg);
   font-family: var(--font-display-stack);
   font-weight: 800;
-  font-size: 24px;
+  font-size: var(--fs-title);
   line-height: 1.1;
   text-transform: uppercase;
   clip-path: polygon(0 0, 100% 0, calc(100% - var(--bevel)) 100%, 0 100%);
@@ -3107,8 +3810,8 @@ a.board__row:hover {
 .ask__field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  font-size: 14px;
+  gap: var(--sp-2);
+  font-size: var(--fs-footnote);
   color: var(--text-dim);
 }
 
@@ -3119,13 +3822,13 @@ a.board__row:hover {
   background: var(--bg);
   color: var(--text);
   font: inherit;
-  font-size: 16px;
+  font-size: var(--fs-body);
 }
 
 .ask__actions {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
+  gap: var(--sp-2);
   margin-top: 4px;
 }
 
@@ -3136,7 +3839,7 @@ a.board__row:hover {
   color: var(--bg);
   font-family: var(--font-display-stack);
   font-weight: 800;
-  font-size: 18px;
+  font-size: var(--fs-lead);
   text-transform: uppercase;
 }
 
@@ -3152,14 +3855,34 @@ a.board__row:hover {
 
 @media (prefers-reduced-motion: no-preference) {
   .ask[open] .ask__box {
-    animation: ask-in 160ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    animation: ask-in var(--dur-spring) var(--ease-spring);
+  }
+
+  .ask[open]::backdrop {
+    animation: backdrop-in 200ms ease-out;
+  }
+
+  .ask--closing[open] .ask__box {
+    animation: ask-out 160ms ease-in forwards;
+  }
+
+  .ask--closing[open]::backdrop {
+    animation: backdrop-out 160ms ease-in forwards;
   }
 }
 
 @keyframes ask-in {
   from {
     opacity: 0;
-    transform: translateY(8px) scale(0.98);
+    transform: translateY(16px) scale(0.96);
+  }
+}
+
+/* Il repart par où il est venu. */
+@keyframes ask-out {
+  to {
+    opacity: 0;
+    transform: translateY(16px) scale(0.96);
   }
 }
 
@@ -3195,7 +3918,7 @@ html:has(.attente) {
   display: flex;
   font-family: var(--font-display-stack);
   font-weight: 800;
-  font-size: 26px;
+  font-size: var(--fs-title);
   line-height: 1;
   text-transform: uppercase;
 }
@@ -3221,7 +3944,7 @@ html:has(.attente) {
 .attente__clock {
   font-family: var(--font-display-stack);
   font-weight: 700;
-  font-size: 30px;
+  font-size: var(--fs-headline);
   font-variant-numeric: tabular-nums;
   color: var(--text-dim);
 }
@@ -3263,13 +3986,13 @@ html:has(.attente) {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--sp-2);
 }
 
 .attente__row {
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: var(--sp-4);
   padding: 12px 22px;
   background: var(--surface);
   border-left: 4px solid transparent;
@@ -3286,14 +4009,14 @@ html:has(.attente) {
   text-align: center;
   font-family: var(--font-display-stack);
   font-weight: 800;
-  font-size: 30px;
+  font-size: var(--fs-headline);
   color: var(--text-dim);
 }
 
 .attente__row .avatar {
   width: 48px;
   height: 48px;
-  font-size: 20px;
+  font-size: var(--fs-lead);
 }
 
 .attente__what {
@@ -3303,7 +4026,7 @@ html:has(.attente) {
 }
 
 .attente__label {
-  font-size: 15px;
+  font-size: var(--fs-body);
   color: var(--text-dim);
 }
 
@@ -3311,7 +4034,7 @@ html:has(.attente) {
   flex: 1;
   font-family: var(--font-display-stack);
   font-weight: 700;
-  font-size: 32px;
+  font-size: var(--fs-headline);
   line-height: 1.1;
   text-transform: uppercase;
 }
@@ -3323,29 +4046,29 @@ html:has(.attente) {
 }
 
 .attente__row--leader .attente__name {
-  font-size: 42px;
+  font-size: var(--fs-display);
 }
 
 .attente__value {
   margin-left: auto;
   font-family: var(--font-display-stack);
   font-weight: 800;
-  font-size: 44px;
+  font-size: var(--fs-display);
   font-variant-numeric: tabular-nums;
   line-height: 1;
 }
 
 .attente__row--leader .attente__value {
-  font-size: 64px;
+  font-size: var(--fs-hero);
   color: var(--gold);
 }
 
 .attente__ticker {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 22px;
+  gap: var(--sp-2) var(--sp-5);
   margin-top: 22px;
-  font-size: 17px;
+  font-size: var(--fs-body);
   color: var(--text-dim);
 }
 
@@ -3353,7 +4076,7 @@ html:has(.attente) {
   color: var(--red);
   font-family: var(--font-display-stack);
   font-weight: 800;
-  font-size: 20px;
+  font-size: var(--fs-lead);
   text-transform: uppercase;
 }
 
@@ -3364,14 +4087,14 @@ html:has(.attente) {
 .attente__card-head {
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: var(--sp-5);
   margin-bottom: 30px;
 }
 
 .attente__card-head .avatar {
   width: 96px;
   height: 96px;
-  font-size: 40px;
+  font-size: var(--fs-display);
   border: 3px solid var(--gold);
 }
 
@@ -3384,14 +4107,14 @@ html:has(.attente) {
 }
 
 .attente__card-nick {
-  font-size: 22px;
+  font-size: var(--fs-title);
   color: var(--gold);
 }
 
 .attente__figures {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
+  gap: var(--sp-2);
 }
 
 .attente__figure {
@@ -3400,21 +4123,21 @@ html:has(.attente) {
 }
 
 .attente__figure dt {
-  font-size: 15px;
+  font-size: var(--fs-body);
   color: var(--text-dim);
 }
 
 .attente__figure dd {
   font-family: var(--font-display-stack);
   font-weight: 800;
-  font-size: 56px;
+  font-size: var(--fs-hero);
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 
 .attente__card-foot {
   margin-top: 18px;
-  font-size: 18px;
+  font-size: var(--fs-lead);
   color: var(--text-dim);
 }
 
@@ -3433,28 +4156,28 @@ html:has(.attente) {
 
 .attente__lede {
   margin-top: 22px;
-  font-size: 26px;
+  font-size: var(--fs-title);
 }
 
 .attente__games {
   margin-top: 30px;
   padding-left: 16px;
   border-left: 4px solid var(--red);
-  font-size: 19px;
+  font-size: var(--fs-lead);
   color: var(--text-dim);
 }
 
 .attente__foot {
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: var(--sp-5);
 }
 
 .attente__progress {
   list-style: none;
   flex: 1;
   display: flex;
-  gap: 6px;
+  gap: var(--sp-2);
 }
 
 .attente__segment {
@@ -3493,7 +4216,7 @@ html:has(.attente) {
 .attente__wake {
   font-family: var(--font-display-stack);
   font-weight: 700;
-  font-size: 22px;
+  font-size: var(--fs-title);
   text-transform: uppercase;
   color: var(--text-dim);
 }
@@ -3525,9 +4248,9 @@ html:has(.attente) {
 
   .tabbar {
     order: 1;
-    position: static;
+    position: relative;
     justify-content: flex-start;
-    gap: 6px;
+    gap: var(--sp-2);
     padding: 10px 0;
     background: none;
     border-top: none;
@@ -3536,11 +4259,22 @@ html:has(.attente) {
     margin-bottom: 26px;
   }
 
+  .tabbar__tab,
+  .tabbar__indicator {
+    --bevel: 12px;
+  }
+
   .tabbar__tab {
     flex: none;
     max-width: none;
+    display: block;
     padding: 9px calc(var(--bevel) + 18px) 7px;
-    font-size: 19px;
+    font-size: var(--fs-lead);
+    letter-spacing: 0;
+  }
+
+  .tabbar__icon {
+    display: none;
   }
 
   .content {
@@ -3553,6 +4287,33 @@ html:has(.attente) {
   /* Le scorer profite de toute la largeur : statut à gauche, clavier à droite. */
   .content:has(.scorer) {
     max-width: none;
+  }
+
+  .app:has(.scorer) {
+    max-width: 1280px;
+    padding-top: 20px;
+    padding-bottom: 20px;
+  }
+
+  /* Sur le kiosque, les commentaires s'affichent en bas de la colonne des
+     scores, comme un bandeau d'incrustation, loin de la cible. */
+  body:has(.scorer) .toasts {
+    top: auto;
+    bottom: 24px;
+    left: max(56px, calc((100vw - 1280px) / 2 + 40px));
+    right: auto;
+    /* La largeur de la colonne des scores (4 parts sur 10, moins l'écart). */
+    width: calc((min(100vw, 1280px) - 80px - 36px) * 0.4);
+    align-items: stretch;
+  }
+
+  body:has(.scorer) .toast {
+    animation-name: toast-in;
+    font-size: var(--fs-body);
+  }
+
+  body:has(.scorer) .toast.toast--leaving {
+    animation-name: toast-out;
   }
 
   /* Tout le tableau à gauche, la saisie seule à droite sur toute la hauteur.
@@ -3598,11 +4359,6 @@ html:has(.attente) {
 
   .install-banner {
     display: none;
-  }
-
-  .idle-board img {
-    width: 220px;
-    height: 220px;
   }
 }
 

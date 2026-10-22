@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { PLAYERS_LINKS, SectionNav } from '@/components/SectionNav'
 import { SetupNotice } from '@/components/SetupNotice'
 import { useDialog } from '@/components/Dialog'
 import { useToast } from '@/components/Toaster'
@@ -142,6 +143,8 @@ export default function PunchlinesPage() {
 
   return (
     <div className="stack">
+      <SectionNav label="Joueurs" links={PLAYERS_LINKS} />
+
       <section>
         <h2 className="section-title">Nouvelle punchline</h2>
         <div className="chips" role="radiogroup" aria-label="Famille de punchline">
@@ -292,7 +295,7 @@ export default function PunchlinesPage() {
                           </button>
                           <button
                             type="button"
-                            className="button-ghost"
+                            className="button-ghost button-ghost--danger"
                             onClick={() => void remove(p)}
                           >
                             Supprimer

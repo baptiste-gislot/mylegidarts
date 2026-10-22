@@ -1,17 +1,11 @@
 'use client'
 
 import Link from 'next/link'
+import { SectionNav, historyLinks } from '@/components/SectionNav'
 import { SetupNotice } from '@/components/SetupNotice'
-import { useToast } from '@/components/Toaster'
-import { useDialog } from '@/components/Dialog'
-import {
-  DELETE_CODE_INPUT,
-  forgetDeleteCode,
-  rememberDeleteCode,
-  storedDeleteCode,
-} from '@/lib/deleteCode'
 import { SIDE_LABEL, type Side } from '@/lib/fletanque'
 import { TURN_GAMES, isTurnGame } from '@/lib/gameCatalog'
+import { useLiveMatches } from '@/lib/liveMatch'
 import { groupByMatch } from '@/lib/matches'
 import { useLeagueContext } from '@/lib/LeagueProvider'
 import { useSessionHistory } from '@/lib/useSessions'
@@ -25,10 +19,9 @@ const dateFormat = new Intl.DateTimeFormat('fr-FR', {
 })
 
 export default function HistoriquePage() {
-  const toast = useToast()
-  const ask = useDialog()
-  const { players, configured, removeMatch } = useLeagueContext()
-  const { rows, hasMore, error, loadMore, reload } = useSessionHistory()
+  const { players, configured } = useLeagueContext()
+  const { rows, hasMore, error, loadMore } = useSessionHistory()
+  const liveMatches = useLiveMatches()
 
   if (!configured) return <SetupNotice />
   if (error) return <p className="notice notice--error">Erreur : {error}</p>
@@ -51,6 +44,8 @@ export default function HistoriquePage() {
 
   return (
     <div className="stack">
+      <SectionNav label="Historique" links={historyLinks(liveMatches.length > 0)} />
+
       <ul className="history">
         {groups.map((group) => {
           const total180 = group.sessions.reduce((sum, s) => sum + s.count_180, 0)
@@ -130,38 +125,6 @@ export default function HistoriquePage() {
                     </li>
                   ))}
                 </ul>
-                <div className="history__actions">
-                  <button
-                    type="button"
-                    className="button-ghost"
-                    onClick={async (e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      const stored = storedDeleteCode()
-                      const answer = await ask({
-                        title: 'Supprimer cette partie ?',
-                        body: 'Elle disparaît de l’historique et les classements sont recalculés.',
-                        confirmLabel: 'Supprimer la partie',
-                        danger: true,
-                        input: stored ? undefined : DELETE_CODE_INPUT,
-                      })
-                      if (!answer) return
-                      const code = stored ?? answer.value.trim()
-                      void removeMatch(group.sessions.map((s) => s.id), code).then((err) => {
-                        if (err) {
-                          forgetDeleteCode()
-                          toast(err, 'error')
-                        } else {
-                          rememberDeleteCode(code)
-                          reload()
-                          toast('Partie supprimée, classement recalculé')
-                        }
-                      })
-                    }}
-                  >
-                    Supprimer
-                  </button>
-                </div>
               </Link>
             </li>
           )
@@ -169,7 +132,7 @@ export default function HistoriquePage() {
       </ul>
 
       {hasMore && (
-        <button type="button" className="button-ghost history__more" onClick={loadMore}>
+        <button type="button" className="button-secondary history__more" onClick={loadMore}>
           Voir plus de parties
         </button>
       )}
